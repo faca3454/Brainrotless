@@ -20,9 +20,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -79,7 +79,18 @@ jobs:
       - name: Compilar
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+          set +e
+          ./gradlew :app:assembleRelease --no-daemon 2>&1 | tee build.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" != "0" ]; then
+            # Errores como anotaciones: se ven en el resumen del run sin abrir el log entero
+            # (GitHub muestra hasta 10 por paso, así que va todo en una sola, multilínea)
+            msg=$(grep -E '^e: |error:|ERROR:|What went wrong' -A4 build.log | head -80 \
+              | sed -e 's/%/%25/g' -e 's/\r//g' | awk '{printf "%s%%0A", $0}')
+            echo "::error title=Falló la compilación::${msg}"
+            exit "$status"
+          fi
           cp app/build/outputs/apk/release/app-release.apk "Brainrotless-$VERSION_NAME.apk"
 
       - uses: actions/upload-artifact@v4
