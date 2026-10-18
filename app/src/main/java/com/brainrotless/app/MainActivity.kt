@@ -207,8 +207,9 @@ class MainActivity : ComponentActivity() {
 
     /** Puente JS → app para el pull-to-refresh. */
     class Bridge {
-        @Volatile var atTop = false
-        @JavascriptInterface fun setAtTop(value: Boolean) { atTop = value }
+        @Volatile private var top = false
+        val atTop get() = top
+        @JavascriptInterface fun setAtTop(value: Boolean) { top = value }
     }
 
     // ---------- Intents ----------
