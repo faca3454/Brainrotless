@@ -8,6 +8,11 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión a publicar (ej: 1.0.1). Vacío = solo compilar.'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -65,7 +70,8 @@ jobs:
 
       - name: Versión
         run: |
-          if [ "$GITHUB_EVENT_NAME" = "release" ]; then TAG="${{ github.event.release.tag_name }}";
+          if [ -n "${{ inputs.version }}" ]; then TAG="v${{ inputs.version }}"; TAG="${TAG#vv}"; TAG="v${TAG#v}";
+          elif [ "$GITHUB_EVENT_NAME" = "release" ]; then TAG="${{ github.event.release.tag_name }}";
           elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then TAG="$GITHUB_REF_NAME";
           else TAG=""; fi
           if [ -n "$TAG" ]; then
@@ -112,5 +118,6 @@ jobs:
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" Brainrotless-*.apk --clobber
           else
-            gh release create "$RELEASE_TAG" Brainrotless-*.apk --title "Brainrotless $VERSION_NAME" --generate-notes
+            gh release create "$RELEASE_TAG" Brainrotless-*.apk --target "$GITHUB_SHA" \
+              --title "Brainrotless $VERSION_NAME" --generate-notes
           fi

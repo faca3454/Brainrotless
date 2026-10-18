@@ -39,7 +39,9 @@ Editá `app/src/main/assets/block.user.js` y **subí el número de `@version`**.
 
 ### Sacar una versión nueva de la app
 
-GitHub → *Releases* → *Draft a new release* → creá un tag tipo `v1.0.1` → *Publish*. GitHub Actions compila el APK y lo adjunta en unos 5 minutos. Las apps instaladas avisan solas.
+GitHub → *Actions* → *Build APK* → *Run workflow* → escribí la versión (ej. `1.0.1`, siempre mayor que la anterior) → *Run workflow*. En unos 5 minutos aparece en *Releases* con el APK adjunto, y las apps instaladas avisan solas.
+
+También funciona crear el release a mano (*Releases* → *Draft a new release* → tag `v1.0.1` → *Publish*); el APK se adjunta solo.
 
 ### Firma (una sola vez)
 
