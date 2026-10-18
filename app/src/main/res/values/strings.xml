@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Brainrotless</string>
+    <string name="label_ig">IG Lite</string>
+    <string name="label_yt">YT Lite</string>
+    <string name="settings_title">Ajustes de Brainrotless</string>
+    <string name="shortcut_settings">Ajustes</string>
+    <string name="tile_label">Apps oficiales</string>
+    <string name="guard_label">Brainrotless: bloquear apps oficiales</string>
+    <string name="app_guard_desc">Cuando abrís Instagram o YouTube oficiales, te lleva a Brainrotless. Solo detecta qué app está en pantalla; no lee contenido ni lo que escribís.</string>
+</resources>

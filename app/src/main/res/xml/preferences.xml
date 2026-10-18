@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="Permisos">
+        <Preference app:key="perm_notif" app:title="Redirigir notificaciones" />
+        <Preference app:key="perm_links" app:title="Abrir links de Instagram/YouTube acá"
+            app:summary="Agregá los dominios en 'Abrir de forma predeterminada'" />
+        <Preference app:key="perm_guard" app:title="Bloquear apps oficiales" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Instagram">
+        <SwitchPreferenceCompat
+            app:key="ig_block_feed"
+            app:defaultValue="false"
+            app:title="Bloquear feed de inicio"
+            app:summary="Instagram queda solo para mensajes y perfiles" />
+        <SwitchPreferenceCompat
+            app:key="ig_block_explore"
+            app:defaultValue="true"
+            app:title="Bloquear Explorar"
+            app:summary="La búsqueda de usuarios sigue funcionando" />
+        <ListPreference
+            app:key="tap_window_ms"
+            app:defaultValue="900"
+            app:title="Detección de swipe"
+            app:entries="@array/tap_window_entries"
+            app:entryValues="@array/tap_window_values"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Pausa del bloqueo">
+        <ListPreference
+            app:key="bypass_minutes"
+            app:defaultValue="10"
+            app:title="Duración de la pausa"
+            app:entries="@array/bypass_entries"
+            app:entryValues="@array/bypass_values"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Actualizaciones">
+        <SwitchPreferenceCompat
+            app:key="remote_rules"
+            app:defaultValue="true"
+            app:title="Actualizar reglas de bloqueo"
+            app:summary="Descarga arreglos desde GitHub sin reinstalar la app" />
+        <SwitchPreferenceCompat
+            app:key="check_updates"
+            app:defaultValue="true"
+            app:title="Avisar si hay versión nueva" />
+        <Preference app:key="check_now" app:title="Buscar actualización ahora" />
+        <Preference app:key="version" app:title="Versión" app:selectable="false" />
+    </PreferenceCategory>
+</PreferenceScreen>
