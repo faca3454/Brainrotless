@@ -148,7 +148,7 @@ class MainActivity : ComponentActivity() {
                 fullscreenCallback = callback
                 root.addView(view, FrameLayout.LayoutParams(MATCH, MATCH))
                 refresh.visibility = View.GONE
-                setImmersive(true)
+                setBarsHidden(true)
                 requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
             }
 
@@ -323,11 +323,11 @@ class MainActivity : ComponentActivity() {
         fullscreenCallback?.onCustomViewHidden()
         fullscreenCallback = null
         refresh.visibility = View.VISIBLE
-        setImmersive(false)
+        setBarsHidden(false)
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     }
 
-    private fun setImmersive(on: Boolean) {
+    private fun setBarsHidden(on: Boolean) {
         val ctrl = WindowCompat.getInsetsController(window, window.decorView)
         if (on) {
             ctrl.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
