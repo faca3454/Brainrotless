@@ -110,7 +110,10 @@ El "modo solo mensajes" es el mismo que usa el límite diario (punto 5.3).
 - El tiempo de pausa **no cuenta** para el límite diario.
 - **Solo se pueden usar cuando se pasó el límite diario.** Antes de llegar al límite, el botón no
   aparece.
-- ⚠️ *Pendiente:* ¿también se pueden usar de noche (horario de dormir), o la noche no tiene pausas?
+- **De noche (horario de dormir) la pausa no levanta el bloqueo de noche:** navegadores y YouTube
+  siguen bloqueados e Instagram sigue solo con mensajes.
+- ⚠️ *Pendiente:* como de noche ya se permiten los mensajes, una pausa ahí no cambia nada. Propuesta:
+  no mostrar el botón de pausa de noche, para no gastarla sin querer.
 
 ### 5.3 Límite diario de uso
 - Se define dentro del compromiso: minutos por día para **Instagram + YouTube juntos**.
