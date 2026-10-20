@@ -13,6 +13,8 @@ Podés ver los reels y shorts que te mandan tus amigos, pero no pasar al siguien
 - **Sin carteles de "Usá la app"** en Instagram.
 - **Modo dormir** (opcional): en tu horario (uno para todos los días o uno por noche), Instagram queda solo para mensajes, YouTube se bloquea (también desde las apps oficiales) y los navegadores (Chrome, Brave, Opera…) no abren. Avisa unos minutos antes y la pausa del bloqueo no funciona.
 - **Compromiso** (opcional): por 7 días o más, el modo dormir, el bloqueo de navegadores y el límite diario solo se pueden endurecer. El **límite diario** (Instagram + YouTube juntos, se reinicia al despertarte) deja Instagram solo para mensajes y bloquea YouTube. Da una **pausa de emergencia** de 15 minutos cada 2 días (máximo 2 por día), para cuando llegás al límite o de noche. Cambiar la hora del teléfono no lo saltea. Con un límite corriendo, se pueden ver **Reels** (con scroll) hasta llegar al límite; de noche, no.
+  - **Al terminar** muestra cuánto bajó tu uso (comparado con las 4 semanas antes de instalar Brainrotless, si diste el permiso de *Acceso a datos de uso*) y pregunta si querés empezar otro: no se renueva solo.
+  - **Difícil de sacar**: opcionalmente, protección contra desinstalación (hay que quitar un permiso, con 2 minutos de espera; se quita sola al terminar). Si apagás la accesibilidad, queda un aviso fijo y IG Lite / YT Lite no abren hasta que la vuelvas a activar.
 - **Links** (WhatsApp, Telegram, etc.) y **notificaciones** de Instagram/YouTube se abren en Brainrotless.
 - **Apps oficiales**: si las abrís a mano, te redirige. Para pausarlo unos minutos: Ajustes → *Pausar ahora*, o el botón *Apps oficiales* de los ajustes rápidos (Ajustes → *Agregar botón a ajustes rápidos*).
 - **Ajustes**: mantené presionado el ícono de IG Lite o YT Lite → *Ajustes*.
@@ -62,6 +64,8 @@ Sin el secret, los builds de `main` salen firmados con clave de debug (sirven pa
 
 - Todo corre en el teléfono. No hay servidor, cuentas ni analíticas. Las sesiones quedan en la WebView del dispositivo.
 - El servicio de accesibilidad solo mira qué app pasó a primer plano: para redirigir Instagram y YouTube oficiales y, con el modo dormir, cerrar los navegadores en tu horario. No lee contenido ni lo que escribís, y no guarda ni envía nada.
+- *Acceso a datos de uso* (opcional) solo se usa para leer cuánto usabas Instagram y YouTube oficiales antes de instalar Brainrotless, para la estadística al terminar un compromiso. El tiempo de uso se guarda en el teléfono.
+- La protección contra desinstalación es un administrador de dispositivo **sin ninguna política**: no puede bloquear, borrar ni controlar el teléfono; solo hace que haya que quitarlo antes de desinstalar.
 - Las reglas remotas se descargan por HTTPS únicamente desde este repo, y se inyectan en Instagram y YouTube con tu sesión iniciada. Por eso, **quien tenga acceso de escritura al repo puede cambiar lo que corre en la app de todos**. Protegé la cuenta de GitHub con 2FA. Si no querés depender de eso, desactivá *Actualizar reglas de bloqueo* en Ajustes.
 - La seguridad de la clave de firma depende de la contraseña del secret.
 

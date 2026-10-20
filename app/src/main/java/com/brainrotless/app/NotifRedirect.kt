@@ -31,6 +31,11 @@ class NotifRedirect : NotificationListenerService() {
         runCatching { activeNotifications?.forEach(::onNotificationPosted) }
     }
 
+    // Si se cierra el aviso de "Brainrotless está apagado" durante un compromiso, vuelve a aparecer
+    override fun onNotificationRemoved(sbn: StatusBarNotification) {
+        if (Protection.isGuardNotice(sbn)) Protection.updateGuardNotice(this)
+    }
+
     @SuppressLint("MissingPermission") // sin permiso de notificaciones, notify() falla en silencio (runCatching)
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         val url = targets[sbn.packageName] ?: return

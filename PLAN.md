@@ -158,13 +158,24 @@ app oficial abierta, te saca en el acto.
   siguen pudiendo usar (modo solo mensajes).
 - Medición: tiempo con IG Lite / YT Lite en primer plano (pantalla encendida), guardado por día.
 
-### 5.4 Al terminar
+### 5.4 Al terminar ✅
+
+**Hecho; falta probar en el teléfono.** Notificación a la hora de terminar y, al abrir la app,
+resumen (uso por día antes y durante, cuánto bajó, días que llegó al límite, pausas usadas) con
+"Empezar otro" / "Ahora no". El uso de antes se calcula una sola vez y se guarda; si no hay permiso,
+el resumen muestra solo el uso durante. El último resumen queda en Ajustes → "Último compromiso".
 - **No se renueva solo.** Pregunta si querés empezar otro compromiso.
 - **Estadística final:** cuánto se redujo el uso. Pide el permiso *Acceso a datos de uso*
   (`PACKAGE_USAGE_STATS`) para leer cuánto usabas Instagram y YouTube oficiales en las semanas
   anteriores a instalar Brainrotless, y lo compara con el uso durante el compromiso.
 
-### 5.5 Difícil de sacar (molesto, no imposible)
+### 5.5 Difícil de sacar (molesto, no imposible) ✅
+
+**Hecho; falta probar en el teléfono.** Limitación: la espera con cartel solo se puede poner al
+quitar la protección contra desinstalación. Para la accesibilidad no se puede detectar que alguien
+está por apagarla sin leer el contenido de la pantalla (y eso no lo hacemos); en su lugar, el aviso
+fijo vuelve a aparecer si lo cerrás y IG Lite / YT Lite no abren. En Android 14+, el sistema deja
+deslizar los avisos fijos: por eso se vuelven a publicar.
 La app va a ser pública, así que no usamos el modo "propietario del dispositivo".
 - **Administrador de dispositivo:** para desinstalar hay que quitarle ese permiso primero; al
   intentarlo, aviso de "vas a romper tu compromiso de X días".

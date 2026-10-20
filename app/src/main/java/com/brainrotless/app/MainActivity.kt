@@ -52,6 +52,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var lockBarText: TextView
     private lateinit var lockBarPause: Button
     private var usageMark = 0L // desde cuándo se cuenta el uso sin sumar
+    private lateinit var guardScreen: View // accesibilidad apagada durante un compromiso
 
     private val bridge = Bridge()
     private var scriptHandler: ScriptHandler? = null
@@ -102,6 +103,11 @@ class MainActivity : ComponentActivity() {
         lockText = lockScreen.findViewWithTag("subtitle")
         lockPause = lockScreen.findViewWithTag("button2")
         lockPause.setOnClickListener { usePause() }
+        guardScreen = buildNotice(
+            "Brainrotless está apagado",
+            "Tu compromiso sigue. Volvé a activar 'Bloquear apps oficiales' en Accesibilidad para seguir usando IG Lite y YT Lite.",
+            "Activar"
+        ) { Setup.openAccessibility(this) }
         lockBar = buildLockBar()
         lockBarText = lockBar.findViewWithTag("text")
         lockBarPause = lockBar.findViewWithTag("pause")
@@ -114,6 +120,7 @@ class MainActivity : ComponentActivity() {
             addView(content, FrameLayout.LayoutParams(MATCH, MATCH))
             addView(offline, FrameLayout.LayoutParams(MATCH, MATCH))
             addView(lockScreen, FrameLayout.LayoutParams(MATCH, MATCH))
+            addView(guardScreen, FrameLayout.LayoutParams(MATCH, MATCH))
         }
         setContentView(root)
 
@@ -200,7 +207,7 @@ class MainActivity : ComponentActivity() {
             override fun handleOnBackPressed() {
                 when {
                     fullscreenView != null -> exitFullscreen()
-                    lockScreen.visibility == View.VISIBLE -> finish()
+                    lockScreen.visibility == View.VISIBLE || guardScreen.visibility == View.VISIBLE -> finish()
                     web.canGoBack() -> web.goBack()
                     else -> finish()
                 }
@@ -221,6 +228,19 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         usageMark = SystemClock.elapsedRealtime()
         lockTicker.run()
+        Commitment.onEnd(this)?.let(::showSummary)
+    }
+
+    /** Terminó el compromiso: resumen y la pregunta de si empezar otro (no se renueva solo). */
+    private fun showSummary(text: String) {
+        Commitment.markSummarySeen(this)
+        AlertDialog.Builder(this)
+            .setMessage(text)
+            .setPositiveButton("Empezar otro") { _, _ ->
+                startActivity(Intent(this, SettingsActivity::class.java).putExtra(SettingsActivity.EXTRA_START_COMMITMENT, true))
+            }
+            .setNegativeButton("Ahora no", null)
+            .show()
     }
 
     // ---------- Bloqueos: noche, límite diario y pausa de emergencia ----------
@@ -236,6 +256,13 @@ class MainActivity : ComponentActivity() {
 
     private fun applyLock() {
         countUsage()
+        // Accesibilidad apagada durante un compromiso: IG Lite y YT Lite no abren
+        val guardOff = Commitment.active(this) && !Setup.guardOn(this)
+        Protection.updateGuardNotice(this, guardOn = !guardOff)
+        if (guardOff != (guardScreen.visibility == View.VISIBLE)) {
+            guardScreen.visibility = if (guardOff) View.VISIBLE else View.GONE
+            if (guardOff) web.loadUrl("about:blank") else open(launcherUrl(intent))
+        }
         val yt = Lock.yt(this)
         // Cambió el modo solo mensajes o algún ajuste: reinyectar y recargar para aplicarlo ya
         val scriptChanged = Rules.build(this) != injectedScript
@@ -252,7 +279,8 @@ class MainActivity : ComponentActivity() {
     /** Todo el tiempo con Instagram o YouTube en pantalla suma al límite (salvo la pantalla de bloqueo). */
     private fun countUsage() {
         val now = SystemClock.elapsedRealtime()
-        if (usageMark > 0 && lockScreen.visibility != View.VISIBLE) Usage.add(this, now - usageMark)
+        val blocked = lockScreen.visibility == View.VISIBLE || guardScreen.visibility == View.VISIBLE
+        if (usageMark > 0 && !blocked) Usage.add(this, now - usageMark)
         usageMark = now
     }
 

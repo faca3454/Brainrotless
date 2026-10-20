@@ -32,6 +32,10 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    companion object {
+        const val EXTRA_START_COMMITMENT = "start_commitment" // desde el resumen: "Empezar otro"
+    }
+
     class SettingsFragment : PreferenceFragmentCompat() {
         private companion object {
             const val LOOSEN_MSG = "Durante el compromiso solo podés hacerlo más estricto"
@@ -52,7 +56,11 @@ class SettingsActivity : AppCompatActivity() {
                 Commitment.cancelForTesting(requireContext())
                 Sleep.reschedule(requireContext())
                 refreshCommitment()
+                Commitment.onEnd(requireContext())?.let { showSummary(it, markSeen = true) }
             }
+            onClick("protect") { if (!Protection.adminActive(requireContext())) Protection.requestAdmin(requireActivity()) }
+            onClick("usage_access") { UsageAccess.open(requireContext()) }
+            onClick("last_summary") { Commitment.lastSummary(requireContext())?.let { showSummary(it, markSeen = false) } }
             onClick("pause_now") {
                 if (Commitment.startPause(requireContext()))
                     Toast.makeText(requireContext(), "🆘 Pausa de emergencia: 15 minutos", Toast.LENGTH_LONG).show()
@@ -91,6 +99,11 @@ class SettingsActivity : AppCompatActivity() {
             refreshSleep()
             refreshBypass()
             refreshCommitment()
+            val i = requireActivity().intent
+            if (i.getBooleanExtra(EXTRA_START_COMMITMENT, false)) {
+                i.removeExtra(EXTRA_START_COMMITMENT)
+                if (!Commitment.active(requireContext())) startCommitment()
+            }
         }
 
         override fun onPause() {
@@ -170,11 +183,26 @@ class SettingsActivity : AppCompatActivity() {
                 } else "Mínimo ${Commitment.MIN_DAYS} días sin poder aflojar el modo dormir ni el límite diario"
             }
             findPreference<Preference>("usage_today")?.summary = buildString {
-                append(minutes(Usage.todayMs(c)))
-                Usage.limitMs(c)?.let { append(" de ${minutes(it)}") }
+                append(formatDuration(Usage.todayMs(c)))
+                Usage.limitMs(c)?.let { append(" de ${formatDuration(it)}") }
                 append(" · se reinicia a las ${Sleep.fmt(c, Usage.nextReset(c).toLocalTime())}")
             }
             findPreference<Preference>("debug_end")?.isVisible = BuildConfig.DEBUG && active
+            findPreference<Preference>("protect")?.apply {
+                isVisible = active
+                summary = if (Protection.adminActive(c))
+                    "✓ Activado. Para desinstalar hay que quitarlo primero, con 2 minutos de espera"
+                else "Tocá para que no se pueda desinstalar Brainrotless sin pasar por un aviso"
+            }
+            findPreference<Preference>("usage_access")?.summary = if (UsageAccess.granted(c)) {
+                UsageAccess.baseline(c) // calcularlo ya, antes de que Android borre los datos viejos
+                "✓ Activado. Al terminar vas a ver cuánto bajó tu uso"
+            } else "Permiso de acceso a datos de uso, para la estadística al terminar"
+            findPreference<Preference>("last_summary")?.apply {
+                val last = Commitment.lastSummary(c)
+                isVisible = !active && last != null
+                summary = last?.lines()?.firstOrNull()
+            }
             findPreference<Preference>("pause_now")?.apply {
                 isVisible = active
                 isEnabled = Commitment.canPause(c)
@@ -186,9 +214,13 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        private fun minutes(ms: Long): String {
-            val m = ms / 60_000
-            return if (m < 60) "$m min" else "${m / 60} h ${m % 60} min"
+        private fun showSummary(text: String, markSeen: Boolean) {
+            if (markSeen) Commitment.markSummarySeen(requireContext())
+            AlertDialog.Builder(requireContext())
+                .setMessage(text)
+                .setPositiveButton("Empezar otro") { _, _ -> startCommitment() }
+                .setNegativeButton("Listo", null)
+                .show()
         }
 
         private fun startCommitment() {
@@ -222,7 +254,7 @@ class SettingsActivity : AppCompatActivity() {
                     add("• Apagar el modo dormir, acostarte más tarde ni despertarte más temprano")
                     if (c.userPrefs().getBoolean("sleep_browsers", true)) add("• Desbloquear los navegadores de noche")
                 }
-                Usage.limitMinutes(c)?.let { add("• Subir el límite diario (${minutes(it * 60_000L)} entre Instagram y YouTube)") }
+                Usage.limitMinutes(c)?.let { add("• Subir el límite diario (${formatDuration(it * 60_000L)} entre Instagram y YouTube)") }
             }
             val pauses = Commitment.pausesFor(days)
             val dialog = AlertDialog.Builder(c)
@@ -240,6 +272,7 @@ class SettingsActivity : AppCompatActivity() {
                     Sleep.reschedule(c)
                     refreshCommitment()
                     Toast.makeText(c, "Compromiso empezado: $days días 💪", Toast.LENGTH_LONG).show()
+                    offerProtection()
                 }
                 .setNegativeButton("Cancelar", null)
                 .show()
@@ -250,6 +283,28 @@ class SettingsActivity : AppCompatActivity() {
                 start.text = if (left > 0) "Empezar ($left)" else "Empezar"
                 start.isEnabled = left == 0
             }, (5 - left) * 1000L)
+        }
+
+        /** Recién empezado el compromiso: ofrecer la protección y el permiso para la estadística final. */
+        private fun offerProtection() {
+            val c = requireContext()
+            val steps = buildList {
+                if (!Protection.adminActive(c)) add("protect")
+                if (!UsageAccess.granted(c)) add("usage")
+            }
+            if (steps.isEmpty()) return
+            AlertDialog.Builder(c)
+                .setTitle("Dos cosas más (opcionales)")
+                .setMessage(
+                    "• Proteger contra desinstalación: para desinstalar Brainrotless vas a tener que quitar un " +
+                        "permiso, con 2 minutos de espera. Al terminar se quita solo.\n\n" +
+                        "• Comparar con tu uso de antes: al terminar vas a ver cuánto bajó tu uso de Instagram y YouTube."
+                )
+                .setPositiveButton(if ("protect" in steps) "Proteger" else "Permitir comparar") { _, _ ->
+                    if ("protect" in steps) Protection.requestAdmin(requireActivity()) else UsageAccess.open(c)
+                }
+                .setNegativeButton("Ahora no", null)
+                .show()
         }
 
         // ---------- Modo dormir ----------

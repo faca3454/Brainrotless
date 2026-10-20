@@ -91,6 +91,15 @@
             app:title="Usar pausa de emergencia"
             app:isPreferenceVisible="false" />
         <Preference
+            app:key="protect"
+            app:title="Proteger contra desinstalación"
+            app:isPreferenceVisible="false" />
+        <Preference app:key="usage_access" app:title="Comparar con tu uso de antes" />
+        <Preference
+            app:key="last_summary"
+            app:title="Último compromiso"
+            app:isPreferenceVisible="false" />
+        <Preference
             app:key="debug_end"
             app:title="Terminar compromiso (solo prueba)"
             app:summary="Aparece solo en los APK de prueba; en las versiones de Releases no está"

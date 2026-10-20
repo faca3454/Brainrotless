@@ -90,8 +90,15 @@ class AppGuard : AccessibilityService() {
     }
 
     override fun onServiceConnected() {
+        Protection.updateGuardNotice(this, guardOn = true)
         wasLocked = locked()
         lockTicker.run()
+    }
+
+    // Se apagó la accesibilidad (o se está actualizando la app; al volver se borra el aviso)
+    override fun onUnbind(intent: Intent?): Boolean {
+        Protection.updateGuardNotice(this, guardOn = false)
+        return super.onUnbind(intent)
     }
 
     override fun onDestroy() {

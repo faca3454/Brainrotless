@@ -133,6 +133,7 @@ object Sleep {
     /** Programa la próxima alarma: aviso previo, inicio o fin de la noche. */
     fun reschedule(c: Context) {
         val am = c.getSystemService(AlarmManager::class.java) ?: return
+        Commitment.scheduleEnd(c)
         val pi = alarmIntent(c)
         am.cancel(pi)
         if (!enabled(c)) { NotificationManagerCompat.from(c).cancel(NOTIF_ID); return }
@@ -186,6 +187,7 @@ class SleepAlarm : BroadcastReceiver() {
     override fun onReceive(c: Context, i: Intent) {
         when (i.action) {
             null -> Sleep.onAlarm(c) // la nuestra no tiene acción; las del sistema sí
+            Commitment.ACTION_END -> Commitment.notifyEnd(c)
             Intent.ACTION_TIME_CHANGED -> TrustedClock.onTimeSet(c)
             Intent.ACTION_BOOT_COMPLETED -> TrustedClock.onBoot(c)
         }
