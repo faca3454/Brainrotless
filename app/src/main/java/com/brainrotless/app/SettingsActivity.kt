@@ -335,7 +335,7 @@ class SettingsActivity : AppCompatActivity() {
             if (key?.startsWith("sleep_") == true) refreshSleep()
             if (key?.startsWith("sleep_") == true || key == "daily_limit") refreshCommitment()
             if (key?.startsWith("focus_") == true) refreshFocus()
-            TodayWidget.update(requireContext())
+            Widgets.update(requireContext())
         }
 
         private fun refreshSleep() {

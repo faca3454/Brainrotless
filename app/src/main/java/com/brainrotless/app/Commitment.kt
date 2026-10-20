@@ -291,7 +291,7 @@ object Usage {
         val before = remainingMs(c)
         val key = dayKey(c)
         prefs(c).edit().putLong(key, prefs(c).getLong(key, 0) + ms.coerceAtMost(10 * 60_000)).apply()
-        TodayWidget.update(c)
+        Widgets.update(c)
         val after = remainingMs(c) ?: return
         if (before == null) return
         for (min in listOf(10, 2)) {

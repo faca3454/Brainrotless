@@ -1,0 +1,9 @@
+<!-- Anillo de muestra para la vista previa de los widgets (en el widget real se dibuja con los datos) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="48dp"
+    android:viewportWidth="48" android:viewportHeight="48">
+    <path android:pathData="M4,24 a20,20 0 1,0 40,0 a20,20 0 1,0 -40,0" android:strokeColor="@color/brand_surface_alt"
+        android:strokeWidth="5" android:fillColor="#00000000" />
+    <path android:pathData="M24,4 A20,20 0 0,1 37.69,38.58" android:strokeColor="@color/brand_primary"
+        android:strokeWidth="5" android:strokeLineCap="round" android:fillColor="#00000000" />
+</vector>

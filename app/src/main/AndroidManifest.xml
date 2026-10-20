@@ -176,7 +176,29 @@
             android:excludeFromRecents="true"
             android:launchMode="singleTask" />
 
-        <!-- Widget "Hoy": uso del día y accesos a Instagram y YouTube -->
+        <!-- Widgets: Mini (1×1), Barra (4×1) y Hoy (2×2) -->
+        <receiver
+            android:name=".MiniWidget"
+            android:exported="true"
+            android:label="@string/widget_mini_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_mini_info" />
+        </receiver>
+        <receiver
+            android:name=".BarWidget"
+            android:exported="true"
+            android:label="@string/widget_bar_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_bar_info" />
+        </receiver>
         <receiver
             android:name=".TodayWidget"
             android:exported="true"

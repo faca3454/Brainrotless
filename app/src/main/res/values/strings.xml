@@ -240,6 +240,15 @@
     <string name="pref_focus_youtube_summary">Apagalo si usás YouTube para estudiar o trabajar</string>
     <string name="pref_session">Aviso de sesión larga</string>
     <string name="diag_copied">No encontré el botón Responder. Copié un diagnóstico (sin el texto de tus mensajes): pegalo en el chat.</string>
+    <string name="widget_mini_label">Lúcido · Mini</string>
+    <string name="widget_bar_label">Lúcido · Barra</string>
+    <string name="widget_mini_desc">Un anillo con tu uso de hoy</string>
+    <string name="widget_bar_desc">Tu uso de hoy en una fila, con accesos a Instagram y YouTube</string>
+    <string name="widget_unit_min">min</string>
+    <string name="widget_unit_h">h</string>
+    <string name="widget_of_limit">de %1$s</string>
+    <string name="widget_no_limit">Sin límite</string>
+    <string name="widget_preview_limit">de 1 h</string>
     <plurals name="days_n">
         <item quantity="one">%1$d día</item>
         <item quantity="other">%1$d días</item>

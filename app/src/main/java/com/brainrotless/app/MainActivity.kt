@@ -356,7 +356,7 @@ class MainActivity : ComponentActivity() {
         }
         if (lockScreen.visibility == View.VISIBLE) showLockScreen() // refrescar texto y pausa
         refreshLockBar()
-        TodayWidget.update(this)
+        Widgets.update(this)
     }
 
     // ---------- Aviso de sesión larga ----------

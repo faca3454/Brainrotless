@@ -68,5 +68,6 @@ class App : Application() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         Lang.applyTo(this) // el sistema repone su idioma al girar o cambiar de tema
+        Widgets.update(this, force = true) // claro/oscuro: redibujar el anillo con los colores nuevos
     }
 }
