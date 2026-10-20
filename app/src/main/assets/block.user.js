@@ -61,6 +61,10 @@
   };
   document.documentElement ? addStyle() : addEventListener('DOMContentLoaded', addStyle);
 
+  // APK de prueba: lo que hace el script por su cuenta (frenar un toque, cerrar un cartel), para el diagnóstico
+  const trace = [];
+  const note = (what) => { if (CFG.debug) trace.push([performance.now(), what]); };
+
   // Lo que una sección rehace al cambiar la URL: corre ahora y después en cada cambio (desde check)
   const onRoute = [];
   const route = (f) => { onRoute.push(f); f(); };
@@ -286,6 +290,7 @@
         if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) continue;
         e.preventDefault();
         e.stopPropagation();
+        note('videos al tocar: frené el toque y reproduje el video');
         tapped.add(v);
         v.preload = 'auto';
         v.play().catch(() => {});
@@ -309,8 +314,9 @@
       if (!APP.test(text(el))) return;
       const dialog = el.closest('[role="dialog"]');
       const later = dialog && [...dialog.querySelectorAll(CLICKABLE)].find((b) => LATER.test(text(b)));
-      if (later) { later.click(); return; }
+      if (later) { note(`carteles: toqué "${text(later)}" en una ventana con "${text(el)}"`); later.click(); return; }
 
+      note(`carteles: oculté "${text(el)}"`);
       el.style.setProperty('display', 'none', 'important');
       for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
         const pos = getComputedStyle(p).position;
@@ -645,6 +651,67 @@
     const write = navigator.clipboard && navigator.clipboard.writeText;
     if (write) navigator.clipboard.writeText = function (...a) { copied = true; return write.apply(this, a); };
 
+    // Toques sobre fotos o videos en los chats: qué se tocó (la estructura, sin el texto), si el toque
+    // llegó a la página, qué pasó en el segundo y medio siguiente y si hay otra igual (el original) con botón
+    const taps = [];
+    const shape = (u) => {
+      try {
+        const x = new URL(u, location.href);
+        return x.hostname === location.hostname ? x.pathname.replace(/\/(reels?|p|t|stories)\/[^/]+/g, '/$1/#') : x.hostname;
+      } catch (e) { return '?'; }
+    };
+    const desc = (el) => el.tagName.toLowerCase() + ['role', 'aria-label', 'href', 'tabindex'].map((a) => {
+      const v = el.getAttribute(a);
+      return v === null ? '' : `[${a}=${a === 'href' ? shape(v) : v.slice(0, 30)}]`;
+    }).join('');
+    const mediaIn = (el) => (el.matches('img,video') ? el : el.querySelector('img,video'));
+    const key = (m) => ((m.currentSrc || m.src || m.poster || '').split('?')[0].match(/[^/]+$/) || [''])[0];
+    const sanitize = (el) => {
+      const c = el.cloneNode(true);
+      const walk = (n) => {
+        if (n.nodeType === 3) { if (n.textContent.trim()) n.textContent = '…'; return; }
+        if (n.nodeType !== 1) return;
+        for (const a of [...n.attributes]) {
+          if (a.name === 'href') n.setAttribute('href', shape(a.value));
+          else if (a.name === 'aria-label') n.setAttribute('aria-label', a.value.slice(0, 30));
+          else if (!/^(role|aria-|tabindex|data-)/.test(a.name)) n.removeAttribute(a.name);
+        }
+        [...n.childNodes].forEach(walk);
+      };
+      walk(c);
+      return c.outerHTML.replace(/<path[^>]*>(<\/path>)?/g, '').slice(0, 1500);
+    };
+    let lastTap = null;
+    addEventListener('click', (e) => {
+      if (!/^\/direct\/t\//.test(location.pathname) || !e.isTrusted) return;
+      let card = e.target.nodeType === 1 ? e.target : e.target.parentElement;
+      for (let i = 0; card && i < 8 && !mediaIn(card); i++) card = card.parentElement; // hasta la foto o el video
+      const m = card && mediaIn(card);
+      if (!m) return;
+      const chain = [];
+      for (let el = e.target; el && el !== document.body && chain.length < 12; el = el.parentElement) chain.push(desc(el));
+      const k = key(m);
+      const twins = k ? [...document.querySelectorAll('img,video')].filter((o) => o !== m && key(o) === k) : [];
+      const tap = {
+        t: e.timeStamp, event: e, reached: false, prevented: false, after: '', // hora del toque, antes que cualquier listener
+        media: `${m.tagName.toLowerCase()} de ${Math.round(m.getBoundingClientRect().width)}px`,
+        twins: twins.map((o) => { const b = o.closest('a[href],button,[role="button"],[role="link"]'); return b ? desc(b) : 'sin botón'; }).join(' | ') || 'ninguna',
+        chain: chain.join(' < ').slice(0, 700), card: sanitize(card),
+      };
+      taps.push(tap);
+      if (taps.length > 2) taps.shift();
+      lastTap = tap;
+      const p0 = location.pathname;
+      setTimeout(() => {
+        const ours = trace.filter(([t]) => t >= tap.t).map(([, w]) => w).join('; ');
+        tap.after = `url ${location.pathname === p0 ? 'igual' : 'cambió a ' + shape(location.pathname)}, ` +
+          `ventanas abiertas ${document.querySelectorAll('[role="dialog"]').length}, el script: ${ours || 'nada'}`;
+      }, 1500);
+    }, true);
+    addEventListener('click', (e) => { // al final del recorrido: nadie lo frenó en el camino
+      if (lastTap && lastTap.event === e) { lastTap.reached = true; lastTap.prevented = e.defaultPrevented; }
+    });
+
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'hidden') return;
       if (copied) { copied = false; return; }
@@ -659,6 +726,8 @@
         '  ' + navs.slice(-30).join(' · '),
         `Videos, de play() a playing (ms): ${sorted.length ? `mediana ${sorted[sorted.length >> 1]}, máx ${sorted[sorted.length - 1]} (n=${sorted.length})` : 'ninguno'}`,
         '  ' + videos.slice(-30).join(' '),
+        ...taps.map((t) => `Toque en foto/video de un chat: ${t.media} · llegó a la página: ${t.reached ? (t.prevented ? 'sí (y alguien lo usó)' : 'sí') : 'no'}` +
+          `\n  después: ${t.after || 'sin medir'}\n  otra igual: ${t.twins}\n  cadena: ${t.chain}\n  ${t.card}`),
       ].join('\n'));
     });
   }
