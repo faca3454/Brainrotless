@@ -73,7 +73,7 @@
     <string name="offer_msg">• Proteger contra desinstalación: para desinstalar Lúcido vas a tener que quitar un permiso, con 2 minutos de espera. Al terminar se quita solo.\n\n• Comparar con tu uso de antes: al terminar vas a ver cuánto bajó tu uso de Instagram y YouTube.</string>
     <string name="offer_protect">Proteger</string>
     <string name="offer_compare">Permitir comparar</string>
-    <string name="browsers_need_guard">⚠ Activá \"Bloquear apps oficiales\" (arriba) para que funcione</string>
+    <string name="browsers_need_guard">⚠ Activá \"Bloquear apps oficiales\" en el inicio de Lúcido para que funcione</string>
     <string name="browsers_none">No hay navegadores instalados</string>
     <string name="night_range">%1$s a %2$s</string>
     <string name="pick_sleep">Hora de dormir</string>

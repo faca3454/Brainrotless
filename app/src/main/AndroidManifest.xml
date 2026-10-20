@@ -76,6 +76,12 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- El "Abrir" del instalador (y de la tienda) abre esta pantalla y no IG Lite/YT Lite:
+                 Android busca primero una actividad con INFO antes de elegir un ícono cualquiera -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.INFO" />
+            </intent-filter>
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
 

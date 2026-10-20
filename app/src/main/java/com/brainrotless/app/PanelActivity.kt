@@ -15,6 +15,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Space
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import java.time.DayOfWeek
@@ -51,10 +52,7 @@ class PanelActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(pad, Brand.px(this@PanelActivity, 12), pad, pad)
         }
-        setContentView(ScrollView(this).apply {
-            isFillViewport = true
-            addView(list, ViewGroup.LayoutParams(MATCH, WRAP))
-        })
+        setContentView(ScrollView(this).apply { addView(list, ViewGroup.LayoutParams(MATCH, WRAP)) })
     }
 
     override fun onResume() {
@@ -443,7 +441,9 @@ class PanelActivity : AppCompatActivity() {
         views.forEach { addView(it, LinearLayout.LayoutParams(MATCH, WRAP)) }
     }
 
-    private fun space(dp: Int) = View(this).apply { minimumHeight = Brand.px(context, dp) }
+    // Space y no View: una View común con alto WRAP ocupa todo el lugar que le ofrecen y empuja
+    // afuera lo que viene después; Space mide exactamente su alto mínimo.
+    private fun space(dp: Int) = Space(this).apply { minimumHeight = Brand.px(context, dp) }
 
     private fun muted(s: String) = Brand.text(this, s, 13.5f, R.color.brand_text_muted)
 

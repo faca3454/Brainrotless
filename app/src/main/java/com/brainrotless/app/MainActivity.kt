@@ -96,6 +96,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // La primera vez (sin idioma elegido) desde el ícono de IG Lite o YT Lite: arrancar por el
+        // inicio de Lúcido, que es donde está la configuración. Los links compartidos abren igual.
+        if (!Lang.hasChosen(this) && savedInstanceState == null && urlFromIntent(intent) == null) {
+            startActivity(Intent(this, HomeActivity::class.java))
+            finish()
+            return
+        }
         lang = Lang.current(this)
 
         igWeb = buildWebView()

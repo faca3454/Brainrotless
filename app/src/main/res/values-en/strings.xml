@@ -73,7 +73,7 @@
     <string name="offer_msg">• Uninstall protection: to uninstall Lúcido you\'ll have to remove a permission, with a 2-minute wait. It\'s removed automatically when the commitment ends.\n\n• Compare with your usage before: when it ends you\'ll see how much your Instagram and YouTube usage dropped.</string>
     <string name="offer_protect">Protect</string>
     <string name="offer_compare">Allow comparing</string>
-    <string name="browsers_need_guard">⚠ Turn on \"Block official apps\" (above) for this to work</string>
+    <string name="browsers_need_guard">⚠ Turn on \"Block official apps\" on the Lúcido home screen for this to work</string>
     <string name="browsers_none">No browsers installed</string>
     <string name="night_range">%1$s to %2$s</string>
     <string name="pick_sleep">Bedtime</string>
