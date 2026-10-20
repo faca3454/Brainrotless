@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -112,7 +113,8 @@ class NotifRedirect : NotificationListenerService() {
                 val face = if (style.isGroupConversation) avatar?.let(IconCompat::createWithBitmap) else who?.icon
                     ?: avatar?.let(IconCompat::createWithBitmap)
                 val name = style.conversationTitle ?: who?.name ?: title ?: label
-                conversation("${if (ig) "ig" else "yt"}_${key.hashCode()}", name, face, who, open)?.let(b::setShortcutId)
+                conversation("${if (ig) "ig" else "yt"}_${key.hashCode()}", name, face, who, open, if (ig) "Instagram" else "YouTube")
+                    ?.let(b::setShortcutId)
             } else avatar?.let { b.setLargeIcon(it) } // en versiones viejas la foto va al costado
         } else {
             avatar?.let { b.setLargeIcon(it) }
@@ -202,31 +204,35 @@ class NotifRedirect : NotificationListenerService() {
             .setKey(from.toString())
             .setIcon(avatar?.let(IconCompat::createWithBitmap))
             .build()
-        // La app oficial a veces vuelve a publicar el mismo mensaje: no repetirlo
-        if (style.messages.lastOrNull()?.text?.toString() != text.toString()) style.addMessage(text, time, sender)
+        // La app oficial a veces vuelve a publicar el mismo mensaje (mismo texto y misma hora): no
+        // repetirlo. Dos "jaja" seguidos de verdad tienen distinta hora y quedan los dos.
+        val last = style.messages.lastOrNull()
+        if (last?.text?.toString() != text.toString() || last?.timestamp != time) style.addMessage(text, time, sender)
         while (style.messages.size > MAX_MESSAGES) style.messages.removeAt(0)
         return style
     }
 
     /**
      * Atajo de conversación (Android 11+): sin él, Android no muestra la notificación como chat.
-     * Desde Android 13 no aparece en el menú del ícono; antes, la compatibilidad no lo permite.
+     * Va colgado del ícono de IG Lite / YT Lite: al mantenerlo presionado aparecen los chats
+     * recientes. Si Android no acepta ese ícono, se publica sin él.
      */
     @RequiresApi(30)
-    private fun conversation(id: String, name: CharSequence, face: IconCompat?, who: Person?, intent: Intent): String? = runCatching {
-        val shortcut = ShortcutInfoCompat.Builder(this, id)
+    private fun conversation(id: String, name: CharSequence, face: IconCompat?, who: Person?, intent: Intent, alias: String): String? {
+        fun shortcut(onIcon: Boolean) = ShortcutInfoCompat.Builder(this, id)
             .setShortLabel(name)
             .setLongLived(true)
             .setIntent(intent)
             .setIcon(face ?: IconCompat.createWithResource(this, R.mipmap.ic_launcher))
             .apply {
                 who?.let { setPerson(it) }
-                if (Build.VERSION.SDK_INT >= 33) setExcludedFromSurfaces(ShortcutInfoCompat.SURFACE_LAUNCHER)
+                if (onIcon) setActivity(ComponentName(this@NotifRedirect, "$PKG.$alias"))
             }
             .build()
-        ShortcutManagerCompat.pushDynamicShortcut(this, shortcut)
-        id
-    }.getOrNull()
+        for (onIcon in listOf(true, false))
+            if (runCatching { ShortcutManagerCompat.pushDynamicShortcut(this, shortcut(onIcon)) }.getOrDefault(false)) return id
+        return null
+    }
 
     companion object {
         const val CHANNEL = "redirect"

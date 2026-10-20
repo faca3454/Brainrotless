@@ -197,8 +197,10 @@ class HomeActivity : ComponentActivity() {
             chevron = true,
             iconSize = 68
         ).apply {
-            addView(spark, 2, LinearLayout.LayoutParams(Brand.px(context, 52), ViewGroup.LayoutParams.WRAP_CONTENT)
-                .apply { marginStart = Brand.px(context, 8); marginEnd = Brand.px(context, 4) })
+            // Con un solo día no hay forma que mostrar
+            if (week.count { it != null } >= 2)
+                addView(spark, 2, LinearLayout.LayoutParams(Brand.px(context, 52), ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { marginStart = Brand.px(context, 8); marginEnd = Brand.px(context, 4) })
         }) { PanelActivity.open(this, PanelActivity.STATS) }
     }
 

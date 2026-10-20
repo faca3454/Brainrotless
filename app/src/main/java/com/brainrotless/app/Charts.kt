@@ -72,6 +72,8 @@ class DayBars(c: Context, private val mini: Boolean = false) : View(c) {
     }
 
     private fun scale(): Float {
+        // El mini gráfico muestra la forma de la semana: relativo al día de más uso
+        if (mini) return (values.filterNotNull().maxOrNull() ?: 0L).coerceAtLeast(60_000L).toFloat()
         val maxValue = listOfNotNull(values.filterNotNull().maxOrNull(), limit, before).maxOrNull() ?: 0L
         return maxValue.coerceAtLeast(30 * 60_000L) * 1.08f
     }
