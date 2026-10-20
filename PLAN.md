@@ -108,7 +108,9 @@ El "modo solo mensajes" es el mismo que usa el límite diario (punto 5.3).
 - Máximo **2 por día**, también en compromisos de una semana.
 - Desbloquean **todo**: Instagram, YouTube y navegadores.
 - El tiempo de pausa **no cuenta** para el límite diario.
-- ⚠️ *Pendiente:* la respuesta quedó cortada en "y que la pausa de emergencia…".
+- **Solo se pueden usar cuando se pasó el límite diario.** Antes de llegar al límite, el botón no
+  aparece.
+- ⚠️ *Pendiente:* ¿también se pueden usar de noche (horario de dormir), o la noche no tiene pausas?
 
 ### 5.3 Límite diario de uso
 - Se define dentro del compromiso: minutos por día para **Instagram + YouTube juntos**.
