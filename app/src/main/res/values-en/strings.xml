@@ -347,4 +347,8 @@
     <string name="weekly_tap">Tap to see your stats</string>
     <string name="weekly_pref">Weekly summary</string>
     <string name="weekly_pref_sub">Sundays at 8 PM, a notification with how your week went</string>
+    <string name="notif_reply">Reply</string>
+    <string name="notif_reply_hint">Write a reply</string>
+    <string name="notif_read">Mark as read</string>
+    <string name="notif_reply_failed">Couldn\'t send it. Open IG Lite to reply.</string>
 </resources>

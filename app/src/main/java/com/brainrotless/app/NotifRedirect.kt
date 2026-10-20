@@ -116,6 +116,7 @@ class NotifRedirect : NotificationListenerService() {
                 conversation("${if (ig) "ig" else "yt"}_${key.hashCode()}", name, face, who, open, if (ig) "Instagram" else "YouTube")
                     ?.let(b::setShortcutId)
             } else avatar?.let { b.setLargeIcon(it) } // en versiones viejas la foto va al costado
+            addActions(b, id, n)
         } else {
             avatar?.let { b.setLargeIcon(it) }
             val picture = picture(n) // ej: la miniatura de un video nuevo de YouTube
@@ -134,6 +135,41 @@ class NotifRedirect : NotificationListenerService() {
                 nm.notify(id, b.setStyle(NotificationCompat.BigTextStyle().bigText(text)).setLargeIcon(null as Bitmap?).build())
             }
         }
+    }
+
+    /**
+     * Responder y marcar como leído sin abrir nada: si la notificación original trae esas
+     * acciones, la nuestra también. Pasan por [NotifActions], que se las reenvía a la app oficial
+     * y actualiza la conversación (la app oficial manda el mensaje sin abrirse).
+     */
+    private fun addActions(b: NotificationCompat.Builder, id: Int, n: Notification) {
+        val actions = n.actions ?: return
+        val reply = actions.firstOrNull { a -> a.remoteInputs?.any { it.allowFreeFormInput } == true }
+        val read = if (Build.VERSION.SDK_INT >= 28)
+            actions.firstOrNull { it.semanticAction == Notification.Action.SEMANTIC_ACTION_MARK_AS_READ && it.remoteInputs.isNullOrEmpty() }
+            else null
+        if (reply == null && read == null) return
+        NotifActions.remember(id, NotifActions.Original(reply?.actionIntent, reply?.remoteInputs ?: emptyArray(), read?.actionIntent))
+
+        fun pending(action: String, mutable: Boolean) = PendingIntent.getBroadcast(
+            this, id, Intent(this, NotifActions::class.java).setAction(action).putExtra(NotifActions.EXTRA_ID, id),
+            PendingIntent.FLAG_UPDATE_CURRENT or if (mutable) PendingIntent.FLAG_MUTABLE else PendingIntent.FLAG_IMMUTABLE
+        )
+        if (reply != null) b.addAction(
+            // Mutable: Android le agrega lo que escribiste antes de mandarla
+            NotificationCompat.Action.Builder(0, getString(R.string.notif_reply), pending(NotifActions.ACTION_REPLY, mutable = true))
+                .addRemoteInput(androidx.core.app.RemoteInput.Builder(NotifActions.KEY_TEXT).setLabel(getString(R.string.notif_reply_hint)).build())
+                .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
+                .setAllowGeneratedReplies(true)
+                .setShowsUserInterface(false)
+                .build()
+        )
+        if (read != null) b.addAction(
+            NotificationCompat.Action.Builder(0, getString(R.string.notif_read), pending(NotifActions.ACTION_READ, mutable = false))
+                .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_MARK_AS_READ)
+                .setShowsUserInterface(false)
+                .build()
+        )
     }
 
     /** La foto de quien escribe: la imagen grande de la notificación original. */

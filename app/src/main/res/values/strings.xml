@@ -347,4 +347,8 @@
     <string name="weekly_tap">Tocá para ver tus estadísticas</string>
     <string name="weekly_pref">Resumen semanal</string>
     <string name="weekly_pref_sub">Los domingos a las 20, una notificación con cómo te fue en la semana</string>
+    <string name="notif_reply">Responder</string>
+    <string name="notif_reply_hint">Escribí tu respuesta</string>
+    <string name="notif_read">Marcar como leído</string>
+    <string name="notif_reply_failed">No se pudo enviar. Abrí IG Lite para responder.</string>
 </resources>

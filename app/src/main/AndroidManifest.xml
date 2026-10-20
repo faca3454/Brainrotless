@@ -142,6 +142,9 @@
             </intent-filter>
         </service>
 
+        <!-- Responder / marcar como leído desde las notificaciones redirigidas -->
+        <receiver android:name=".NotifActions" android:exported="false" />
+
         <!-- Si abrís Instagram/YouTube oficiales a mano, salta a Lúcido -->
         <service
             android:name=".AppGuard"
