@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget Hoy (2×2): los textos y el anillo los pone Widgets (estos son solo para la vista previa) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/w_ring"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:contentDescription="@string/widget_title"
+            android:src="@drawable/widget_ring_preview" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/w_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/widget_title"
+                android:textColor="@color/brand_text_muted"
+                android:textSize="11.5sp" />
+
+            <TextView
+                android:id="@+id/w_limit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="1"
+                android:text="@string/widget_preview_limit"
+                android:textColor="@color/brand_text"
+                android:textSize="15sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/w_status"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:text="@string/widget_preview_status"
+        android:textColor="@color/brand_text_muted"
+        android:textSize="12sp" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/w_ig"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:contentDescription="@string/label_ig"
+            android:src="@mipmap/ic_ig" />
+
+        <ImageView
+            android:id="@+id/w_yt"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_marginStart="8dp"
+            android:contentDescription="@string/label_yt"
+            android:src="@mipmap/ic_yt" />
+    </LinearLayout>
+</LinearLayout>

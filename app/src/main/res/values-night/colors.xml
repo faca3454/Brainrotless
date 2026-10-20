@@ -1,0 +1,16 @@
+<resources>
+    <!-- Lúcido, modo oscuro -->
+    <color name="brand_bg">#0E1A1C</color>
+    <color name="brand_surface">#16272A</color>
+    <color name="brand_surface_alt">#1C3134</color>
+    <color name="brand_tonal">#1D3D3B</color>
+    <color name="brand_primary">#4FBFAD</color>
+    <color name="brand_on_primary">#06201D</color>
+    <color name="brand_accent">#F5B55C</color>
+    <color name="brand_on_accent">#2B1A00</color>
+    <color name="brand_text">#EEE8DD</color>
+    <color name="brand_text_muted">#9DAEAA</color>
+    <color name="brand_line">#25393C</color>
+    <color name="brand_warning">#F08467</color>
+    <color name="brand_ripple">#294FBFAD</color>
+</resources>

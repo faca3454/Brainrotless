@@ -5,12 +5,48 @@
         <item name="android:windowBackground">@android:color/white</item>
         <item name="android:statusBarColor">#FFFFFF</item>
         <item name="android:windowLightStatusBar">true</item>
+        <item name="android:colorPrimary">@color/brand_primary</item>
+        <item name="android:colorAccent">@color/brand_primary</item>
+        <item name="android:windowOptOutEdgeToEdgeEnforcement" tools:targetApi="35">true</item>
+    </style>
+
+    <!-- Pantallas propias de Lúcido (inicio, espera): fondo de la marca -->
+    <style name="HomeTheme" parent="AppTheme">
+        <item name="android:windowBackground">@color/brand_bg</item>
+        <item name="android:statusBarColor">@color/brand_bg</item>
+        <item name="android:navigationBarColor">@color/brand_bg</item>
+    </style>
+
+    <!-- Pantallas de configuración (PanelActivity): AppCompat, para que los interruptores se dibujen -->
+    <style name="PanelTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/brand_primary</item>
+        <item name="colorAccent">@color/brand_primary</item>
+        <item name="colorControlActivated">@color/brand_primary</item>
+        <item name="android:windowBackground">@color/brand_bg</item>
+        <item name="android:statusBarColor">@color/brand_bg</item>
+        <item name="android:navigationBarColor">@color/brand_bg</item>
+        <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowOptOutEdgeToEdgeEnforcement" tools:targetApi="35">true</item>
     </style>
 
     <style name="SettingsTheme" parent="Theme.AppCompat.DayNight">
-        <item name="colorPrimary">#6C4CF1</item>
-        <item name="colorAccent">#6C4CF1</item>
+        <item name="colorPrimary">@color/brand_primary</item>
+        <item name="colorAccent">@color/brand_primary</item>
+        <item name="android:windowBackground">@color/brand_bg</item>
+        <item name="android:statusBarColor">@color/brand_bg</item>
+        <item name="android:navigationBarColor">@color/brand_bg</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="actionBarStyle">@style/BrandActionBar</item>
         <item name="android:windowOptOutEdgeToEdgeEnforcement" tools:targetApi="35">true</item>
+    </style>
+
+    <style name="BrandActionBar" parent="Widget.AppCompat.ActionBar.Solid">
+        <item name="background">@color/brand_bg</item>
+        <item name="elevation">0dp</item>
+        <item name="titleTextStyle">@style/BrandActionBarTitle</item>
+    </style>
+
+    <style name="BrandActionBarTitle" parent="TextAppearance.AppCompat.Widget.ActionBar.Title">
+        <item name="android:textColor">@color/brand_text</item>
     </style>
 </resources>

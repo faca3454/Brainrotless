@@ -1,65 +1,101 @@
-# Brainrotless
+# Lúcido
 
-Instagram y YouTube sin el scroll infinito de Reels y Shorts.
-Podés ver los reels y shorts que te mandan tus amigos, pero no pasar al siguiente.
+**Instagram y YouTube, sin piloto automático.**
+
+Lúcido es una app para Android que abre Instagram y YouTube sin el scroll infinito de Reels y Shorts, y te ayuda a usarlos menos: modo dormir, horas de foco, un límite diario y estadísticas para ver cómo vas. Gratis, sin anuncios y sin cuentas: todo queda en tu teléfono.
+
+<p align="center">
+  <img src="docs/capturas/inicio.png" width="200" alt="Inicio de Lúcido">
+  <img src="docs/capturas/estadisticas.png" width="200" alt="Estadísticas: antes vs ahora y racha">
+  <img src="docs/capturas/dormir.png" width="200" alt="Modo dormir">
+  <img src="docs/capturas/compromiso.png" width="200" alt="Compromiso con límite diario">
+</p>
+
+<p align="center">
+  <a href="https://github.com/faca3454/Brainrotless/releases/latest"><b>⬇ Descargar la última versión</b></a> · Android 8 o más nuevo
+</p>
+
+*Antes se llamaba Brainrotless.*
 
 ## Qué hace
 
-- **IG Lite** y **YT Lite**: Instagram y YouTube web dentro de la app, con el feed de Reels, Shorts y Explorar bloqueado.
-- **Reels que te mandan**: se abren normal; si deslizás al siguiente, te devuelve.
-- **Shorts**: se abren en el reproductor clásico, que no tiene swipe.
-- **Links** (WhatsApp, Telegram, etc.) y **notificaciones** de Instagram/YouTube se abren en Brainrotless.
-- **Apps oficiales**: si las abrís a mano, te redirige. Hay un botón en los ajustes rápidos para pausarlo unos minutos.
-- **Ajustes**: mantené presionado el ícono de IG Lite o YT Lite → *Ajustes*.
-- **Actualizaciones**: las reglas de bloqueo se actualizan solas, y la app avisa cuando hay versión nueva.
-- **Comodidad**: deslizar hacia abajo para recargar, modo oscuro según el sistema, subir fotos, videos en pantalla completa.
+**Sin scroll infinito**
+- Los reels y shorts que te mandan tus amigos se ven, pero no podés deslizar al siguiente.
+- El feed de Instagram, a tu elección: normal, solo las cuentas que seguís (en orden, y se termina) o bloqueado.
+- Explorar bloqueado y sin carteles de "Usá la app". Si querés, los videos arrancan solo cuando los tocás (ahorra datos).
 
-## Instalar (Android 8 o superior)
+**Modo dormir y modo foco**
+- **De noche**, en tu horario (puede ser distinto cada día): Instagram queda solo para mensajes, YouTube se bloquea y, si querés, también los navegadores. Te avisa unos minutos antes.
+- **En tus horas de foco**, los días que elijas: Instagram solo para mensajes y, si querés, YouTube bloqueado.
 
-1. Bajá el APK de la última versión en [Releases](../../releases/latest).
-2. Abrilo y aceptá *instalar apps de origen desconocido*. Si Play Protect avisa, tocá *Instalar igual*: pasa con cualquier APK que no venga del Store.
-3. Abrí **IG Lite** y seguí los pasos de la ventana de configuración:
-   - **Notificaciones**: activá Brainrotless.
-   - **Links**: en Ajustes → Apps → *Instagram* (y *YouTube*) → *Abrir de forma predeterminada*, desactivá *Abrir vínculos compatibles*. Después, en la de Brainrotless, agregá todos los dominios.
-   - **Bloquear apps oficiales**: Ajustes → Accesibilidad → Brainrotless.
-4. Si un permiso aparece gris: Ajustes → Apps → Brainrotless → ⋮ → *Permitir ajustes restringidos*.
-5. En Xiaomi o Samsung: Ajustes → Batería → Brainrotless → *Sin restricciones*, para que el sistema no apague el bloqueo.
+**Compromiso**
+- Elegís cuántos días (7 o más) y un **límite diario** para Instagram y YouTube juntos. Mientras dure, solo podés hacerlo más estricto.
+- Al llegar al límite, Instagram queda solo para mensajes y YouTube se bloquea hasta que te despertás.
+- **Pausas de emergencia** de 15 minutos para cuando de verdad lo necesitás.
+- Al terminar, un resumen de cuánto bajó tu uso.
 
-Las apps oficiales tienen que seguir instaladas: son las que reciben las notificaciones.
+**Estadísticas**
+- Antes vs ahora: cuánto usabas Instagram y YouTube antes de Lúcido y cuánto ahora.
+- Uso por día, Instagram vs YouTube, rachas y un resumen los domingos.
 
-### iPhone
+**Notificaciones**
+- Los mensajes de Instagram y YouTube se abren en Lúcido, no en las apps oficiales.
+- Con la foto de quien te escribe y juntos como conversación. Cuando Instagram lo permite, podés responder sin abrir nada.
 
-No hay app. Usá Safari con la app gratuita *Userscripts* y cargá [`block.user.js`](app/src/main/assets/block.user.js).
+**Y además**
+- Aviso cuando llevás mucho rato seguido.
+- Widgets para la pantalla de inicio.
+- Links de Instagram y YouTube (de WhatsApp, Telegram, etc.) que se abren en Lúcido.
+- En español e inglés, con modo claro y oscuro.
 
-## Mantenimiento
+## Instalar
 
-### Arreglar el bloqueo cuando Instagram cambia algo
+1. Bajá `Lucido-X.Y.Z.apk` de la [última versión](https://github.com/faca3454/Brainrotless/releases/latest) (en *Assets*).
+2. Abrilo y permití instalar apps de esa fuente. Si Play Protect avisa, tocá *Instalar igual*: pasa con cualquier app que no venga de Play Store.
+3. Abrí **Lúcido**. Una guía te lleva por el idioma, los permisos y con qué querés arrancar.
 
-Editá `app/src/main/assets/block.user.js` y **subí el número de `@version`**. En unas horas les llega a todos sin reinstalar. Para probarlo antes: Ajustes → *Buscar actualización ahora*.
+Después de instalar vas a ver tres íconos: **Lúcido** (el inicio y la configuración), **IG Lite** (Instagram) e **YT Lite** (YouTube).
 
-### Sacar una versión nueva de la app
+- **Las apps oficiales de Instagram y YouTube tienen que seguir instaladas**: son las que reciben las notificaciones. Si las abrís, Lúcido te trae de vuelta.
+- **¿Un permiso aparece gris?** Android lo hace con las apps que no vienen de Play Store. La guía tiene un botón *¿Un permiso aparece gris?* que explica cómo destrabarlo.
+- **En Xiaomi o Samsung**: Ajustes → Batería → Lúcido → *Sin restricciones*, para que el sistema no la apague.
+- **Actualizaciones**: la app te avisa cuando hay una versión nueva, y se instala encima sin perder nada.
 
-GitHub → *Actions* → *Build APK* → *Run workflow* → escribí la versión (ej. `1.0.1`, siempre mayor que la anterior) → *Run workflow*. En unos 5 minutos aparece en *Releases* con el APK adjunto, y las apps instaladas avisan solas.
+## Preguntas frecuentes
 
-También funciona crear el release a mano (*Releases* → *Draft a new release* → tag `v1.0.1` → *Publish*); el APK se adjunta solo.
+**¿Es una app oficial de Instagram o YouTube?**
+No. Lúcido no tiene relación con Instagram, Meta, YouTube ni Google. Abre las versiones web de Instagram y YouTube, como un navegador.
 
-### Firma (una sola vez)
+**¿Es seguro iniciar sesión?**
+Iniciás sesión en las páginas de Instagram y YouTube, igual que en un navegador, y la sesión queda guardada en tu teléfono. Lúcido no tiene servidores ni cuentas propias, y el código está acá para que cualquiera pueda revisarlo.
 
-Para que las actualizaciones se puedan instalar encima, todos los APK tienen que firmarse con la misma clave.
+**¿Por qué pide tantos permisos?**
+Cada uno tiene una función concreta, explicada en [Privacidad](#privacidad). Los únicos opcionales son abrir links y comparar con tu uso de antes.
 
-1. Repo → *Settings* → *Secrets and variables* → *Actions* → *New repository secret*.
-2. Nombre: `KEYSTORE_PASSWORD`. Valor: una contraseña **larga y aleatoria** (20 caracteres o más, de un gestor de contraseñas). Guardala.
-3. El próximo push a `main` genera `signing/release.jks` y lo sube al repo, cifrado con esa contraseña.
+**¿Puedo desinstalarla?**
+Sí. Durante un compromiso o el modo dormir cuesta más a propósito: Lúcido bloquea las pantallas de desinstalar y detener la app, y si activaste la protección hay que esperar 2 minutos. Siempre se puede arrancar el teléfono en modo seguro y desinstalarla desde ahí.
 
-Sin el secret, los builds de `main` salen firmados con clave de debug (sirven para probar) y los releases fallan a propósito.
+**¿Hay versión para iPhone?**
+No hay app. Se puede usar el bloqueo de Reels y Shorts en Safari con la app gratuita *Userscripts*, cargando [`block.user.js`](app/src/main/assets/block.user.js).
 
-## Seguridad y privacidad
+## Privacidad
 
-- Todo corre en el teléfono. No hay servidor, cuentas ni analíticas. Las sesiones quedan en la WebView del dispositivo.
-- El servicio de accesibilidad solo recibe eventos de las apps de Instagram y YouTube, y solo mira qué app pasó a primer plano. No lee contenido.
-- Las reglas remotas se descargan por HTTPS únicamente desde este repo, y se inyectan en Instagram y YouTube con tu sesión iniciada. Por eso, **quien tenga acceso de escritura al repo puede cambiar lo que corre en la app de todos**. Protegé la cuenta de GitHub con 2FA. Si no querés depender de eso, desactivá *Actualizar reglas de bloqueo* en Ajustes.
-- La seguridad de la clave de firma depende de la contraseña del secret.
+Todo corre en tu teléfono. No hay servidor, cuentas, anuncios ni analíticas, y Lúcido no manda tus datos a ningún lado. Solo se conecta a Instagram y YouTube (para mostrarlos) y a este repositorio (para actualizar las reglas de bloqueo y avisar de versiones nuevas).
 
-## Compilar local
+Para qué es cada permiso:
 
-Android Studio → *Open* → esta carpeta → *Build APK*. O desde la terminal: `./gradlew assembleRelease`.
+- **Acceso a notificaciones**: para copiar las notificaciones de Instagram y YouTube y que se abran en Lúcido. Las de otras apps no se tocan.
+- **Accesibilidad**: para saber qué app se abrió, redirigir Instagram y YouTube oficiales, contar ese tiempo en tu límite y bloquear los navegadores de noche (si lo elegiste). Durante un compromiso o el modo dormir, también mira las pantallas de Ajustes y del instalador para que no puedas desinstalar o detener Lúcido en un impulso. No lee lo que escribís ni el contenido de Instagram o YouTube.
+- **Acceso a datos de uso** (opcional): para leer cuánto usabas Instagram y YouTube oficiales antes de instalar Lúcido, para el "antes vs ahora".
+- **Protección contra desinstalación** (opcional, solo durante un compromiso): un administrador de dispositivo sin ningún poder sobre el teléfono. No puede bloquearlo, borrarlo ni controlarlo; solo hace que haya que quitarlo antes de desinstalar.
+- **Notificaciones**: para avisarte antes del modo dormir, cuando llegás al límite y el resumen semanal.
+
+Las reglas de bloqueo se descargan de este repositorio por HTTPS para seguir funcionando cuando Instagram o YouTube cambian algo. Si preferís que no, apagá *Actualizar reglas de bloqueo* en Ajustes.
+
+## In English
+
+Lúcido is a free Android app that opens Instagram and YouTube without the endless Reels and Shorts scroll, and helps you use them less: sleep mode, focus hours, a daily limit you can't loosen, stats and streaks. No ads, no accounts, nothing leaves your phone. The app is available in English: pick it the first time you open it. [Download the latest version](https://github.com/faca3454/Brainrotless/releases/latest) (Android 8+). Lúcido is not affiliated with Instagram, Meta, YouTube or Google.
+
+---
+
+¿Querés colaborar o compilarla vos? Mirá las [notas de mantenimiento](docs/mantenimiento.md).

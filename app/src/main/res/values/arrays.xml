@@ -1,13 +1,56 @@
 <resources>
-    <string-array name="tap_window_entries">
-        <item>Estricta (0,6 s)</item>
-        <item>Normal (0,9 s)</item>
-        <item>Permisiva (1,5 s)</item>
+    <string-array name="language_entries" translatable="false">
+        <item>Español</item>
+        <item>English</item>
     </string-array>
-    <string-array name="tap_window_values">
-        <item>600</item>
-        <item>900</item>
-        <item>1500</item>
+    <string-array name="language_values" translatable="false">
+        <item>es</item>
+        <item>en</item>
+    </string-array>
+
+    <string-array name="ig_feed_entries">
+        <item>Normal</item>
+        <item>Solo cuentas que seguís</item>
+        <item>Bloqueado (solo mensajes y perfiles)</item>
+    </string-array>
+    <string-array name="ig_feed_values" translatable="false">
+        <item>normal</item>
+        <item>following</item>
+        <item>blocked</item>
+    </string-array>
+
+    <string-array name="sleep_warn_entries">
+        <item>Sin aviso</item>
+        <item>5 minutos antes</item>
+        <item>10 minutos antes</item>
+        <item>15 minutos antes</item>
+        <item>30 minutos antes</item>
+    </string-array>
+    <string-array name="sleep_warn_values" translatable="false">
+        <item>0</item>
+        <item>5</item>
+        <item>10</item>
+        <item>15</item>
+        <item>30</item>
+    </string-array>
+
+    <string-array name="limit_entries">
+        <item>Sin límite</item>
+        <item>30 minutos</item>
+        <item>45 minutos</item>
+        <item>1 hora</item>
+        <item>1 hora y media</item>
+        <item>2 horas</item>
+        <item>3 horas</item>
+    </string-array>
+    <string-array name="limit_values" translatable="false">
+        <item>0</item>
+        <item>30</item>
+        <item>45</item>
+        <item>60</item>
+        <item>90</item>
+        <item>120</item>
+        <item>180</item>
     </string-array>
 
     <string-array name="bypass_entries">
@@ -16,10 +59,53 @@
         <item>15 minutos</item>
         <item>30 minutos</item>
     </string-array>
-    <string-array name="bypass_values">
+    <string-array name="bypass_values" translatable="false">
         <item>5</item>
         <item>10</item>
         <item>15</item>
         <item>30</item>
+    </string-array>
+    <string-array name="weekday_entries">
+        <item>Lunes</item>
+        <item>Martes</item>
+        <item>Miércoles</item>
+        <item>Jueves</item>
+        <item>Viernes</item>
+        <item>Sábado</item>
+        <item>Domingo</item>
+    </string-array>
+    <string-array name="weekday_values" translatable="false">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+    </string-array>
+    <string-array name="weekday_default" translatable="false">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+    </string-array>
+    <string-array name="session_entries">
+        <item>Apagado</item>
+        <item>10 minutos</item>
+        <item>15 minutos</item>
+        <item>20 minutos</item>
+        <item>30 minutos</item>
+        <item>45 minutos</item>
+        <item>1 hora</item>
+    </string-array>
+    <string-array name="session_values" translatable="false">
+        <item>0</item>
+        <item>10</item>
+        <item>15</item>
+        <item>20</item>
+        <item>30</item>
+        <item>45</item>
+        <item>60</item>
     </string-array>
 </resources>

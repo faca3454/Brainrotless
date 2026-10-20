@@ -1,5 +1,25 @@
 <resources>
-    <color name="icon_main_bg">#6C4CF1</color>
-    <color name="icon_ig_bg">#8E44AD</color>
-    <color name="icon_yt_bg">#E67E22</color>
+    <!-- Lúcido: verde azulado profundo (calma, foco) con un sol ámbar (despertar). Modo claro. -->
+    <color name="brand_bg">#FBF7F0</color>
+    <color name="brand_surface">#FFFFFF</color>
+    <color name="brand_surface_alt">#F1EADF</color>
+    <color name="brand_tonal">#DDEFEA</color>
+    <color name="brand_primary">#167A70</color>
+    <color name="brand_on_primary">#FFFFFF</color>
+    <color name="brand_accent">#F2A33A</color>
+    <color name="brand_on_accent">#2B1A00</color>
+    <color name="brand_text">#16211F</color>
+    <color name="brand_text_muted">#5E6B68</color>
+    <color name="brand_line">#E6DED2</color>
+    <color name="brand_warning">#C9492E</color>
+    <color name="brand_ripple">#1F167A70</color>
+
+    <!-- Logo (igual en claro y oscuro) -->
+    <color name="logo_deep">#0F3B3A</color>
+    <color name="logo_cream">#FBF3E6</color>
+    <color name="logo_sun">#F4A93D</color>
+
+    <!-- Notificaciones: color de la app de la que vienen (círculo del ícono y detalles) -->
+    <color name="notif_ig">#D62976</color>
+    <color name="notif_yt">#E62117</color>
 </resources>

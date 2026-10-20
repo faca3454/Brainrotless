@@ -1,54 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <PreferenceCategory app:title="Permisos">
-        <Preference app:key="perm_notif" app:title="Redirigir notificaciones" />
-        <Preference app:key="perm_links" app:title="Abrir links de Instagram/YouTube acá"
-            app:summary="Agregá los dominios en 'Abrir de forma predeterminada'" />
-        <Preference app:key="perm_guard" app:title="Bloquear apps oficiales" />
-    </PreferenceCategory>
-
-    <PreferenceCategory app:title="Instagram">
-        <SwitchPreferenceCompat
-            app:key="ig_block_feed"
-            app:defaultValue="false"
-            app:title="Bloquear feed de inicio"
-            app:summary="Instagram queda solo para mensajes y perfiles" />
-        <SwitchPreferenceCompat
-            app:key="ig_block_explore"
-            app:defaultValue="true"
-            app:title="Bloquear Explorar"
-            app:summary="La búsqueda de usuarios sigue funcionando" />
+    <PreferenceCategory app:title="@string/pref_cat_general">
         <ListPreference
-            app:key="tap_window_ms"
-            app:defaultValue="900"
-            app:title="Detección de swipe"
-            app:entries="@array/tap_window_entries"
-            app:entryValues="@array/tap_window_values"
+            app:key="language"
+            app:title="@string/language"
+            app:entries="@array/language_entries"
+            app:entryValues="@array/language_values"
             app:useSimpleSummaryProvider="true" />
+        <Preference app:key="guide" app:title="@string/pref_guide" app:summary="@string/pref_guide_summary" />
     </PreferenceCategory>
 
-    <PreferenceCategory app:title="Pausa del bloqueo">
+    <PreferenceCategory app:title="@string/pref_cat_permissions">
+        <Preference app:key="perm_notif" app:title="@string/pref_notif" />
+        <Preference app:key="perm_links" app:title="@string/pref_links"
+            app:summary="@string/pref_links_summary" />
+        <Preference app:key="perm_guard" app:title="@string/pref_guard" />
+        <Preference app:key="perm_restricted" app:title="@string/gray_title"
+            app:summary="@string/pref_restricted_summary" app:isPreferenceVisible="false" />
+    </PreferenceCategory>
+
+    <!-- Modo dormir, foco, compromiso e Instagram/YouTube tienen sus propias pantallas (PanelActivity) -->
+    <PreferenceCategory app:title="@string/pref_cat_rules">
+        <Preference app:key="panel_sleep" app:title="@string/home_sleep" />
+        <Preference app:key="panel_focus" app:title="@string/home_focus" />
+        <Preference app:key="panel_commit" app:title="@string/home_commit" />
+        <Preference app:key="panel_apps" app:title="@string/panel_apps" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/pref_cat_protection">
+        <Preference app:key="shield_info" app:title="@string/pref_shield" app:summary="@string/pref_shield_summary"
+            app:selectable="false" />
+        <SwitchPreferenceCompat
+            app:key="hide_icon"
+            app:defaultValue="false"
+            app:title="@string/pref_hide_icon"
+            app:summary="@string/pref_hide_icon_summary" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/pref_cat_bypass">
+        <Preference app:key="bypass_now" app:title="@string/bypass_now" />
         <ListPreference
             app:key="bypass_minutes"
             app:defaultValue="10"
-            app:title="Duración de la pausa"
+            app:title="@string/pref_bypass_minutes"
+            app:summary="@string/pref_bypass_summary"
             app:entries="@array/bypass_entries"
-            app:entryValues="@array/bypass_values"
-            app:useSimpleSummaryProvider="true" />
+            app:entryValues="@array/bypass_values" />
+        <Preference
+            app:key="bypass_tile"
+            app:title="@string/pref_tile"
+            app:summary="@string/pref_tile_summary"
+            app:isPreferenceVisible="false" />
     </PreferenceCategory>
 
-    <PreferenceCategory app:title="Actualizaciones">
+    <PreferenceCategory app:title="@string/pref_cat_updates">
         <SwitchPreferenceCompat
             app:key="remote_rules"
             app:defaultValue="true"
-            app:title="Actualizar reglas de bloqueo"
-            app:summary="Descarga arreglos desde GitHub sin reinstalar la app" />
+            app:title="@string/pref_rules"
+            app:summary="@string/pref_rules_summary" />
         <SwitchPreferenceCompat
             app:key="check_updates"
             app:defaultValue="true"
-            app:title="Avisar si hay versión nueva" />
-        <Preference app:key="check_now" app:title="Buscar actualización ahora" />
-        <Preference app:key="version" app:title="Versión" app:selectable="false" />
+            app:title="@string/pref_updates" />
+        <Preference app:key="check_now" app:title="@string/pref_check_now" />
+        <Preference app:key="version" app:title="@string/pref_version" app:selectable="false" />
     </PreferenceCategory>
 </PreferenceScreen>
