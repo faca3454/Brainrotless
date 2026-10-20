@@ -174,13 +174,22 @@
     const orig = history[k];
     history[k] = function (...a) { const r = orig.apply(this, a); check(k === 'pushState'); return r; };
   }
-  // Tocar "Inicio" va directo al feed de seguidos, sin mostrar el otro un instante
+  // Tocar "Inicio" va directo al feed de seguidos, sin mostrar el otro un instante. Se navega dentro
+  // del sitio, como el botón atrás; si en 1 s lo que estaba en pantalla sigue ahí, se recarga.
   if (IG && CFG.igFeed === 'following') {
+    const FOLLOWING = '/?variant=following';
     addEventListener('click', (e) => {
       if (!(e.target.closest && e.target.closest('a[href="/"]'))) return;
       e.preventDefault();
       e.stopPropagation();
-      location.assign('/?variant=following');
+      if (location.pathname === '/') { location.assign(FOLLOWING); return; } // ya en el feed: recargarlo
+      const before = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
+      history.pushState(null, '', FOLLOWING);
+      dispatchEvent(new PopStateEvent('popstate', { state: null }));
+      setTimeout(() => {
+        if (location.pathname === '/' && before && before.isConnected && before.getClientRects().length)
+          location.assign(FOLLOWING);
+      }, 1000);
     }, true);
   }
   addEventListener('popstate', () => check(true));
