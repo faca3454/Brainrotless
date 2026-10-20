@@ -13,7 +13,9 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import androidx.activity.ComponentActivity
+import java.time.format.TextStyle
 import java.util.Date
+import java.util.Locale
 
 /**
  * Pantalla principal de Lúcido (el ícono de la app): abrir Instagram o YouTube, cómo va el día,
@@ -62,6 +64,7 @@ class HomeActivity : ComponentActivity() {
         add(appsRow())
         add(todayCard())
         add(sleepCard())
+        add(focusCard())
         add(commitmentCard())
         // Ajustes al pie, empujado hacia abajo si sobra lugar
         list.addView(View(this), LinearLayout.LayoutParams(MATCH, 0, 1f))
@@ -190,6 +193,18 @@ class HomeActivity : ComponentActivity() {
             } ?: getString(R.string.home_sleep_none)
         }
         return linkCard(R.drawable.ic_moon, getString(R.string.home_sleep), sub, pill = null) { openSettings(focus = "sleep_on") }
+    }
+
+    private fun focusCard(): View {
+        val sub = when {
+            !Focus.enabled(this) -> getString(R.string.home_focus_off)
+            Focus.current(this) != null -> getString(R.string.home_sleep_now, Sleep.fmt(this, Focus.current(this)!!.end.toLocalTime()))
+            else -> Focus.next(this)?.let { b ->
+                val day = b.start.dayOfWeek.getDisplayName(TextStyle.FULL, Locale(Lang.current(this)))
+                getString(R.string.home_focus_next, day, Sleep.fmt(this, b.start.toLocalTime()), Sleep.fmt(this, b.end.toLocalTime()))
+            } ?: getString(R.string.focus_no_days)
+        }
+        return linkCard(R.drawable.ic_focus, getString(R.string.home_focus), sub, pill = null) { openSettings(focus = "focus_on") }
     }
 
     private fun commitmentCard(): View {

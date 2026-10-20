@@ -98,6 +98,35 @@
             app:dependency="sleep_on" />
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="@string/pref_cat_focus">
+        <SwitchPreferenceCompat
+            app:key="focus_on"
+            app:defaultValue="false"
+            app:title="@string/pref_focus_on"
+            app:summary="@string/pref_focus_on_summary" />
+        <Preference app:key="focus_time" app:title="@string/pref_schedule" app:dependency="focus_on" />
+        <MultiSelectListPreference
+            app:key="focus_days"
+            app:title="@string/pref_focus_days"
+            app:entries="@array/weekday_entries"
+            app:entryValues="@array/weekday_values"
+            app:defaultValue="@array/weekday_default"
+            app:dependency="focus_on" />
+        <SwitchPreferenceCompat
+            app:key="focus_youtube"
+            app:defaultValue="true"
+            app:title="@string/pref_focus_youtube"
+            app:summary="@string/pref_focus_youtube_summary"
+            app:dependency="focus_on" />
+        <ListPreference
+            app:key="session_warn"
+            app:defaultValue="20"
+            app:title="@string/pref_session"
+            app:entries="@array/session_entries"
+            app:entryValues="@array/session_values"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
     <PreferenceCategory app:title="@string/channel_commitment">
         <ListPreference
             app:key="daily_limit"

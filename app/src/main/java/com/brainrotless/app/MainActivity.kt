@@ -301,6 +301,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         if (Lang.current(this) != lang) return recreate() // cambiaron el idioma en Ajustes
         usageMark = SystemClock.elapsedRealtime()
+        Session.resume(this)
         lockTicker.run()
         Commitment.onEnd(this)?.let(::showSummary)
     }
@@ -323,8 +324,10 @@ class MainActivity : ComponentActivity() {
     private val lockTicker = object : Runnable {
         override fun run() {
             applyLock()
+            maybeWarnSession()
             handler.removeCallbacks(this)
-            handler.postDelayed(this, (Lock.msUntilChange(this@MainActivity) + 500).coerceIn(1_000, 60_000))
+            val next = listOfNotNull(Lock.msUntilChange(this@MainActivity), Session.msUntilWarn(this@MainActivity)?.takeIf { it > 0 }).min()
+            handler.postDelayed(this, (next + 500).coerceIn(1_000, 60_000))
         }
     }
 
@@ -351,6 +354,26 @@ class MainActivity : ComponentActivity() {
         }
         if (lockScreen.visibility == View.VISIBLE) showLockScreen() // refrescar texto y pausa
         refreshLockBar()
+        TodayWidget.update(this)
+    }
+
+    // ---------- Aviso de sesión larga ----------
+
+    private var sessionDialog: AlertDialog? = null
+
+    private fun maybeWarnSession() {
+        val blocked = lockScreen.visibility == View.VISIBLE || guardScreen.visibility == View.VISIBLE
+        if (!Session.due(this) || blocked || sessionDialog?.isShowing == true) return
+        Session.snooze(this) // si sale y vuelve enseguida, el próximo aviso es en 5 minutos
+        sessionDialog = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.session_title, Session.minutes(this)))
+            .setMessage(R.string.session_text)
+            .setPositiveButton(R.string.session_exit) { _, _ ->
+                listOf(igWeb, ytWeb).forEach(::pauseMedia)
+                startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+            .setNegativeButton(R.string.session_more, null)
+            .show()
     }
 
     /** Todo el tiempo con Instagram o YouTube en pantalla suma al límite (salvo la pantalla de bloqueo). */
@@ -373,8 +396,12 @@ class MainActivity : ComponentActivity() {
     private fun showLockScreen() {
         val r = Lock.yt(this) ?: return
         val until = Lock.until(this, r)
-        lockTitle.text = getString(if (r == Lock.Reason.NIGHT) R.string.lock_night_title else R.string.lock_limit_title)
-        lockText.text = getString(if (r == Lock.Reason.NIGHT) R.string.lock_night_text else R.string.lock_limit_text, until)
+        lockTitle.text = getString(when (r) {
+            Lock.Reason.NIGHT -> R.string.lock_night_title
+            Lock.Reason.FOCUS -> R.string.lock_focus_title
+            Lock.Reason.LIMIT -> R.string.lock_limit_title
+        })
+        lockText.text = getString(if (r == Lock.Reason.LIMIT) R.string.lock_limit_text else R.string.lock_blocked_text, until)
         // De noche la pausa no abre YouTube: solo se ofrece por el límite
         val canPause = r == Lock.Reason.LIMIT && Commitment.canPause(this)
         lockPause.visibility = if (canPause) View.VISIBLE else View.GONE
@@ -590,6 +617,7 @@ class MainActivity : ComponentActivity() {
         super.onPause()
         countUsage()
         usageMark = 0
+        Session.pause(this)
         handler.removeCallbacks(lockTicker)
         CookieManager.getInstance().flush()
     }

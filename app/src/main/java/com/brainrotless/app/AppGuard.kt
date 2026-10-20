@@ -81,6 +81,7 @@ class AppGuard : AccessibilityService() {
     private val lockTicker = object : Runnable {
         override fun run() {
             countOfficial()
+            TodayWidget.update(this@AppGuard)
             val locked = locked()
             if (locked && !wasLocked) foreground?.let(::enforce)
             wasLocked = locked

@@ -194,5 +194,6 @@ class SleepAlarm : BroadcastReceiver() {
             Intent.ACTION_BOOT_COMPLETED -> TrustedClock.onBoot(c)
         }
         Sleep.reschedule(c)
+        TodayWidget.update(c)
     }
 }

@@ -291,6 +291,7 @@ object Usage {
         val before = remainingMs(c)
         val key = dayKey(c)
         prefs(c).edit().putLong(key, prefs(c).getLong(key, 0) + ms.coerceAtMost(10 * 60_000)).apply()
+        TodayWidget.update(c)
         val after = remainingMs(c) ?: return
         if (before == null) return
         for (min in listOf(10, 2)) {
@@ -327,21 +328,23 @@ object Usage {
     }
 }
 
-/** Qué está bloqueado ahora y por qué (noche o límite diario), contando la pausa de emergencia. */
+/** Qué está bloqueado ahora y por qué (noche, foco o límite diario), contando la pausa de emergencia. */
 object Lock {
-    enum class Reason { NIGHT, LIMIT }
+    enum class Reason { NIGHT, FOCUS, LIMIT }
 
     /** Instagram solo para mensajes. La pausa de emergencia lo abre completo, de día y de noche. */
     fun ig(c: Context): Reason? = when {
         Commitment.pauseActive(c) -> null
         Sleep.active(c) -> Reason.NIGHT
+        Focus.active(c) -> Reason.FOCUS
         Usage.overLimit(c) -> Reason.LIMIT
         else -> null
     }
 
-    /** YouTube bloqueado. De noche, ni la pausa lo abre. */
+    /** YouTube bloqueado. De noche, ni la pausa lo abre; en foco, solo si así se eligió. */
     fun yt(c: Context): Reason? = when {
         Sleep.active(c) -> Reason.NIGHT
+        Focus.active(c) && Focus.blocksYouTube(c) -> Reason.FOCUS
         Usage.overLimit(c) && !Commitment.pauseActive(c) -> Reason.LIMIT
         else -> null
     }
@@ -353,13 +356,14 @@ object Lock {
      * Ni la pausa de emergencia los abre (se usa pasado el límite).
      */
     fun reelsAllowed(c: Context) =
-        c.userPrefs().getBoolean("ig_reels_in_limit", true) && !Sleep.active(c) &&
+        c.userPrefs().getBoolean("ig_reels_in_limit", true) && !Sleep.active(c) && !Focus.active(c) &&
             (Usage.remainingMs(c) ?: 0) > 0
 
     /** Hora en que termina el bloqueo. */
     fun until(c: Context, r: Reason): String {
         val end = when (r) {
             Reason.NIGHT -> Sleep.current(c)?.end ?: TrustedClock.now(c)
+            Reason.FOCUS -> Focus.current(c)?.end ?: TrustedClock.now(c)
             Reason.LIMIT -> Usage.nextReset(c)
         }
         return Sleep.fmt(c, end.toLocalTime())
@@ -367,14 +371,16 @@ object Lock {
 
     fun igMessage(c: Context, r: Reason) = when (r) {
         Reason.NIGHT -> c.getString(R.string.ig_night_msg, until(c, r))
+        Reason.FOCUS -> c.getString(R.string.ig_focus_msg, until(c, r))
         Reason.LIMIT -> c.getString(R.string.ig_limit_msg, until(c, r))
     }
 
-    /** Ms hasta el próximo cambio: noche, fin de la pausa, avisos y fin del límite si se está usando, día nuevo. */
+    /** Ms hasta el próximo cambio: noche, foco, fin de la pausa, avisos y fin del límite si se está usando, día nuevo. */
     fun msUntilChange(c: Context): Long {
         val now = TrustedClock.millis(c)
         val at = mutableListOf<Long>()
         Sleep.msUntilChange(c)?.let(at::add)
+        Focus.msUntilChange(c)?.let(at::add)
         if (Commitment.pauseActive(c)) at += Commitment.pauseUntil(c) - now
         Usage.remainingMs(c)?.let { r -> at += listOf(r - 10 * 60_000, r - 2 * 60_000, r) }
         if (Usage.limitMs(c) != null) at += Duration.between(TrustedClock.now(c), Usage.nextReset(c)).toMillis()

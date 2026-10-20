@@ -77,6 +77,7 @@ class SettingsActivity : AppCompatActivity() {
                 s.copy(nights = DayOfWeek.values().associateWith { Sleep.get(c, if (v as Boolean) it else null) })
             }
             onClick("sleep_all") { pickNight(null) }
+            onClick("focus_time") { pickFocus() }
             for (d in DayOfWeek.values()) onClick("sleep_day_${d.value}") { pickNight(d) }
             onClick("check_now") {
                 Updater.maybeCheck(requireActivity(), force = true)
@@ -103,6 +104,7 @@ class SettingsActivity : AppCompatActivity() {
                 Setup.restrictedApplies() && !(listenerOn && guardOn)
             preferenceManager.sharedPreferences?.registerOnSharedPreferenceChangeListener(prefsListener)
             refreshSleep()
+            refreshFocus()
             refreshBypass()
             refreshCommitment()
             val i = requireActivity().intent
@@ -307,11 +309,33 @@ class SettingsActivity : AppCompatActivity() {
                 .show()
         }
 
+        // ---------- Modo foco ----------
+
+        private fun refreshFocus() {
+            val c = requireContext()
+            val (start, end) = Focus.times(c)
+            findPreference<Preference>("focus_time")?.summary =
+                getString(R.string.night_range, Sleep.fmt(c, start), Sleep.fmt(c, end))
+            val names = resources.getStringArray(R.array.weekday_entries)
+            findPreference<Preference>("focus_days")?.summary =
+                Focus.days(c).sorted().joinToString(", ") { names[it.value - 1] }.ifEmpty { getString(R.string.focus_no_days) }
+        }
+
+        private fun pickFocus() {
+            val c = requireContext()
+            val (start, end) = Focus.times(c)
+            pickTime(getString(R.string.pick_focus_start), start) { s ->
+                pickTime(getString(R.string.pick_focus_end), end) { e -> Focus.setTimes(c, s, e) }
+            }
+        }
+
         // ---------- Modo dormir ----------
 
         private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key?.startsWith("sleep_") == true) refreshSleep()
             if (key?.startsWith("sleep_") == true || key == "daily_limit") refreshCommitment()
+            if (key?.startsWith("focus_") == true) refreshFocus()
+            TodayWidget.update(requireContext())
         }
 
         private fun refreshSleep() {
