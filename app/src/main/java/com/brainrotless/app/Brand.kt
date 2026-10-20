@@ -128,3 +128,50 @@ class RingView(c: Context) : View(c) {
         if (shown > 0f) canvas.drawArc(box, -90f, 360f * shown, false, arc)
     }
 }
+
+/**
+ * Interruptor dibujado con Canvas (no depende de los drawables del tema, así se ve seguro en
+ * cualquier teléfono). Tocarlo lo cambia y avisa; tocar la fila entera también, vía performClick.
+ */
+class ToggleView(c: Context) : View(c) {
+    private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val knobPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val onTrack = Brand.color(c, R.color.brand_primary)
+    private val offTrack = Brand.color(c, R.color.brand_surface_alt)
+    private val onKnob = Brand.color(c, R.color.brand_on_primary)
+    private val offKnob = Brand.color(c, R.color.brand_text_muted)
+    private val box = RectF()
+
+    var onChange: (Boolean) -> Unit = {}
+
+    var checked = false
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+
+    init {
+        isClickable = true
+        isFocusable = true
+        setOnClickListener {
+            checked = !checked
+            onChange(checked)
+        }
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        setMeasuredDimension(Brand.px(context, 48), Brand.px(context, 28))
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        val r = height / 2f
+        box.set(0f, 0f, width.toFloat(), height.toFloat())
+        trackPaint.color = if (checked) onTrack else offTrack
+        canvas.drawRoundRect(box, r, r, trackPaint)
+        val pad = Brand.dp(context, 3f)
+        val cx = if (checked) width - r else r
+        knobPaint.color = if (checked) onKnob else offKnob
+        canvas.drawCircle(cx, r, r - pad, knobPaint)
+    }
+}

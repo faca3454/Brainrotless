@@ -5,7 +5,6 @@ import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.TextUtils
@@ -18,7 +17,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SwitchCompat
 import java.time.DayOfWeek
 import java.time.LocalTime
 import java.util.Date
@@ -423,7 +421,7 @@ class PanelActivity : AppCompatActivity() {
         list.addView(v, LinearLayout.LayoutParams(MATCH, WRAP).apply { topMargin = Brand.px(this@PanelActivity, top) })
 
     /** Flecha para volver, título y, opcional, el interruptor principal de la pantalla. */
-    private fun header(title: String, switch: SwitchCompat? = null) {
+    private fun header(title: String, switch: ToggleView? = null) {
         val bar = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             minimumHeight = Brand.px(context, 52)
@@ -460,15 +458,10 @@ class PanelActivity : AppCompatActivity() {
         setPadding(p, Brand.px(context, 9), p, Brand.px(context, 9))
     }
 
-    /** Interruptor estándar de Android con los colores de la marca (se dibuja igual en todos lados). */
-    private fun toggle(checked: Boolean, onChange: (Boolean) -> Unit) = SwitchCompat(this).apply {
-        val states = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
-        trackTintList = ColorStateList(states,
-            intArrayOf(Brand.color(context, R.color.brand_primary), Brand.color(context, R.color.brand_surface_alt)))
-        thumbTintList = ColorStateList(states,
-            intArrayOf(Brand.color(context, R.color.brand_on_primary), Brand.color(context, R.color.brand_text_muted)))
-        isChecked = checked
-        setOnCheckedChangeListener { _, on -> post { onChange(on) } } // después de la animación
+    /** Interruptor dibujado con Canvas (ToggleView): se ve seguro en cualquier teléfono. */
+    private fun toggle(checked: Boolean, onChange: (Boolean) -> Unit) = ToggleView(this).apply {
+        this.checked = checked
+        this.onChange = { on -> post { onChange(on) } }
     }
 
     private fun switchRow(title: String, sub: String, checked: Boolean, onChange: (Boolean) -> Unit): View {
@@ -477,7 +470,7 @@ class PanelActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_VERTICAL
             addView(column(Brand.text(context, title, 15.5f, bold = true), muted(sub)), LinearLayout.LayoutParams(0, WRAP, 1f))
             addView(sw, LinearLayout.LayoutParams(WRAP, WRAP).apply { marginStart = Brand.px(context, 12) })
-            setOnClickListener { sw.toggle() }
+            setOnClickListener { sw.performClick() }
         }
     }
 
