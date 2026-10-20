@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Brainrotless
 // @description  Bloquea el feed de Reels/Shorts pero deja ver los que te mandan
-// @version      5
+// @version      6
 // @match        *://*.instagram.com/*
 // @match        *://instagram.com/*
 // @match        *://*.youtube.com/*
@@ -17,7 +17,10 @@
 
   // --- Config (la app la inyecta desde Ajustes; en Safari/Userscripts usa estos valores) ---
   const CFG = Object.assign(
-    { igFeed: 'normal', igBlockExplore: true, igTapToPlay: false, igReels: false, restricted: false, restrictedMsg: '' },
+    {
+      igFeed: 'normal', igBlockExplore: true, igTapToPlay: false, igReels: false, ytShorts: false,
+      restricted: false, restrictedMsg: '', smooth: false, swipeReply: false,
+    },
     window.__noscrollCfg || {}
   );
   if (CFG.igBlockFeed) CFG.igFeed = 'blocked'; // versiones viejas de la app mandan igBlockFeed
@@ -32,12 +35,16 @@
   try { pendingToast = sessionStorage.getItem('brl_toast'); sessionStorage.removeItem('brl_toast'); } catch (e) {}
 
   // --- 1. Ocultar accesos al feed (cosmético; los selectores pueden romperse) ---
-  // igReels: la app deja ver Reels mientras no se llegue al límite diario (ni sea de noche)
+  // igReels / ytShorts: la app los deja ver mientras no se llegue al límite diario (ni sea de noche)
   const hidden = [!CFG.igReels && 'a[href="/reels/"]', CFG.igBlockExplore && 'a[href="/explore/"]'].filter(Boolean);
-  const CSS = IG
+  const SMOOTH = CFG.smooth
+    ? '@view-transition { navigation: auto; }' + // fundido también en las páginas que se recargan
+      '::view-transition-old(root), ::view-transition-new(root) { animation-duration: .18s; }'
+    : '';
+  const CSS = SMOOTH + (IG
     ? (hidden.length ? `${hidden.join(', ')} { display:none !important; }` : '') +
       (CFG.restricted ? 'a[href="/"], video { display:none !important; }' : '')
-    : `
+    : CFG.ytShorts ? '' : `
       ytm-reel-shelf-renderer, ytm-shorts-lockup-view-model,
       ytm-rich-item-renderer:has(a[href^="/shorts/"]),
       ytm-video-with-context-renderer:has(a[href^="/shorts/"]),
@@ -46,7 +53,7 @@
       ytd-rich-item-renderer:has(a[href^="/shorts/"]),
       ytd-guide-entry-renderer:has(a[title="Shorts"]),
       ytd-mini-guide-entry-renderer[aria-label="Shorts"]
-      { display:none !important; }`;
+      { display:none !important; }`);
   const addStyle = () => {
     const s = document.createElement('style');
     s.textContent = CSS;
@@ -100,7 +107,7 @@
     if (YT) {
       // Short -> reproductor clásico: se ve igual, pero sin swipe al siguiente
       const m = p.match(/^\/shorts\/([\w-]{11})/);
-      if (m) location.replace('/watch?v=' + m[1] + location.search.replace(/^\?/, '&'));
+      if (m && !CFG.ytShorts) location.replace('/watch?v=' + m[1] + location.search.replace(/^\?/, '&'));
       return;
     }
 
@@ -289,7 +296,117 @@
     }).observe(document, { childList: true, subtree: true }); // document: el <html> puede no existir todavía
   }
 
-  // --- 7. Pull-to-refresh: avisarle a la app si el gesto empieza arriba de todo ---
+  // --- 7. Transiciones suaves (opcional) ---
+  // Fundido corto al cambiar de página dentro del sitio. La URL cambia en el acto (el sitio
+  // puede leerla enseguida); solo se espera a que termine de dibujarse para el fundido.
+  if (CFG.smooth && document.startViewTransition) {
+    const VIDEO_PAGE = /^\/(reels?|stories|shorts|watch)(\/|$)/; // un video congelado se nota
+    const settle = () => new Promise((done) => {
+      let quiet = 0, max = 0;
+      const obs = new MutationObserver(() => { clearTimeout(quiet); quiet = setTimeout(finish, 50); });
+      const finish = () => { obs.disconnect(); clearTimeout(quiet); clearTimeout(max); done(); };
+      obs.observe(document, { childList: true, subtree: true });
+      quiet = setTimeout(finish, 50);
+      max = setTimeout(finish, 200);
+    });
+    let running = false;
+    const push = history.pushState;
+    history.pushState = function (...a) {
+      const from = location.pathname;
+      const r = push.apply(this, a);
+      if (!running && document.visibilityState === 'visible' &&
+          !VIDEO_PAGE.test(from) && !VIDEO_PAGE.test(location.pathname)) {
+        running = true;
+        try {
+          document.startViewTransition(settle).finished.finally(() => { running = false; });
+        } catch (e) { running = false; }
+      }
+      return r;
+    };
+  }
+
+  // --- 8. Deslizar un mensaje a la derecha para responder (Instagram, opcional) ---
+  // Instagram web no lo trae: el mensaje se mueve con el dedo y, al soltar, se toca su botón
+  // "Responder" (el que aparece al pasar el mouse o al mantener presionado). Depende del HTML
+  // de Instagram: si deja de andar, se arregla acá.
+  if (IG && CFG.swipeReply) {
+    const REPLY = /^(responder|reply)$/i;
+    const label = (el) => (el.getAttribute('aria-label') || el.textContent || '').replace(/\s+/g, ' ').trim();
+    const findReply = (root) => {
+      for (const el of root.querySelectorAll('[aria-label], [role="button"], [role="menuitem"], button')) {
+        if (REPLY.test(label(el))) return el.closest('[role="button"], [role="menuitem"], button') || el;
+      }
+      return null;
+    };
+    // La fila del mensaje: el primer ancestro que ocupa todo el ancho de una lista con varias filas
+    const rowOf = (el) => {
+      if (el.closest && el.closest('textarea, input, [contenteditable="true"], [role="textbox"], form')) return null;
+      for (; el && el.nodeType === 1 && el !== document.body; el = el.parentElement) {
+        const list = el.parentElement;
+        if (list && list.children.length >= 3 && el.offsetWidth >= list.offsetWidth * 0.9 &&
+            list.offsetWidth >= innerWidth * 0.8 && el.offsetHeight < innerHeight * 0.6) return el;
+      }
+      return null;
+    };
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const reply = async (row) => {
+      const bubble = row.querySelector('[dir="auto"]') || row;
+      for (const type of ['mouseover', 'mouseenter', 'mousemove'])
+        bubble.dispatchEvent(new MouseEvent(type, { bubbles: true, view: window }));
+      await sleep(80);
+      let btn = findReply(row);
+      if (!btn) { // si no hay barra al pasar el mouse, probar con el menú de mantener presionado
+        bubble.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, view: window }));
+        await sleep(350);
+        btn = findReply(document.querySelector('[role="dialog"], [role="menu"]') || document.body);
+      }
+      if (btn) btn.click();
+    };
+
+    let row = null, arrow = null, sx = 0, sy = 0, dx = 0, decided = false;
+    addEventListener('touchstart', (e) => {
+      row = null;
+      if (!/^\/direct\/t\//.test(location.pathname) || e.touches.length !== 1) return;
+      row = rowOf(e.target);
+      sx = e.touches[0].clientX;
+      sy = e.touches[0].clientY;
+      dx = 0;
+      decided = false;
+    }, { capture: true, passive: true });
+    addEventListener('touchmove', (e) => {
+      if (!row) return;
+      const mx = e.touches[0].clientX - sx, my = e.touches[0].clientY - sy;
+      if (!decided) {
+        if (Math.abs(mx) < 10 && Math.abs(my) < 10) return;
+        decided = true;
+        if (!(mx > 0 && Math.abs(mx) > Math.abs(my) * 1.5)) { row = null; return; } // vertical: scroll normal
+        const r = row.getBoundingClientRect();
+        arrow = document.createElement('div');
+        arrow.textContent = '↩';
+        arrow.style.cssText = `position:fixed;left:12px;top:${r.top + r.height / 2 - 14}px;font:22px/28px sans-serif;` +
+          'opacity:0;pointer-events:none;z-index:2147483647;color:#888';
+        document.body.appendChild(arrow);
+      }
+      if (e.cancelable) e.preventDefault();
+      dx = Math.max(0, Math.min(mx, 90));
+      row.style.transition = 'none';
+      row.style.transform = `translateX(${dx}px)`;
+      arrow.style.opacity = String(Math.min(dx / 60, 1));
+    }, { capture: true, passive: false });
+    const end = (cancel) => () => {
+      if (!row || !decided) { row = null; return; }
+      const r = row;
+      row = null;
+      r.style.transition = 'transform .2s';
+      r.style.transform = '';
+      if (arrow) { arrow.remove(); arrow = null; }
+      if (!cancel && dx >= 60) reply(r);
+    };
+    addEventListener('touchend', end(false), { capture: true, passive: true });
+    addEventListener('touchcancel', end(true), { capture: true, passive: true });
+  }
+
+  // --- 9. Pull-to-refresh: avisarle a la app si el gesto empieza arriba de todo ---
   // Instagram y YouTube scrollean dentro de contenedores, no la ventana,
   // así que la app no puede saberlo sola.
   if (window.NoScrollBridge) {

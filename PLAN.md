@@ -186,7 +186,17 @@ La app va a ser pública, así que no usamos el modo "propietario del dispositiv
 
 ---
 
-## 6. Fluidez
+## 6. Fluidez ✅
+
+**Hecho; falta probar en el teléfono.**
+- Dos WebViews (Instagram y YouTube) vivas, con fundido de 180 ms al cambiar; la de fondo pausa
+  sus videos. Tocar un ícono vuelve a donde estabas en esa plataforma, sin recargar.
+- Transiciones suaves (ajuste en "Comodidad"): fundido entre páginas que se recargan
+  (`@view-transition`) y al navegar dentro del sitio (`startViewTransition`, sin demorar el cambio
+  de URL y nunca en páginas de video).
+- Deslizar para responder (experimental, ajuste en "Comodidad"): se prueba primero el botón que
+  aparece al pasar el mouse y después el menú de mantener presionado. Depende del HTML de Instagram.
+- También: Shorts dentro del límite diario, igual que los Reels.
 
 - **Sin saltos bruscos:** las redirecciones del script usan `history` en lugar de
   `location.replace` (que recarga la página y hace flash).

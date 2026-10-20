@@ -26,13 +26,26 @@
         <SwitchPreferenceCompat
             app:key="ig_reels_in_limit"
             app:defaultValue="true"
-            app:title="Reels dentro del límite diario"
-            app:summary="Con un compromiso con límite, podés ver Reels hasta llegar al límite. De noche, no" />
+            app:title="Reels y Shorts dentro del límite diario"
+            app:summary="Con un compromiso con límite, podés ver Reels y Shorts hasta llegar al límite. De noche, no" />
         <SwitchPreferenceCompat
             app:key="ig_tap_to_play"
             app:defaultValue="false"
             app:title="Videos solo al tocar"
             app:summary="Ahorra datos: los videos no arrancan solos. Los reels que te mandan, sí" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Comodidad">
+        <SwitchPreferenceCompat
+            app:key="smooth_transitions"
+            app:defaultValue="true"
+            app:title="Transiciones suaves"
+            app:summary="Fundido corto al cambiar de página" />
+        <SwitchPreferenceCompat
+            app:key="swipe_reply"
+            app:defaultValue="true"
+            app:title="Deslizar para responder (experimental)"
+            app:summary="En los chats de Instagram, deslizá un mensaje a la derecha para responderlo" />
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Modo dormir">

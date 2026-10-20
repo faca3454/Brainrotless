@@ -38,7 +38,10 @@ import androidx.webkit.WebViewFeature
 class MainActivity : ComponentActivity() {
     private lateinit var root: FrameLayout
     private lateinit var refresh: SwipeRefreshLayout
-    private lateinit var web: WebView
+    // Una WebView por plataforma: cambiar de Instagram a YouTube no recarga nada
+    private lateinit var igWeb: WebView
+    private lateinit var ytWeb: WebView
+    private lateinit var web: WebView // la que está en pantalla
     private lateinit var content: LinearLayout
     private lateinit var offline: View
     private val handler = Handler(Looper.getMainLooper())
@@ -55,7 +58,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var guardScreen: View // accesibilidad apagada durante un compromiso
 
     private val bridge = Bridge()
-    private var scriptHandler: ScriptHandler? = null
+    private val scriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private var injectedScript = ""
     private var mainFrameError = false
 
@@ -85,20 +88,24 @@ class MainActivity : ComponentActivity() {
     private var fullscreenView: View? = null
     private var fullscreenCallback: WebChromeClient.CustomViewCallback? = null
 
-    @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        web = WebView(this)
-        web.setBackgroundColor(if (dark) Color.BLACK else Color.WHITE) // sin flash blanco al cargar en modo oscuro
+        igWeb = buildWebView()
+        ytWeb = buildWebView().apply { visibility = View.GONE }
+        web = igWeb
+        val webs = FrameLayout(this).apply {
+            addView(ytWeb, FrameLayout.LayoutParams(MATCH, MATCH))
+            addView(igWeb, FrameLayout.LayoutParams(MATCH, MATCH))
+        }
         refresh = SwipeRefreshLayout(this).apply {
-            addView(web, ViewGroup.LayoutParams(MATCH, MATCH))
+            addView(webs, ViewGroup.LayoutParams(MATCH, MATCH))
             // La página avisa (vía JS) si el gesto empezó arriba de todo
             setOnChildScrollUpCallback { _, _ -> fullscreenView != null || !bridge.atTop }
             setOnRefreshListener { web.reload() }
         }
         offline = buildNotice("Sin conexión", "Revisá el Wi-Fi o los datos", "Reintentar") { web.reload() }
-        lockScreen = buildNotice("", "", "Ir a los mensajes de Instagram", "") { open(IG_INBOX) }
+        lockScreen = buildNotice("", "", "Ir a los mensajes de Instagram", "") { goTo(youtube = false) }
         lockTitle = lockScreen.findViewWithTag("title")
         lockText = lockScreen.findViewWithTag("subtitle")
         lockPause = lockScreen.findViewWithTag("button2")
@@ -123,85 +130,7 @@ class MainActivity : ComponentActivity() {
             addView(guardScreen, FrameLayout.LayoutParams(MATCH, MATCH))
         }
         setContentView(root)
-
-        CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
-        web.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            mediaPlaybackRequiresUserGesture = false
-            allowFileAccess = false
-            userAgentString = userAgentString.replace("; wv", "") // ayuda con algunos logins
-        }
-        // Solo expone setAtTop(boolean): nada sensible si una página lo llama
-        web.addJavascriptInterface(bridge, "NoScrollBridge")
         installScript()
-
-        web.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(v: WebView, r: WebResourceRequest): Boolean {
-                val u = r.url
-                if (isYouTube(u.toString()) && Lock.yt(this@MainActivity) != null) { showLockScreen(); return true }
-                shortsToWatch(u)?.let { v.loadUrl(it); return true }
-                // intent:// o instagram:// que intentan abrir la app oficial
-                if (u.scheme != "https" && u.scheme != "http") return true
-                if (hostIn(u.host, inAppHosts)) return false
-                // De noche los navegadores están bloqueados: avisar en vez de abrir uno
-                Sleep.current(this@MainActivity)?.takeIf { Sleep.blocksBrowsers(this@MainActivity) }?.let {
-                    val until = Sleep.fmt(this@MainActivity, it.end.toLocalTime())
-                    Toast.makeText(this@MainActivity, "🌙 Los links externos se abren después de las $until", Toast.LENGTH_LONG).show()
-                    return true
-                }
-                runCatching { startActivity(Intent(Intent.ACTION_VIEW, u)) }
-                return true
-            }
-
-            override fun onPageStarted(v: WebView, url: String?, favicon: android.graphics.Bitmap?) {
-                mainFrameError = false
-                // Volver atrás a YouTube no pasa por shouldOverrideUrlLoading
-                if (isYouTube(url) && Lock.yt(this@MainActivity) != null) { v.stopLoading(); showLockScreen() }
-            }
-
-            override fun onPageFinished(v: WebView, url: String) {
-                refresh.isRefreshing = false
-                if (!mainFrameError) offline.visibility = View.GONE
-                // Respaldo para WebViews viejas; el script tiene guardia contra doble inyección
-                v.evaluateJavascript(injectedScript, null)
-            }
-
-            override fun onReceivedError(v: WebView, req: WebResourceRequest, err: WebResourceError) {
-                if (!req.isForMainFrame) return
-                mainFrameError = true
-                refresh.isRefreshing = false
-                offline.visibility = View.VISIBLE
-            }
-        }
-
-        web.webChromeClient = object : WebChromeClient() {
-            override fun onShowFileChooser(
-                view: WebView, callback: ValueCallback<Array<Uri>>, params: FileChooserParams
-            ): Boolean {
-                fileCallback?.onReceiveValue(null) // cancela uno pendiente
-                fileCallback = callback
-                val intent = params.createIntent().apply {
-                    if (params.mode == FileChooserParams.MODE_OPEN_MULTIPLE)
-                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-                }
-                return runCatching { filePicker.launch(intent); true }.getOrElse {
-                    fileCallback = null; false
-                }
-            }
-
-            override fun onShowCustomView(view: View, callback: CustomViewCallback) {
-                if (fullscreenView != null) { callback.onCustomViewHidden(); return }
-                fullscreenView = view
-                fullscreenCallback = callback
-                root.addView(view, FrameLayout.LayoutParams(MATCH, MATCH))
-                content.visibility = View.GONE
-                setBarsHidden(true)
-                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
-            }
-
-            override fun onHideCustomView() = exitFullscreen()
-        }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -215,13 +144,149 @@ class MainActivity : ComponentActivity() {
         })
 
         if (savedInstanceState == null) open(urlFromIntent(intent) ?: launcherUrl(intent))
-        else web.restoreState(savedInstanceState)
+        else {
+            savedInstanceState.getBundle("ig")?.let { igWeb.restoreState(it) }
+            savedInstanceState.getBundle("yt")?.let { ytWeb.restoreState(it) }
+            switchTo(if (savedInstanceState.getBoolean("onYouTube")) ytWeb else igWeb)
+        }
         handlePauseIntent(intent)
 
         maybeAskSetup()
         Rules.refreshAsync(this) { runOnUiThread { installScript() } } // se aplica en la próxima carga
         Updater.maybeCheck(this)
         Sleep.reschedule(this)
+    }
+
+    @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
+    private fun buildWebView() = WebView(this).apply {
+        setBackgroundColor(if (dark) Color.BLACK else Color.WHITE) // sin flash blanco al cargar en modo oscuro
+        CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+        settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            mediaPlaybackRequiresUserGesture = false
+            allowFileAccess = false
+            userAgentString = userAgentString.replace("; wv", "") // ayuda con algunos logins
+        }
+        // Solo expone setAtTop(boolean): nada sensible si una página lo llama
+        addJavascriptInterface(bridge, "NoScrollBridge")
+        webViewClient = client
+        webChromeClient = chromeClient
+    }
+
+    private val client = object : WebViewClient() {
+        override fun shouldOverrideUrlLoading(v: WebView, r: WebResourceRequest): Boolean {
+            val u = r.url
+            val url = u.toString()
+            if (isYouTube(url) && Lock.yt(this@MainActivity) != null) { switchTo(ytWeb); showLockScreen(); return true }
+            if (!Lock.reelsAllowed(this@MainActivity)) shortsToWatch(u)?.let { open(it); return true }
+            // intent:// o instagram:// que intentan abrir la app oficial
+            if (u.scheme != "https" && u.scheme != "http") return true
+            // Un link de YouTube desde Instagram (o al revés) se abre en la WebView de esa plataforma
+            val target = when {
+                isYouTube(url) -> ytWeb
+                hostIn(u.host, listOf("instagram.com")) -> igWeb
+                else -> null
+            }
+            if (target != null && target !== v) { open(url); return true }
+            if (hostIn(u.host, inAppHosts)) return false
+            // De noche los navegadores están bloqueados: avisar en vez de abrir uno
+            Sleep.current(this@MainActivity)?.takeIf { Sleep.blocksBrowsers(this@MainActivity) }?.let {
+                val until = Sleep.fmt(this@MainActivity, it.end.toLocalTime())
+                Toast.makeText(this@MainActivity, "🌙 Los links externos se abren después de las $until", Toast.LENGTH_LONG).show()
+                return true
+            }
+            runCatching { startActivity(Intent(Intent.ACTION_VIEW, u)) }
+            return true
+        }
+
+        override fun onPageStarted(v: WebView, url: String?, favicon: android.graphics.Bitmap?) {
+            if (v === web) mainFrameError = false
+            // Volver atrás a YouTube no pasa por shouldOverrideUrlLoading
+            if (isYouTube(url) && Lock.yt(this@MainActivity) != null) {
+                v.stopLoading()
+                if (v === web) showLockScreen()
+            }
+        }
+
+        override fun onPageFinished(v: WebView, url: String) {
+            if (v === web) {
+                refresh.isRefreshing = false
+                if (!mainFrameError) offline.visibility = View.GONE
+            }
+            // Respaldo para WebViews viejas; el script tiene guardia contra doble inyección
+            v.evaluateJavascript(injectedScript, null)
+        }
+
+        override fun onReceivedError(v: WebView, req: WebResourceRequest, err: WebResourceError) {
+            if (!req.isForMainFrame || v !== web) return
+            mainFrameError = true
+            refresh.isRefreshing = false
+            offline.visibility = View.VISIBLE
+        }
+    }
+
+    private val chromeClient = object : WebChromeClient() {
+        override fun onShowFileChooser(
+            view: WebView, callback: ValueCallback<Array<Uri>>, params: FileChooserParams
+        ): Boolean {
+            fileCallback?.onReceiveValue(null) // cancela uno pendiente
+            fileCallback = callback
+            val intent = params.createIntent().apply {
+                if (params.mode == FileChooserParams.MODE_OPEN_MULTIPLE)
+                    putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+            }
+            return runCatching { filePicker.launch(intent); true }.getOrElse {
+                fileCallback = null; false
+            }
+        }
+
+        override fun onShowCustomView(view: View, callback: CustomViewCallback) {
+            if (fullscreenView != null) { callback.onCustomViewHidden(); return }
+            fullscreenView = view
+            fullscreenCallback = callback
+            root.addView(view, FrameLayout.LayoutParams(MATCH, MATCH))
+            content.visibility = View.GONE
+            setBarsHidden(true)
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+        }
+
+        override fun onHideCustomView() = exitFullscreen()
+    }
+
+    // ---------- Instagram y YouTube, cada uno en su WebView ----------
+
+    private val onYouTube get() = web === ytWeb
+    private fun hasPage(v: WebView) = v.url.let { it != null && it != "about:blank" }
+
+    /** Muestra la WebView de esa plataforma con un fundido corto; la otra queda viva, en pausa. */
+    private fun switchTo(v: WebView) {
+        if (v === web && v.visibility == View.VISIBLE) return
+        val old = web
+        web = v
+        offline.visibility = View.GONE
+        v.onResume()
+        v.alpha = 0f
+        v.visibility = View.VISIBLE
+        v.bringToFront()
+        v.animate().alpha(1f).setDuration(180).withEndAction { if (web !== old) old.visibility = View.GONE }.start()
+        if (old !== v) {
+            pauseMedia(old)
+            old.onPause()
+        }
+        refreshLockBar()
+    }
+
+    private fun pauseMedia(v: WebView) =
+        v.evaluateJavascript("document.querySelectorAll('video,audio').forEach(m => m.pause())", null)
+
+    /** Ícono o botón de una plataforma: volver a donde estabas, o a su inicio si todavía no cargó. */
+    private fun goTo(youtube: Boolean) {
+        val v = if (youtube) ytWeb else igWeb
+        if (hasPage(v) && !(youtube && Lock.yt(this) != null)) {
+            lockScreen.visibility = View.GONE
+            switchTo(v)
+        } else open(if (youtube) YT_HOME else IG_INBOX)
     }
 
     override fun onResume() {
@@ -261,16 +326,19 @@ class MainActivity : ComponentActivity() {
         Protection.updateGuardNotice(this, guardOn = !guardOff)
         if (guardOff != (guardScreen.visibility == View.VISIBLE)) {
             guardScreen.visibility = if (guardOff) View.VISIBLE else View.GONE
-            if (guardOff) web.loadUrl("about:blank") else open(launcherUrl(intent))
+            if (guardOff) listOf(igWeb, ytWeb).forEach { it.loadUrl("about:blank") } else goTo(onYouTube)
         }
         val yt = Lock.yt(this)
         // Cambió el modo solo mensajes o algún ajuste: reinyectar y recargar para aplicarlo ya
         val scriptChanged = Rules.build(this) != injectedScript
         if (scriptChanged) installScript()
+        // YouTube bloqueado: pantalla de bloqueo si está a la vista; si está de fondo, cortarlo igual
+        if (yt != null && hasPage(ytWeb)) {
+            if (onYouTube) showLockScreen() else ytWeb.loadUrl("about:blank")
+        }
         when {
-            yt != null && isYouTube(web.url) -> showLockScreen()
             yt == null && lockScreen.visibility == View.VISIBLE -> open(YT_HOME) // se terminó el bloqueo
-            scriptChanged && lockScreen.visibility != View.VISIBLE -> web.reload()
+            scriptChanged && lockScreen.visibility != View.VISIBLE -> listOf(igWeb, ytWeb).filter(::hasPage).forEach { it.reload() }
         }
         if (lockScreen.visibility == View.VISIBLE) showLockScreen() // refrescar texto y pausa
         refreshLockBar()
@@ -284,11 +352,13 @@ class MainActivity : ComponentActivity() {
         usageMark = now
     }
 
-    /** Carga una URL, salvo YouTube bloqueado. */
+    /** Carga una URL en la WebView de su plataforma, salvo YouTube bloqueado. */
     private fun open(url: String) {
-        if (isYouTube(url) && Lock.yt(this) != null) { showLockScreen(); return }
+        val v = if (isYouTube(url)) ytWeb else igWeb
+        switchTo(v)
+        if (v === ytWeb && Lock.yt(this) != null) { showLockScreen(); return }
         lockScreen.visibility = View.GONE
-        web.loadUrl(url)
+        v.loadUrl(url)
     }
 
     private fun showLockScreen() {
@@ -305,7 +375,7 @@ class MainActivity : ComponentActivity() {
         countUsage()
         lockScreen.visibility = View.VISIBLE
         if (fullscreenView != null) exitFullscreen()
-        web.loadUrl("about:blank") // corta el video y el audio
+        ytWeb.loadUrl("about:blank") // corta el video y el audio
     }
 
     /** Barra arriba de la página: "solo mensajes" con el botón de pausa, o la pausa en curso. */
@@ -314,7 +384,7 @@ class MainActivity : ComponentActivity() {
         val text = when {
             Commitment.pauseActive(this) -> "🆘 Pausa de emergencia hasta las " +
                 DateFormat.getTimeFormat(this).format(java.util.Date(Commitment.pauseUntil(this))) + " (no suma al límite)"
-            ig != null && !isYouTube(web.url) && lockScreen.visibility != View.VISIBLE -> Lock.igMessage(this, ig)
+            ig != null && !onYouTube && lockScreen.visibility != View.VISIBLE -> Lock.igMessage(this, ig)
             else -> null
         }
         lockBar.visibility = if (text != null) View.VISIBLE else View.GONE
@@ -347,19 +417,18 @@ class MainActivity : ComponentActivity() {
         handlePauseIntent(intent)
         val url = urlFromIntent(intent)
         if (url != null) { open(url); return }
-        // Tocaste el ícono de la otra plataforma: cambiar solo si hace falta
-        val wantYT = isYouTubeAlias(intent)
-        val onYT = lockScreen.visibility == View.VISIBLE || isYouTube(web.url)
-        if (wantYT != onYT) open(launcherUrl(intent))
+        // Tocaste un ícono: volver a donde estabas en esa plataforma, sin recargar
+        goTo(isYouTubeAlias(intent))
     }
 
     // ---------- Script de bloqueo ----------
 
     private fun installScript() {
         injectedScript = Rules.build(this)
-        if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
-            scriptHandler?.remove()
-            scriptHandler = WebViewCompat.addDocumentStartJavaScript(web, injectedScript, scriptOrigins)
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
+        for (v in listOf(igWeb, ytWeb)) {
+            scriptHandlers[v]?.remove()
+            scriptHandlers[v] = WebViewCompat.addDocumentStartJavaScript(v, injectedScript, scriptOrigins)
         }
     }
 
@@ -381,7 +450,8 @@ class MainActivity : ComponentActivity() {
             else -> null
         } ?: return null
         if (!hostIn(uri.host, linkHosts)) return null
-        return shortsToWatch(uri) ?: uri.toString()
+        // Shorts al reproductor clásico, salvo que se puedan ver dentro del límite
+        return (if (Lock.reelsAllowed(this)) null else shortsToWatch(uri)) ?: uri.toString()
     }
 
     private fun isYouTubeAlias(i: Intent) = i.component?.className?.endsWith("YouTube") == true
@@ -540,7 +610,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        web.saveState(outState)
+        outState.putBundle("ig", Bundle().also { igWeb.saveState(it) })
+        outState.putBundle("yt", Bundle().also { ytWeb.saveState(it) })
+        outState.putBoolean("onYouTube", onYouTube)
     }
 
     companion object {

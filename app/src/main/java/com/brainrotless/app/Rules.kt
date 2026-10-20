@@ -43,11 +43,15 @@ object Rules {
     fun build(c: Context): String {
         Setup.migratePrefs(c)
         val p = c.userPrefs()
+        val reels = Lock.reelsAllowed(c)
         val cfg = JSONObject()
             .put("igFeed", p.getString("ig_feed", "normal"))
             .put("igBlockExplore", p.getBoolean("ig_block_explore", true))
             .put("igTapToPlay", p.getBoolean("ig_tap_to_play", false))
-            .put("igReels", Lock.reelsAllowed(c))
+            .put("igReels", reels)
+            .put("ytShorts", reels)
+            .put("smooth", p.getBoolean("smooth_transitions", true))
+            .put("swipeReply", p.getBoolean("swipe_reply", true))
         // Hora de dormir o límite diario: Instagram solo para mensajes
         Lock.ig(c)?.let { cfg.put("restricted", true).put("restrictedMsg", Lock.igMessage(c, it)) }
         return "window.__noscrollCfg=$cfg;\n" + current(c)

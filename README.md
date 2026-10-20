@@ -12,14 +12,14 @@ Podés ver los reels y shorts que te mandan tus amigos, pero no pasar al siguien
 - **Videos solo al tocar** (opcional): los videos de Instagram no arrancan ni se precargan hasta que los tocás. Los reels que te mandan arrancan solos.
 - **Sin carteles de "Usá la app"** en Instagram.
 - **Modo dormir** (opcional): en tu horario (uno para todos los días o uno por noche), Instagram queda solo para mensajes, YouTube se bloquea (también desde las apps oficiales) y los navegadores (Chrome, Brave, Opera…) no abren. Avisa unos minutos antes y la pausa del bloqueo no funciona.
-- **Compromiso** (opcional): por 7 días o más, el modo dormir, el bloqueo de navegadores y el límite diario solo se pueden endurecer. El **límite diario** (Instagram + YouTube juntos, se reinicia al despertarte) deja Instagram solo para mensajes y bloquea YouTube. Da una **pausa de emergencia** de 15 minutos cada 2 días (máximo 2 por día), para cuando llegás al límite o de noche. Cambiar la hora del teléfono no lo saltea. Con un límite corriendo, se pueden ver **Reels** (con scroll) hasta llegar al límite; de noche, no.
+- **Compromiso** (opcional): por 7 días o más, el modo dormir, el bloqueo de navegadores y el límite diario solo se pueden endurecer. El **límite diario** (Instagram + YouTube juntos, se reinicia al despertarte) deja Instagram solo para mensajes y bloquea YouTube. Da una **pausa de emergencia** de 15 minutos cada 2 días (máximo 2 por día), para cuando llegás al límite o de noche. Cambiar la hora del teléfono no lo saltea. Con un límite corriendo, se pueden ver **Reels y Shorts** (con scroll) hasta llegar al límite; de noche, no.
   - **Al terminar** muestra cuánto bajó tu uso (comparado con las 4 semanas antes de instalar Brainrotless, si diste el permiso de *Acceso a datos de uso*) y pregunta si querés empezar otro: no se renueva solo.
   - **Difícil de sacar**: opcionalmente, protección contra desinstalación (hay que quitar un permiso, con 2 minutos de espera; se quita sola al terminar). Si apagás la accesibilidad, queda un aviso fijo y IG Lite / YT Lite no abren hasta que la vuelvas a activar.
 - **Links** (WhatsApp, Telegram, etc.) y **notificaciones** de Instagram/YouTube se abren en Brainrotless.
 - **Apps oficiales**: si las abrís a mano, te redirige. Para pausarlo unos minutos: Ajustes → *Pausar ahora*, o el botón *Apps oficiales* de los ajustes rápidos (Ajustes → *Agregar botón a ajustes rápidos*).
 - **Ajustes**: mantené presionado el ícono de IG Lite o YT Lite → *Ajustes*.
 - **Actualizaciones**: las reglas de bloqueo se actualizan solas, y la app avisa cuando hay versión nueva.
-- **Comodidad**: deslizar hacia abajo para recargar, modo oscuro según el sistema, subir fotos, videos en pantalla completa.
+- **Comodidad**: Instagram y YouTube quedan abiertos a la vez (cambiar de uno al otro no recarga), transiciones suaves entre páginas, deslizar un mensaje a la derecha para responderlo (experimental), deslizar hacia abajo para recargar, modo oscuro según el sistema, subir fotos, videos en pantalla completa.
 
 ## Instalar (Android 8 o superior)
 
