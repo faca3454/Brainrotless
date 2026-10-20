@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Brainrotless
 // @description  Bloquea el feed de Reels/Shorts pero deja ver los que te mandan
-// @version      1
+// @version      2
 // @match        *://*.instagram.com/*
 // @match        *://instagram.com/*
 // @match        *://*.youtube.com/*
@@ -17,7 +17,7 @@
 
   // --- Config (la app la inyecta desde Ajustes; en Safari/Userscripts usa estos valores) ---
   const CFG = Object.assign(
-    { igBlockFeed: false, igBlockExplore: true, tapWindowMs: 900 },
+    { igBlockFeed: false, igBlockExplore: true },
     window.__noscrollCfg || {}
   );
 
@@ -45,14 +45,44 @@
   };
   document.documentElement ? addStyle() : addEventListener('DOMContentLoaded', addStyle);
 
-  // --- 2. Distinguir "abrí un reel con un toque" de "scrolleé al siguiente" ---
-  let lastTap = 0;
-  addEventListener('click', (e) => {
-    if (e.target.closest && e.target.closest('a,[role="link"],[role="button"]')) lastTap = Date.now();
-  }, true);
-  const tappedRecently = () => Date.now() - lastTap < CFG.tapWindowMs;
+  // --- 2. Reels: que la pantalla no se mueva al deslizar ---
+  // Bloquea el gesto sobre el contenedor que pasa de un video al siguiente.
+  // Los comentarios y todo lo que no tenga videos adentro sigue scrolleando.
+  if (IG) {
+    const onReel = () => /^\/reels?\/[\w-]+/.test(location.pathname);
+    const scrollerOf = (el) => {
+      for (; el && el.nodeType === 1; el = el.parentElement) {
+        const oy = getComputedStyle(el).overflowY;
+        if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight) return el;
+      }
+      return null; // scrollea la página entera
+    };
+    const blocks = (target) => {
+      const s = scrollerOf(target);
+      if (!s) return onReel();
+      if (!s.querySelector('video')) return false;
+      // Fuera de /reel/ también, por si el visor se abre encima del chat sin cambiar la URL
+      return onReel() || getComputedStyle(s).scrollSnapType !== 'none';
+    };
 
-  // --- 3. Guardia de URL (la defensa real; no depende del DOM) ---
+    let blocking = false;
+    addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) blocking = blocks(e.target);
+    }, { capture: true, passive: true });
+    addEventListener('touchmove', (e) => {
+      if (blocking && e.cancelable) e.preventDefault();
+    }, { capture: true, passive: false });
+    addEventListener('wheel', (e) => {
+      if (blocks(e.target)) e.preventDefault();
+    }, { capture: true, passive: false });
+    addEventListener('keydown', (e) => {
+      const t = e.target;
+      if (/^(ArrowUp|ArrowDown|PageUp|PageDown)$/.test(e.key) &&
+          !(t.isContentEditable || /^(INPUT|TEXTAREA)$/.test(t.tagName)) && blocks(t)) e.preventDefault();
+    }, true);
+  }
+
+  // --- 3. Guardia de URL (respaldo; no depende del DOM) ---
   let allowedReel = null;
   const check = () => {
     const p = location.pathname;
@@ -76,10 +106,10 @@
     const m = p.match(/^\/reels?\/([\w-]+)/);
     if (!m) { allowedReel = null; return; }
     const id = m[1];
-    if (allowedReel === null || tappedRecently()) {
+    if (allowedReel === null) {
       allowedReel = id;                               // reel abierto a propósito (DM, link, perfil)
     } else if (id !== allowedReel) {
-      location.replace('/reel/' + allowedReel + '/'); // scrolleó al siguiente: vuelve
+      location.replace('/reel/' + allowedReel + '/'); // pasó al siguiente: vuelve
     }
   };
 

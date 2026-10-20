@@ -6,7 +6,7 @@ Podés ver los reels y shorts que te mandan tus amigos, pero no pasar al siguien
 ## Qué hace
 
 - **IG Lite** y **YT Lite**: Instagram y YouTube web dentro de la app, con el feed de Reels, Shorts y Explorar bloqueado.
-- **Reels que te mandan**: se abren normal; si deslizás al siguiente, te devuelve.
+- **Reels que te mandan**: se abren normal, pero la pantalla no te deja deslizar al siguiente.
 - **Shorts**: se abren en el reproductor clásico, que no tiene swipe.
 - **Links** (WhatsApp, Telegram, etc.) y **notificaciones** de Instagram/YouTube se abren en Brainrotless.
 - **Apps oficiales**: si las abrís a mano, te redirige. Hay un botón en los ajustes rápidos para pausarlo unos minutos.

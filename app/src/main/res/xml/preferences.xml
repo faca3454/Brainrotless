@@ -19,13 +19,6 @@
             app:defaultValue="true"
             app:title="Bloquear Explorar"
             app:summary="La búsqueda de usuarios sigue funcionando" />
-        <ListPreference
-            app:key="tap_window_ms"
-            app:defaultValue="900"
-            app:title="Detección de swipe"
-            app:entries="@array/tap_window_entries"
-            app:entryValues="@array/tap_window_values"
-            app:useSimpleSummaryProvider="true" />
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Pausa del bloqueo">

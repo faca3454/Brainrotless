@@ -45,7 +45,6 @@ object Rules {
         val cfg = JSONObject()
             .put("igBlockFeed", p.getBoolean("ig_block_feed", false))
             .put("igBlockExplore", p.getBoolean("ig_block_explore", true))
-            .put("tapWindowMs", p.getString("tap_window_ms", "900")?.toIntOrNull() ?: 900)
         return "window.__noscrollCfg=$cfg;\n" + current(c)
     }
 

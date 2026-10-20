@@ -24,8 +24,8 @@ La guardia actual falla por alguna de estas causas:
   vertical: `touchmove` con `preventDefault` (`passive: false`), `touch-action` / `overscroll-behavior`
   en los contenedores, rueda y teclas de flecha. Tocar, pausar, likear y comentar siguen andando.
 - **Capa 2 – Si igual cambia, vuelve al mismo reel.** La guardia de URL queda sin la excepción de
-  "tocaste hace poco": una vez abierto un reel, cualquier otro id vuelve al original. La vuelta se
-  hace con `history` en vez de recargar la página, para que sea instantánea.
+  "tocaste hace poco": una vez abierto un reel, cualquier otro id vuelve al original. Como es el
+  respaldo de la capa 1, la vuelta sigue recargando la página: es más lenta pero no falla.
 - Por ahora solo reels. Historias y posts con varios videos quedan para más adelante.
 
 Solo toca `block.user.js`, así que se puede publicar sin sacar un APK nuevo.
@@ -110,10 +110,8 @@ El "modo solo mensajes" es el mismo que usa el límite diario (punto 5.3).
 - El tiempo de pausa **no cuenta** para el límite diario.
 - **Solo se pueden usar cuando se pasó el límite diario.** Antes de llegar al límite, el botón no
   aparece.
-- **De noche (horario de dormir) la pausa no levanta el bloqueo de noche:** navegadores y YouTube
-  siguen bloqueados e Instagram sigue solo con mensajes.
-- ⚠️ *Pendiente:* como de noche ya se permiten los mensajes, una pausa ahí no cambia nada. Propuesta:
-  no mostrar el botón de pausa de noche, para no gastarla sin querer.
+- **De noche (horario de dormir) la pausa abre Instagram completo** (feed, perfiles, reels que te
+  mandan) durante 15 minutos. Navegadores y YouTube siguen bloqueados.
 
 ### 5.3 Límite diario de uso
 - Se define dentro del compromiso: minutos por día para **Instagram + YouTube juntos**.
