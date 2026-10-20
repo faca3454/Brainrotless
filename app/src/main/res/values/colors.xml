@@ -18,4 +18,8 @@
     <color name="logo_deep">#0F3B3A</color>
     <color name="logo_cream">#FBF3E6</color>
     <color name="logo_sun">#F4A93D</color>
+
+    <!-- Notificaciones: color de la app de la que vienen (círculo del ícono y detalles) -->
+    <color name="notif_ig">#D62976</color>
+    <color name="notif_yt">#E62117</color>
 </resources>

@@ -319,4 +319,5 @@
         <item quantity="one">1 día terminado</item>
         <item quantity="other">%1$d días terminados</item>
     </plurals>
+    <string name="notif_you">Vos</string>
 </resources>

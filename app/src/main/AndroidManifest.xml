@@ -12,8 +12,11 @@
     <!-- Compromiso: comparar con el uso de Instagram/YouTube de antes (permiso especial, opcional) -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
 
-    <!-- Modo dormir: detectar los navegadores instalados para bloquearlos de noche -->
+    <!-- Modo dormir: detectar los navegadores instalados para bloquearlos de noche.
+         Instagram y YouTube: leer la foto de perfil de sus notificaciones -->
     <queries>
+        <package android:name="com.instagram.android" />
+        <package android:name="com.google.android.youtube" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.APP_BROWSER" />
