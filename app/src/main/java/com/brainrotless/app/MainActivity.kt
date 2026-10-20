@@ -314,7 +314,7 @@ class MainActivity : ComponentActivity() {
         AlertDialog.Builder(this)
             .setMessage(text)
             .setPositiveButton(R.string.start_another) { _, _ ->
-                startActivity(Intent(this, SettingsActivity::class.java).putExtra(SettingsActivity.EXTRA_START_COMMITMENT, true))
+                PanelActivity.open(this, PanelActivity.COMMIT)
             }
             .setNegativeButton(R.string.not_now, null)
             .show()

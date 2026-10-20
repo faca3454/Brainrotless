@@ -20,10 +20,14 @@ import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.math.abs
 
-/** "48 min" o "2 h 15 min". */
+/** "48 min", "2 h" o "2 h 15 min". */
 fun formatDuration(ms: Long): String {
     val m = ms / 60_000
-    return if (m < 60) "$m min" else "${m / 60} h ${m % 60} min"
+    return when {
+        m < 60 -> "$m min"
+        m % 60 == 0L -> "${m / 60} h"
+        else -> "${m / 60} h ${m % 60} min"
+    }
 }
 
 /** Lo que el compromiso no deja aflojar. Sin Android (lo prueba StrictnessTest). */

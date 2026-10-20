@@ -51,7 +51,7 @@ class HomeActivity : ComponentActivity() {
             Commitment.markSummarySeen(this)
             AlertDialog.Builder(this)
                 .setMessage(text)
-                .setPositiveButton(R.string.start_another) { _, _ -> openSettings(start = true) }
+                .setPositiveButton(R.string.start_another) { _, _ -> PanelActivity.open(this, PanelActivity.COMMIT) }
                 .setNegativeButton(R.string.not_now, null)
                 .show()
         }
@@ -66,9 +66,12 @@ class HomeActivity : ComponentActivity() {
         add(sleepCard())
         add(focusCard())
         add(commitmentCard())
+        add(linkCard(R.drawable.ic_settings, getString(R.string.panel_apps), getString(R.string.panel_apps_summary), pill = null) {
+            PanelActivity.open(this, PanelActivity.APPS)
+        })
         // Ajustes al pie, empujado hacia abajo si sobra lugar
         list.addView(View(this), LinearLayout.LayoutParams(MATCH, 0, 1f))
-        add(Brand.secondaryButton(this, getString(R.string.settings)) { openSettings() }, top = 20)
+        add(Brand.secondaryButton(this, getString(R.string.settings)) { startActivity(Intent(this, SettingsActivity::class.java)) }, top = 20)
 
         // Entrada suave la primera vez (después, sin animar: que se sienta instantáneo)
         if (firstShow) {
@@ -192,7 +195,7 @@ class HomeActivity : ComponentActivity() {
                 getString(R.string.home_sleep_next, Sleep.fmt(this, n.start.toLocalTime()), Sleep.fmt(this, n.end.toLocalTime()))
             } ?: getString(R.string.home_sleep_none)
         }
-        return linkCard(R.drawable.ic_moon, getString(R.string.home_sleep), sub, pill = null) { openSettings(focus = "sleep_on") }
+        return linkCard(R.drawable.ic_moon, getString(R.string.home_sleep), sub, pill = null) { PanelActivity.open(this, PanelActivity.SLEEP) }
     }
 
     private fun focusCard(): View {
@@ -204,13 +207,13 @@ class HomeActivity : ComponentActivity() {
                 getString(R.string.home_focus_next, day, Sleep.fmt(this, b.start.toLocalTime()), Sleep.fmt(this, b.end.toLocalTime()))
             } ?: getString(R.string.focus_no_days)
         }
-        return linkCard(R.drawable.ic_focus, getString(R.string.home_focus), sub, pill = null) { openSettings(focus = "focus_on") }
+        return linkCard(R.drawable.ic_focus, getString(R.string.home_focus), sub, pill = null) { PanelActivity.open(this, PanelActivity.FOCUS) }
     }
 
     private fun commitmentCard(): View {
         if (!Commitment.active(this))
             return linkCard(R.drawable.ic_flag, getString(R.string.home_commit), getString(R.string.home_commit_idle, Commitment.MIN_DAYS), pill = null) {
-                openSettings(focus = "commit")
+                PanelActivity.open(this, PanelActivity.COMMIT)
             }
         val left = Commitment.daysLeft(this)
         val pauses = Commitment.pausesLeft(this)
@@ -219,7 +222,7 @@ class HomeActivity : ComponentActivity() {
             resources.getQuantityString(R.plurals.pauses_n, pauses, pauses) + " · " +
                 getString(if (Protection.adminActive(this)) R.string.home_protected else R.string.home_unprotected),
             pill = resources.getQuantityString(R.plurals.days_n, left.toInt(), left.toInt())
-        ) { openSettings(focus = "commit") }
+        ) { PanelActivity.open(this, PanelActivity.COMMIT) }
     }
 
     /** Tarjeta con ícono redondo, título, detalle y flecha, que lleva a Ajustes. */
@@ -263,12 +266,6 @@ class HomeActivity : ComponentActivity() {
                 setOnClickListener { f() }
             }
         }
-
-    private fun openSettings(focus: String? = null, start: Boolean = false) {
-        startActivity(Intent(this, SettingsActivity::class.java)
-            .putExtra(SettingsActivity.EXTRA_FOCUS, focus)
-            .putExtra(SettingsActivity.EXTRA_START_COMMITMENT, start))
-    }
 
     private companion object { const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT }
 }

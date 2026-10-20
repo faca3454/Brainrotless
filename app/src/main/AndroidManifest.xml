@@ -169,6 +169,12 @@
             </intent-filter>
         </receiver>
 
+        <!-- Pantallas de configuración: modo dormir, foco, compromiso, Instagram y YouTube -->
+        <activity
+            android:name=".PanelActivity"
+            android:exported="false"
+            android:theme="@style/HomeTheme" />
+
         <activity
             android:name=".WaitActivity"
             android:theme="@style/HomeTheme"
