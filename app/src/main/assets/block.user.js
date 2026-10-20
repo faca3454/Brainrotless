@@ -501,24 +501,25 @@
       }, ms);
     });
 
+    // Al tocar solo se anota dónde: la burbuja se busca (y se mide) si el dedo va hacia la derecha
     let bubble = null, target = null, arrow = null, sx = 0, sy = 0, dx = 0, decided = false;
     addEventListener('touchstart', (e) => {
-      bubble = null;
+      bubble = target = null;
       if (simulating || !inChat() || e.touches.length !== 1) return;
       target = e.target;
-      bubble = bubbleOf(target);
       sx = e.touches[0].clientX;
       sy = e.touches[0].clientY;
       dx = 0;
       decided = false;
     }, { capture: true, passive: true });
     addEventListener('touchmove', (e) => {
-      if (!bubble || simulating) return;
+      if (simulating || !(decided ? bubble : target)) return;
       const mx = e.touches[0].clientX - sx, my = e.touches[0].clientY - sy;
       if (!decided) {
         if (Math.abs(mx) < 10 && Math.abs(my) < 10) return;
         decided = true;
-        if (!(mx > 0 && Math.abs(mx) > Math.abs(my) * 1.5)) { bubble = null; return; } // vertical: scroll normal
+        if (!(mx > 0 && Math.abs(mx) > Math.abs(my) * 1.5)) return; // vertical: scroll normal
+        if (!(bubble = bubbleOf(target))) return;
         panY(bubble);
         const r = bubble.getBoundingClientRect();
         arrow = document.createElement('div');
@@ -535,12 +536,12 @@
     }, { capture: true, passive: true });
     const end = (cancel) => () => {
       if (simulating || !bubble || !decided) { bubble = null; return; }
-      const b = bubble;
+      const b = bubble, t = target;
       bubble = null;
       b.style.transition = 'transform .2s';
       b.style.transform = '';
       if (arrow) { arrow.remove(); arrow = null; }
-      if (!cancel && dx >= 60) setTimeout(() => reply(b, target, sx, sy), 220); // cuando volvió a su lugar
+      if (!cancel && dx >= 60) setTimeout(() => reply(b, t, sx, sy), 220); // cuando volvió a su lugar
     };
     addEventListener('touchend', end(false), { capture: true, passive: true });
     addEventListener('touchcancel', end(true), { capture: true, passive: true });
@@ -551,6 +552,7 @@
   // así que la app no puede saberlo sola.
   if (window.NoScrollBridge) {
     addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return; // segundo dedo: no es un tirón hacia abajo nuevo
       const p = location.pathname;
       // En chats (cargan mensajes viejos tirando hacia abajo) y reels, nunca recargar
       if (IG && /^\/(direct\/t|reels?)\//.test(p)) { NoScrollBridge.setAtTop(false); return; }
