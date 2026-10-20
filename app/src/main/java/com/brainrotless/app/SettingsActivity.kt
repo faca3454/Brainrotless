@@ -44,6 +44,7 @@ class SettingsActivity : AppCompatActivity() {
             onClick("perm_links") { Setup.openLinks(requireContext()) }
             onClick("perm_guard") { Setup.openAccessibility(requireContext()) }
             onClick("perm_restricted") { Setup.explainRestricted(requireActivity()) }
+            onClick("guide") { startActivity(OnboardingActivity.intent(requireContext(), again = true)) }
             onClick("panel_sleep") { PanelActivity.open(requireContext(), PanelActivity.SLEEP) }
             onClick("panel_focus") { PanelActivity.open(requireContext(), PanelActivity.FOCUS) }
             onClick("panel_commit") { PanelActivity.open(requireContext(), PanelActivity.COMMIT) }

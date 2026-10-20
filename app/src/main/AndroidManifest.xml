@@ -184,6 +184,12 @@
             </intent-filter>
         </receiver>
 
+        <!-- Guía del primer uso -->
+        <activity
+            android:name=".OnboardingActivity"
+            android:exported="false"
+            android:theme="@style/HomeTheme" />
+
         <!-- Pantallas de configuración: modo dormir, foco, compromiso, Instagram y YouTube -->
         <activity
             android:name=".PanelActivity"

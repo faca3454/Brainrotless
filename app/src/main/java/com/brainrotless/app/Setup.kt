@@ -5,6 +5,8 @@ import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.verify.domain.DomainVerificationManager
+import android.content.pm.verify.domain.DomainVerificationUserState
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -75,6 +77,14 @@ object Setup {
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
+    }
+
+    /** Si los links de Instagram/YouTube ya se abren en Lúcido. null en Android 11 o antes: no se puede saber. */
+    fun linksOn(c: Context): Boolean? {
+        if (Build.VERSION.SDK_INT < 31) return null
+        val state = c.getSystemService(DomainVerificationManager::class.java)
+            ?.getDomainVerificationUserState(c.packageName) ?: return null
+        return state.hostToStateMap.values.any { it != DomainVerificationUserState.DOMAIN_STATE_NONE }
     }
 
     fun openLinks(c: Context) {

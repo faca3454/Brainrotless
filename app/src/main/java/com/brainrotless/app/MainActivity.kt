@@ -96,11 +96,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // La primera vez (sin idioma elegido) desde el ícono de IG Lite o YT Lite: arrancar por el
-        // inicio de Lúcido, que es donde está la configuración. Los links compartidos abren igual.
-        if (!Lang.hasChosen(this) && savedInstanceState == null && urlFromIntent(intent) == null) {
-            // En su propia tarea: si no, el inicio quedaría debajo de IG Lite y el botón atrás volvería a él
-            startActivity(Intent(this, HomeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        // La primera vez desde el ícono de IG Lite o YT Lite: arrancar por la guía (idioma,
+        // permisos, plan). Los links compartidos abren igual.
+        if (OnboardingActivity.needed(this) && savedInstanceState == null && urlFromIntent(intent) == null) {
+            // En su propia tarea: si no, quedaría debajo de IG Lite y el botón atrás volvería a ella
+            startActivity(OnboardingActivity.intent(this).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             finish()
             return
         }

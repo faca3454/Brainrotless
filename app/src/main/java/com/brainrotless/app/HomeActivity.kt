@@ -30,6 +30,12 @@ class HomeActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Primera vez: la guía (idioma, permisos, plan); al terminar vuelve acá
+        if (OnboardingActivity.needed(this)) {
+            startActivity(OnboardingActivity.intent(this))
+            finish()
+            return
+        }
         lang = Lang.current(this)
         val pad = Brand.px(this, 20)
         list = LinearLayout(this).apply {
@@ -40,7 +46,6 @@ class HomeActivity : ComponentActivity() {
             isFillViewport = true
             addView(list, ViewGroup.LayoutParams(MATCH, ViewGroup.LayoutParams.WRAP_CONTENT))
         })
-        Lang.askIfNeeded(this)
     }
 
     override fun onResume() {

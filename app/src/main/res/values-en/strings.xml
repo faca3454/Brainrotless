@@ -351,4 +351,36 @@
     <string name="notif_reply_hint">Write a reply</string>
     <string name="notif_read">Mark as read</string>
     <string name="notif_reply_failed">Couldn\'t send it. Open IG Lite to reply.</string>
+    <!-- First-run guide -->
+    <string name="onb_next">Next</string>
+    <string name="onb_back">Back</string>
+    <string name="onb_start">Let\'s go</string>
+    <string name="onb_welcome_title">Hi, this is Lúcido</string>
+    <string name="onb_f1_title">No endless Reels or Shorts</string>
+    <string name="onb_f1_sub">Instagram and YouTube as usual, minus the scroll that never ends. What friends send you still plays.</string>
+    <string name="onb_f2_sub">At night, Instagram is messages-only and YouTube is blocked.</string>
+    <string name="onb_f3_sub">Your hours to focus: Instagram is messages-only.</string>
+    <string name="onb_f4_title">Commitment and stats</string>
+    <string name="onb_f4_sub">A daily limit you can\'t loosen, and charts to see how you\'re doing.</string>
+    <string name="onb_perm_title">A few permissions and you\'re set</string>
+    <string name="onb_perm_sub">Everything stays on your phone: Lúcido doesn\'t send your data anywhere.</string>
+    <string name="onb_p_notif_title">Lúcido alerts</string>
+    <string name="onb_p_notif_sub">To warn you before sleep mode and when you hit your limit.</string>
+    <string name="onb_p_listener_title">Open notifications here</string>
+    <string name="onb_p_listener_sub">Instagram and YouTube messages open in Lúcido, and you can reply without opening anything.</string>
+    <string name="onb_p_guard_title">Block the official apps</string>
+    <string name="onb_p_guard_sub">If you open the official Instagram or YouTube, it brings you to Lúcido. Turned on in Accessibility.</string>
+    <string name="onb_p_links_title">Open links here</string>
+    <string name="onb_p_links_sub">Instagram and YouTube links friends send you on WhatsApp open in Lúcido.</string>
+    <string name="onb_p_usage_title">Compare with before</string>
+    <string name="onb_p_usage_sub">To see in Stats how much you used before Lúcido.</string>
+    <string name="onb_optional">Optional</string>
+    <string name="onb_set_up">Set up</string>
+    <string name="onb_later">You can turn them on later from the Lúcido home screen.</string>
+    <string name="onb_plan_title">What do you want to start with?</string>
+    <string name="onb_plan_sub">You can change it anytime.</string>
+    <string name="onb_schedule">Schedule</string>
+    <string name="onb_commit_hint">When you\'re ready, set yourself a daily limit for at least 7 days in Commitment.</string>
+    <string name="pref_guide">See the welcome guide</string>
+    <string name="pref_guide_summary">The first-run steps: permissions and your plan</string>
 </resources>

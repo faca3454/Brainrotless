@@ -351,4 +351,36 @@
     <string name="notif_reply_hint">Escribí tu respuesta</string>
     <string name="notif_read">Marcar como leído</string>
     <string name="notif_reply_failed">No se pudo enviar. Abrí IG Lite para responder.</string>
+    <!-- Guía del primer uso -->
+    <string name="onb_next">Siguiente</string>
+    <string name="onb_back">Atrás</string>
+    <string name="onb_start">Empezar</string>
+    <string name="onb_welcome_title">Hola, esto es Lúcido</string>
+    <string name="onb_f1_title">Sin Reels ni Shorts infinitos</string>
+    <string name="onb_f1_sub">Instagram y YouTube como siempre, pero sin el scroll que no termina. Lo que te mandan, lo ves igual.</string>
+    <string name="onb_f2_sub">De noche, Instagram queda solo para mensajes y YouTube se bloquea.</string>
+    <string name="onb_f3_sub">Tus horas para concentrarte: Instagram solo para mensajes.</string>
+    <string name="onb_f4_title">Compromiso y estadísticas</string>
+    <string name="onb_f4_sub">Un límite diario que no podés aflojar, y gráficos para ver cómo vas.</string>
+    <string name="onb_perm_title">Unos permisos y listo</string>
+    <string name="onb_perm_sub">Todo queda en tu teléfono: Lúcido no manda tus datos a ningún lado.</string>
+    <string name="onb_p_notif_title">Avisos de Lúcido</string>
+    <string name="onb_p_notif_sub">Para avisarte antes del modo dormir y cuando llegás al límite.</string>
+    <string name="onb_p_listener_title">Que las notificaciones abran acá</string>
+    <string name="onb_p_listener_sub">Los mensajes de Instagram y YouTube se abren en Lúcido, y podés responder sin abrir nada.</string>
+    <string name="onb_p_guard_title">Bloquear las apps oficiales</string>
+    <string name="onb_p_guard_sub">Si abrís Instagram o YouTube oficiales, te trae a Lúcido. Se activa en Accesibilidad.</string>
+    <string name="onb_p_links_title">Abrir links acá</string>
+    <string name="onb_p_links_sub">Los links de Instagram y YouTube que te pasan por WhatsApp se abren en Lúcido.</string>
+    <string name="onb_p_usage_title">Comparar con antes</string>
+    <string name="onb_p_usage_sub">Para ver en Estadísticas cuánto usabas antes de Lúcido.</string>
+    <string name="onb_optional">Opcional</string>
+    <string name="onb_set_up">Configurar</string>
+    <string name="onb_later">Si querés, los activás después desde el inicio de Lúcido.</string>
+    <string name="onb_plan_title">¿Con qué arrancás?</string>
+    <string name="onb_plan_sub">Lo cambiás cuando quieras.</string>
+    <string name="onb_schedule">Horario</string>
+    <string name="onb_commit_hint">Cuando estés listo, en Compromiso te ponés un límite diario por al menos 7 días.</string>
+    <string name="pref_guide">Ver la guía de inicio</string>
+    <string name="pref_guide_summary">Los pasos del primer uso: permisos y tu plan</string>
 </resources>

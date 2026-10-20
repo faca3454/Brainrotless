@@ -8,6 +8,7 @@
             app:entries="@array/language_entries"
             app:entryValues="@array/language_values"
             app:useSimpleSummaryProvider="true" />
+        <Preference app:key="guide" app:title="@string/pref_guide" app:summary="@string/pref_guide_summary" />
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/pref_cat_permissions">
