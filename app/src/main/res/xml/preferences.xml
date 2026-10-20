@@ -27,6 +27,16 @@
         <Preference app:key="panel_apps" app:title="@string/panel_apps" />
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="@string/pref_cat_protection">
+        <Preference app:key="shield_info" app:title="@string/pref_shield" app:summary="@string/pref_shield_summary"
+            app:selectable="false" />
+        <SwitchPreferenceCompat
+            app:key="hide_icon"
+            app:defaultValue="false"
+            app:title="@string/pref_hide_icon"
+            app:summary="@string/pref_hide_icon_summary" />
+    </PreferenceCategory>
+
     <PreferenceCategory app:title="@string/pref_cat_bypass">
         <Preference app:key="bypass_now" app:title="@string/bypass_now" />
         <ListPreference

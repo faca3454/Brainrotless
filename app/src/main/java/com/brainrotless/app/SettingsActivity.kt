@@ -55,6 +55,10 @@ class SettingsActivity : AppCompatActivity() {
                 Rules.refreshAsync(requireContext(), force = true) { }
             }
             findPreference<Preference>("version")?.summary = BuildConfig.VERSION_NAME
+            findPreference<Preference>("hide_icon")?.setOnPreferenceChangeListener { _, _ ->
+                view?.post { Protection.applyIconVisibility(requireContext()) } // tras guardar el ajuste
+                true
+            }
             findPreference<ListPreference>("language")?.apply {
                 value = Lang.current(requireContext())
                 setOnPreferenceChangeListener { _, v -> Lang.set(requireActivity(), v as String); true }

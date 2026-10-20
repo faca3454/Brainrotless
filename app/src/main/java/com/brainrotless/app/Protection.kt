@@ -15,9 +15,11 @@ import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.Process
+import android.content.pm.PackageManager
 import android.provider.Settings
 import android.service.notification.StatusBarNotification
 import android.view.Gravity
+import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -125,6 +127,60 @@ object Protection {
     }
 
     fun isGuardNotice(sbn: StatusBarNotification) = sbn.packageName == PKG && sbn.id == NOTIF_ID
+
+    // ---------- Escudo contra desinstalar / forzar detención (punto 3) ----------
+
+    /** Protección activa: durante un compromiso o en horario de dormir. */
+    fun shielded(c: Context) = Commitment.active(c) || Sleep.active(c)
+
+    /** Pantallas del sistema desde donde se desinstala o se fuerza la detención de una app. */
+    fun isSystemManager(pkg: String?) =
+        pkg == "com.android.settings" || (pkg != null && pkg.contains("packageinstall"))
+
+    private val ACTION_RE =
+        Regex("desinstal|uninstall|forzar deten|forzar parada|force.?stop|detener", RegexOption.IGNORE_CASE)
+
+    /**
+     * True si la pantalla que se ve es para desinstalar o detener Lúcido (no otra app). Mira solo
+     * texto: busca el paquete de Lúcido, o su nombre junto a una acción de desinstalar/detener.
+     */
+    fun screenTargetsLucido(root: AccessibilityNodeInfo?, c: Context): Boolean {
+        root ?: return false
+        val label = c.getString(R.string.app_name).lowercase()
+        var hasLabel = false
+        var hasAction = false
+        var hasPkg = false
+        val queue = ArrayDeque<AccessibilityNodeInfo>().apply { add(root) }
+        var seen = 0
+        while (queue.isNotEmpty() && seen < 600) {
+            val node = queue.removeFirst()
+            seen++
+            val text = ((node.text ?: "").toString() + " " + (node.contentDescription ?: "")).lowercase()
+            if (text.isNotBlank()) {
+                if (text.contains(PKG)) hasPkg = true
+                if (text.contains(label)) hasLabel = true
+                if (ACTION_RE.containsMatchIn(text)) hasAction = true
+            }
+            if (hasPkg || (hasLabel && hasAction)) return true
+            for (i in 0 until node.childCount) node.getChild(i)?.let { queue.add(it) }
+        }
+        return false
+    }
+
+    // ---------- Esconder el ícono de Lúcido (punto 4) ----------
+
+    fun iconHidingEnabled(c: Context) = c.userPrefs().getBoolean("hide_icon", false)
+
+    /** Esconde o muestra el ícono del panel de Lúcido según el ajuste y la protección. */
+    fun applyIconVisibility(c: Context) {
+        val hide = iconHidingEnabled(c) && shielded(c)
+        val comp = ComponentName(c, HomeActivity::class.java)
+        val pm = c.packageManager
+        val want = if (hide) PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            else PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        if (pm.getComponentEnabledSetting(comp) != want)
+            runCatching { pm.setComponentEnabledSetting(comp, want, PackageManager.DONT_KILL_APP) }
+    }
 }
 
 /** Administrador de dispositivo: sin él activo no se puede desinstalar la app. No usa ninguna política. */

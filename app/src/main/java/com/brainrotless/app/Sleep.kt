@@ -195,5 +195,6 @@ class SleepAlarm : BroadcastReceiver() {
         }
         Sleep.reschedule(c)
         Widgets.update(c)
+        Protection.applyIconVisibility(c)
     }
 }

@@ -27,10 +27,29 @@ class AppGuard : AccessibilityService() {
     private var lastJump = 0L
     private var foreground: String? = null // última app que pasó a primer plano
 
+    private var lastShield = 0L
+
     override fun onAccessibilityEvent(e: AccessibilityEvent) {
-        if (e.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = e.packageName?.toString() ?: return
         if (pkg == "com.android.systemui") return // la cortina de notificaciones no cambia la app de abajo
+
+        // Escudo: durante un compromiso o el modo dormir, no dejar desinstalar ni detener Lúcido.
+        // Se mira la pantalla de Ajustes/instalador también cuando cambia su contenido (diálogos).
+        // isSystemManager va primero (comparar texto es barato): así los eventos de contenido del
+        // resto de las apps se descartan sin calcular nada pesado.
+        if (Protection.isSystemManager(pkg) && Protection.shielded(this) &&
+            Protection.screenTargetsLucido(rootInActiveWindow, this)
+        ) {
+            val now = SystemClock.elapsedRealtime()
+            if (now - lastShield > 1500) {
+                lastShield = now
+                performGlobalAction(GLOBAL_ACTION_HOME)
+                Toast.makeText(this, getString(R.string.shield_blocked), Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+
+        if (e.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         countOfficial()
         foreground = pkg
         countOfficial()
@@ -82,6 +101,7 @@ class AppGuard : AccessibilityService() {
         override fun run() {
             countOfficial()
             Widgets.update(this@AppGuard)
+            Protection.applyIconVisibility(this@AppGuard) // esconder/mostrar el ícono al cambiar la noche o el compromiso
             val locked = locked()
             if (locked && !wasLocked) foreground?.let(::enforce)
             wasLocked = locked

@@ -7,7 +7,7 @@
     <string name="shortcut_settings">Ajustes</string>
     <string name="tile_label">Apps oficiales</string>
     <string name="guard_label">Lúcido: bloquear apps oficiales</string>
-    <string name="app_guard_desc">Cuando abrís Instagram o YouTube oficiales, te lleva a Lúcido. Con el modo dormir, también cierra los navegadores en tu horario. Solo detecta qué app está en pantalla; no lee contenido ni lo que escribís.</string>
+    <string name="app_guard_desc">Cuando abrís Instagram o YouTube oficiales, te lleva a Lúcido. Con el modo dormir, cierra los navegadores en tu horario. Con un compromiso o el modo dormir, evita que desinstales o detengas Lúcido: para eso lee la pantalla de Ajustes y del instalador. No lee Instagram, YouTube ni lo que escribís, y no guarda ni envía nada.</string>
     <string name="admin_label">Lúcido: protección del compromiso</string>
     <string name="admin_desc">Mientras dura un compromiso, evita que se desinstale Lúcido sin pasar por un aviso. No controla nada del teléfono y se quita solo al terminar.</string>
     <string name="ok">OK</string>
@@ -254,6 +254,12 @@
         <item quantity="one">día restante</item>
         <item quantity="other">días restantes</item>
     </plurals>
+    <string name="shield_blocked">🔒 Durante tu compromiso o el modo dormir no podés desinstalar ni detener Lúcido</string>
+    <string name="pref_cat_protection">Protección</string>
+    <string name="pref_shield">Bloquear la desinstalación</string>
+    <string name="pref_shield_summary">Con un compromiso o en el modo dormir, Lúcido no se puede desinstalar ni detener desde Ajustes. Siempre activo.</string>
+    <string name="pref_hide_icon">Esconder el ícono de Lúcido</string>
+    <string name="pref_hide_icon_summary">Con un compromiso o en el modo dormir, saca el ícono del panel de Lúcido del cajón de apps. IG Lite y YT Lite siguen estando.</string>
     <plurals name="days_n">
         <item quantity="one">%1$d día</item>
         <item quantity="other">%1$d días</item>

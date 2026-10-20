@@ -7,7 +7,7 @@
     <string name="shortcut_settings">Settings</string>
     <string name="tile_label">Official apps</string>
     <string name="guard_label">Lúcido: block official apps</string>
-    <string name="app_guard_desc">When you open the official Instagram or YouTube, it takes you to Lúcido. With sleep mode, it also closes browsers during your bedtime. It only detects which app is on screen; it doesn\'t read content or what you type.</string>
+    <string name="app_guard_desc">When you open the official Instagram or YouTube, it takes you to Lúcido. With sleep mode, it closes browsers during your bedtime. During a commitment or sleep mode, it keeps you from uninstalling or stopping Lúcido: for that it reads the Settings and installer screen. It doesn\'t read Instagram, YouTube or what you type, and it doesn\'t store or send anything.</string>
     <string name="admin_label">Lúcido: commitment protection</string>
     <string name="admin_desc">While a commitment lasts, it keeps Lúcido from being uninstalled without a warning first. It doesn\'t control anything on your phone and is removed automatically when it ends.</string>
     <string name="ok">OK</string>
@@ -254,6 +254,12 @@
         <item quantity="one">day left</item>
         <item quantity="other">days left</item>
     </plurals>
+    <string name="shield_blocked">🔒 During your commitment or sleep mode you can\'t uninstall or stop Lúcido</string>
+    <string name="pref_cat_protection">Protection</string>
+    <string name="pref_shield">Block uninstalling</string>
+    <string name="pref_shield_summary">During a commitment or sleep mode, Lúcido can\'t be uninstalled or stopped from Settings. Always on.</string>
+    <string name="pref_hide_icon">Hide the Lúcido icon</string>
+    <string name="pref_hide_icon_summary">During a commitment or sleep mode, removes the Lúcido panel icon from the app drawer. IG Lite and YT Lite stay.</string>
     <plurals name="days_n">
         <item quantity="one">%1$d day</item>
         <item quantity="other">%1$d days</item>
