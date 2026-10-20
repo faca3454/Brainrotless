@@ -25,6 +25,7 @@ class SettingsActivity : AppCompatActivity() {
             onClick("perm_notif") { Setup.openNotifications(requireContext()) }
             onClick("perm_links") { Setup.openLinks(requireContext()) }
             onClick("perm_guard") { Setup.openAccessibility(requireContext()) }
+            onClick("perm_restricted") { Setup.explainRestricted(requireActivity()) }
             onClick("check_now") {
                 Updater.maybeCheck(requireActivity(), force = true)
                 Rules.refreshAsync(requireContext(), force = true) { }
@@ -36,10 +37,14 @@ class SettingsActivity : AppCompatActivity() {
             super.onResume()
             // Volviendo de los ajustes del sistema: refrescar el estado de cada permiso
             val c = requireContext()
+            val listenerOn = Setup.listenerOn(c)
+            val guardOn = Setup.guardOn(c)
             findPreference<Preference>("perm_notif")?.summary =
-                status(Setup.listenerOn(c), "Las notificaciones abren esta app")
+                status(listenerOn, "Las notificaciones abren esta app")
             findPreference<Preference>("perm_guard")?.summary =
-                status(Setup.guardOn(c), "Abrir Instagram/YouTube oficiales te trae acá")
+                status(guardOn, "Abrir Instagram/YouTube oficiales te trae acá")
+            findPreference<Preference>("perm_restricted")?.isVisible =
+                Setup.restrictedApplies() && !(listenerOn && guardOn)
         }
 
         private fun status(on: Boolean, what: String) =

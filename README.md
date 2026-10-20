@@ -22,7 +22,7 @@ Podés ver los reels y shorts que te mandan tus amigos, pero no pasar al siguien
    - **Notificaciones**: activá Brainrotless.
    - **Links**: en Ajustes → Apps → *Instagram* (y *YouTube*) → *Abrir de forma predeterminada*, desactivá *Abrir vínculos compatibles*. Después, en la de Brainrotless, agregá todos los dominios.
    - **Bloquear apps oficiales**: Ajustes → Accesibilidad → Brainrotless.
-4. Si un permiso aparece gris: Ajustes → Apps → Brainrotless → ⋮ → *Permitir ajustes restringidos*.
+4. Si un permiso aparece gris: en la ventana de configuración (o en Ajustes) tocá *¿Un permiso aparece gris?* y seguí los pasos. A mano: tocá el permiso gris una vez, después Ajustes → Apps → Brainrotless → ⋮ → *Permitir ajustes restringidos*.
 5. En Xiaomi o Samsung: Ajustes → Batería → Brainrotless → *Sin restricciones*, para que el sistema no apague el bloqueo.
 
 Las apps oficiales tienen que seguir instaladas: son las que reciben las notificaciones.

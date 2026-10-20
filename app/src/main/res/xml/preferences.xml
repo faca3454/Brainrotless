@@ -6,6 +6,8 @@
         <Preference app:key="perm_links" app:title="Abrir links de Instagram/YouTube acá"
             app:summary="Agregá los dominios en 'Abrir de forma predeterminada'" />
         <Preference app:key="perm_guard" app:title="Bloquear apps oficiales" />
+        <Preference app:key="perm_restricted" app:title="¿Un permiso aparece gris?"
+            app:summary="Tocá acá para destrabarlo" app:isPreferenceVisible="false" />
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Instagram">

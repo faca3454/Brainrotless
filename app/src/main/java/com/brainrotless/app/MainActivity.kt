@@ -286,11 +286,12 @@ class MainActivity : ComponentActivity() {
         if (prefs.getBoolean("done", false) && listenerOn && guardOn) return
 
         fun mark(on: Boolean) = if (on) "✓" else "○"
-        val steps = arrayOf(
+        val steps = listOfNotNull(
             "${mark(listenerOn)}  Notificaciones → activar Brainrotless",
             "○  Links → agregar dominios de Instagram/YouTube",
-            "${mark(guardOn)}  Bloquear apps oficiales → Accesibilidad → Brainrotless"
-        )
+            "${mark(guardOn)}  Bloquear apps oficiales → Accesibilidad → Brainrotless",
+            if (Setup.restrictedApplies()) "⚠  ¿Un permiso aparece gris? Tocá acá" else null
+        ).toTypedArray()
         AlertDialog.Builder(this)
             .setTitle("Configurar Brainrotless")
             .setItems(steps) { _, which ->
@@ -298,13 +299,14 @@ class MainActivity : ComponentActivity() {
                     0 -> Setup.openNotifications(this)
                     1 -> Setup.openLinks(this)
                     2 -> Setup.openAccessibility(this)
+                    3 -> Setup.explainRestricted(this)
                 }
             }
             .setNeutralButton("Ayuda") { _, _ ->
                 AlertDialog.Builder(this)
                     .setMessage(
-                        "Si un permiso aparece gris o bloqueado: Ajustes → Apps → Brainrotless → ⋮ → " +
-                            "'Permitir ajustes restringidos'.\n\nPara que los links abran acá, en Instagram y " +
+                        "Si un permiso aparece gris o bloqueado, tocá '¿Un permiso aparece gris?' en la " +
+                            "lista y seguí los pasos.\n\nPara que los links abran acá, en Instagram y " +
                             "YouTube oficiales desactivá 'Abrir vínculos compatibles'.\n\n" +
                             "Estos pasos también están en Ajustes (mantené presionado el ícono)."
                     )
