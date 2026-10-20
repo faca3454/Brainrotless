@@ -320,4 +320,31 @@
         <item quantity="other">%1$d días terminados</item>
     </plurals>
     <string name="notif_you">Vos</string>
+    <!-- Rachas -->
+    <string name="streak_title">Racha</string>
+    <string name="streak_limit">dentro del límite</string>
+    <string name="streak_before">usando menos que antes de Lúcido</string>
+    <string name="streak_best">Mejor racha: %s</string>
+    <string name="streak_last">Últimos 14 días</string>
+    <string name="streak_none">Para empezar una racha, ponete un límite diario en un compromiso o dejá que Lúcido compare con tu uso de antes.</string>
+    <plurals name="streak_days">
+        <item quantity="one">día seguido</item>
+        <item quantity="other">días seguidos</item>
+    </plurals>
+    <plurals name="streak_pill">
+        <item quantity="one">%1$d día seguido</item>
+        <item quantity="other">%1$d días seguidos</item>
+    </plurals>
+    <!-- Resumen semanal -->
+    <string name="channel_weekly">Resumen semanal</string>
+    <string name="weekly_title">Tu semana: %s</string>
+    <string name="weekly_title_days">Tus últimos %1$d días: %2$s</string>
+    <string name="weekly_less_prev">%d%% menos que la semana anterior</string>
+    <string name="weekly_more_prev">%d%% más que la semana anterior</string>
+    <string name="weekly_same_prev">Lo mismo que la semana anterior</string>
+    <string name="weekly_less_before">%d%% menos que antes de Lúcido</string>
+    <string name="weekly_more_before">%d%% más que antes de Lúcido</string>
+    <string name="weekly_tap">Tocá para ver tus estadísticas</string>
+    <string name="weekly_pref">Resumen semanal</string>
+    <string name="weekly_pref_sub">Los domingos a las 20, una notificación con cómo te fue en la semana</string>
 </resources>

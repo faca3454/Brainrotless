@@ -41,8 +41,8 @@ class PanelActivity : AppCompatActivity() {
         const val APPS = "apps"
         const val STATS = "stats"
 
-        fun open(c: Context, panel: String) =
-            c.startActivity(Intent(c, PanelActivity::class.java).putExtra(EXTRA, panel))
+        fun intent(c: Context, panel: String): Intent = Intent(c, PanelActivity::class.java).putExtra(EXTRA, panel)
+        fun open(c: Context, panel: String) = c.startActivity(intent(c, panel))
     }
 
     private lateinit var list: LinearLayout
@@ -412,11 +412,13 @@ class PanelActivity : AppCompatActivity() {
         val avg = StatsMath.average(window)
         val before = UsageAccess.baseline(this)
         add(compareCard(history, today, window, avg, before))
+        add(streakCard(history, today))
 
         add(label(getString(R.string.stats_by_day)), top = 18)
         add(Brand.card(dayChart(window, today, before)))
         add(statTiles(window, today, avg))
         splitCard(history, today, window)?.let { add(it) }
+        add(Brand.card(prefSwitch("weekly_summary", true, R.string.weekly_pref, R.string.weekly_pref_sub)))
 
         Commitment.lastSummary(this)?.let { last ->
             add(Brand.card(linkRow(getString(R.string.pref_last), last.lines().first()) { showSummary(last, markSeen = false) }), top = 16)
@@ -467,6 +469,32 @@ class PanelActivity : AppCompatActivity() {
             box.addView(banner(extras.joinToString("\n")))
         }
         return Brand.card(box)
+    }
+
+    /** Días seguidos cumpliendo la meta (límite del compromiso o usar menos que antes) y los últimos 14. */
+    private fun streakCard(history: Map<LocalDate, DayUsage>, today: LocalDate): View {
+        val title = Brand.text(this, getString(R.string.streak_title), 15.5f, bold = true)
+        val goal = StreakGoal.of(this) ?: return Brand.card(column(title, space(4), muted(getString(R.string.streak_none))))
+        val (current, best) = StatsMath.streaks(history, today, goal.max, goal.from)
+        return Brand.card(column(
+            title,
+            space(6),
+            LinearLayout(this).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                addView(Brand.text(context, current.toString(), 32f, bold = true))
+                addView(column(
+                    Brand.text(context, resources.getQuantityString(R.plurals.streak_days, current), 15f, bold = true),
+                    muted(getString(if (goal.isLimit) R.string.streak_limit else R.string.streak_before))
+                ), LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = Brand.px(context, 12) })
+            },
+            space(12),
+            StreakDots(this).apply { marks = StatsMath.goalMarks(history, today, goal.max, goal.from, 14) },
+            space(8),
+            LinearLayout(this).apply {
+                addView(muted(getString(R.string.streak_last)), LinearLayout.LayoutParams(0, WRAP, 1f))
+                addView(muted(getString(R.string.streak_best, resources.getQuantityString(R.plurals.days_n, best, best))))
+            }
+        ))
     }
 
     private fun compareRow(name: String, sub: String?, value: Long, max: Long, strong: Boolean) = column(

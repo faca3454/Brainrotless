@@ -187,13 +187,21 @@ class HomeActivity : ComponentActivity() {
             selected = week.size - 1
             contentDescription = getString(R.string.stats_open)
         }
+        val body = column(
+            Brand.text(this, getString(R.string.home_today), 13f, R.color.brand_text_muted),
+            amount,
+            Brand.text(this, detail, 13f, if (over) R.color.brand_warning else R.color.brand_text_muted)
+        )
+        // Racha de 2 días o más: una pastilla para festejarla
+        StreakGoal.of(this)?.let { goal ->
+            val streak = StatsMath.streaks(Usage.history(this), today, goal.max, goal.from).first
+            if (streak >= 2) body.addView(Brand.pill(this, resources.getQuantityString(R.plurals.streak_pill, streak, streak)),
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { topMargin = Brand.px(this@HomeActivity, 6) })
+        }
         return Brand.card(row(
             ring,
-            column(
-                Brand.text(this, getString(R.string.home_today), 13f, R.color.brand_text_muted),
-                amount,
-                Brand.text(this, detail, 13f, if (over) R.color.brand_warning else R.color.brand_text_muted)
-            ),
+            body,
             chevron = true,
             iconSize = 68
         ).apply {

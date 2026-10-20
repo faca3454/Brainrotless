@@ -166,6 +166,40 @@ class DayBars(c: Context, private val mini: Boolean = false) : View(c) {
     override fun performClick(): Boolean = super.performClick()
 }
 
+/**
+ * Un punto por día de la racha: lleno si se cumplió la meta, solo el borde (color de aviso) si
+ * no, y gris suave si ese día todavía no había meta o datos.
+ */
+class StreakDots(c: Context) : View(c) {
+    var marks: List<Boolean?> = emptyList()
+        set(value) { field = value; invalidate() }
+
+    private val done = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Brand.color(c, R.color.brand_primary) }
+    private val missed = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Brand.color(c, R.color.brand_warning)
+        style = Paint.Style.STROKE
+        strokeWidth = Brand.dp(c, 2f)
+    }
+    private val empty = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Brand.color(c, R.color.brand_surface_alt) }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) =
+        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), Brand.px(context, 14))
+
+    override fun onDraw(canvas: Canvas) {
+        if (marks.isEmpty()) return
+        val slot = width.toFloat() / marks.size
+        val r = minOf(slot * 0.32f, height / 2f - Brand.dp(context, 1f))
+        for ((i, m) in marks.withIndex()) {
+            val cx = slot * i + slot / 2
+            when (m) {
+                true -> canvas.drawCircle(cx, height / 2f, r, done)
+                false -> canvas.drawCircle(cx, height / 2f, r - missed.strokeWidth / 2, missed)
+                null -> canvas.drawCircle(cx, height / 2f, r * 0.6f, empty)
+            }
+        }
+    }
+}
+
 /** Barra horizontal fina que se llena hasta [fraction] (antes y ahora, Instagram y YouTube). */
 @SuppressLint("ViewConstructor") // se arma solo desde el código, nunca desde un XML
 class FillBar(c: Context, private val strong: Boolean) : View(c) {

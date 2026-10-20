@@ -320,4 +320,31 @@
         <item quantity="other">%1$d finished days</item>
     </plurals>
     <string name="notif_you">You</string>
+    <!-- Streaks -->
+    <string name="streak_title">Streak</string>
+    <string name="streak_limit">within the limit</string>
+    <string name="streak_before">using less than before Lúcido</string>
+    <string name="streak_best">Best streak: %s</string>
+    <string name="streak_last">Last 14 days</string>
+    <string name="streak_none">To start a streak, set a daily limit in a commitment or let Lúcido compare with how much you used before.</string>
+    <plurals name="streak_days">
+        <item quantity="one">day in a row</item>
+        <item quantity="other">days in a row</item>
+    </plurals>
+    <plurals name="streak_pill">
+        <item quantity="one">%1$d day in a row</item>
+        <item quantity="other">%1$d days in a row</item>
+    </plurals>
+    <!-- Weekly summary -->
+    <string name="channel_weekly">Weekly summary</string>
+    <string name="weekly_title">Your week: %s</string>
+    <string name="weekly_title_days">Your last %1$d days: %2$s</string>
+    <string name="weekly_less_prev">%d%% less than the week before</string>
+    <string name="weekly_more_prev">%d%% more than the week before</string>
+    <string name="weekly_same_prev">The same as the week before</string>
+    <string name="weekly_less_before">%d%% less than before Lúcido</string>
+    <string name="weekly_more_before">%d%% more than before Lúcido</string>
+    <string name="weekly_tap">Tap to see your stats</string>
+    <string name="weekly_pref">Weekly summary</string>
+    <string name="weekly_pref_sub">Sundays at 8 PM, a notification with how your week went</string>
 </resources>
