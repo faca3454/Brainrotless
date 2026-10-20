@@ -277,4 +277,46 @@
         <item quantity="one">%1$d day left</item>
         <item quantity="other">%1$d days left</item>
     </plurals>
+
+    <!-- Stats -->
+    <string name="stats_title">Stats</string>
+    <string name="stats_range_7">Last 7 days</string>
+    <string name="stats_range_30">Last 30 days</string>
+    <string name="stats_compare">Before vs now</string>
+    <string name="stats_less">less than before Lúcido</string>
+    <string name="stats_more">more than before Lúcido</string>
+    <string name="stats_same">the same as before Lúcido</string>
+    <string name="stats_before">Before Lúcido</string>
+    <string name="stats_now">Now</string>
+    <string name="stats_per_day">%s a day</string>
+    <string name="stats_week_less">%s less per week</string>
+    <string name="stats_recovered">You\'ve won back %s since you started</string>
+    <string name="stats_need_access">To compare with before, Lúcido needs to see how much you used Instagram and YouTube before installing it.</string>
+    <string name="stats_allow">Allow</string>
+    <string name="stats_no_before">Android didn\'t keep data from before you installed Lúcido, so there\'s nothing to compare with.</string>
+    <string name="stats_wait">Tomorrow you\'ll see your first average.</string>
+    <string name="stats_by_day">By day</string>
+    <string name="stats_hint">Tap a bar to see that day</string>
+    <string name="stats_limit_line">limit</string>
+    <string name="stats_before_line">before</string>
+    <string name="stats_today">Today</string>
+    <string name="stats_avg">Daily average</string>
+    <string name="stats_total">Total</string>
+    <string name="stats_best">Best day</string>
+    <string name="stats_within">Within the limit</string>
+    <string name="stats_of">%1$d of %2$d</string>
+    <string name="stats_days_sub">finished days</string>
+    <string name="stats_split_since">Split since %s</string>
+    <string name="stats_split_none">From now on, Lúcido tracks Instagram and YouTube separately.</string>
+    <string name="stats_empty">No usage recorded yet. Use Instagram or YouTube from Lúcido and you\'ll see how it\'s going here.</string>
+    <string name="stats_open">See stats</string>
+    <string name="summary_charts">See charts</string>
+    <plurals name="stats_avg_days">
+        <item quantity="one">average of 1 day</item>
+        <item quantity="other">average of %1$d days</item>
+    </plurals>
+    <plurals name="stats_finished_days">
+        <item quantity="one">1 finished day</item>
+        <item quantity="other">%1$d finished days</item>
+    </plurals>
 </resources>

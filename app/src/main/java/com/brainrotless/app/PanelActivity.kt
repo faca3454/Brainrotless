@@ -9,18 +9,23 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.TextUtils
 import android.text.format.DateFormat
+import android.text.format.DateUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Space
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import java.time.DayOfWeek
+import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 import java.util.Date
+import kotlin.math.abs
 
 /**
  * Pantallas de configuración con el estilo del inicio: Modo dormir, Modo foco, Compromiso e
@@ -34,6 +39,7 @@ class PanelActivity : AppCompatActivity() {
         const val FOCUS = "focus"
         const val COMMIT = "commit"
         const val APPS = "apps"
+        const val STATS = "stats"
 
         fun open(c: Context, panel: String) =
             c.startActivity(Intent(c, PanelActivity::class.java).putExtra(EXTRA, panel))
@@ -42,6 +48,7 @@ class PanelActivity : AppCompatActivity() {
     private lateinit var list: LinearLayout
     private val panel get() = intent.getStringExtra(EXTRA) ?: SLEEP
     private var draftDays = Commitment.MIN_DAYS // días elegidos antes de empezar un compromiso
+    private var statsRange = 7 // días que muestran las estadísticas
 
     override fun attachBaseContext(base: Context) = super.attachBaseContext(Lang.wrap(base))
 
@@ -67,6 +74,7 @@ class PanelActivity : AppCompatActivity() {
             FOCUS -> focusPanel()
             COMMIT -> if (Commitment.active(this)) commitmentActive() else commitmentNew()
             APPS -> appsPanel()
+            STATS -> statsPanel()
         }
     }
 
@@ -348,8 +356,9 @@ class PanelActivity : AppCompatActivity() {
         if (markSeen) Commitment.markSummarySeen(this)
         AlertDialog.Builder(this)
             .setMessage(text)
-            .setPositiveButton(R.string.start_another) { _, _ -> render() }
+            .setPositiveButton(R.string.start_another) { _, _ -> if (panel == COMMIT) render() else open(this, COMMIT) }
             .setNegativeButton(R.string.done, null)
+            .apply { if (panel != STATS) setNeutralButton(R.string.summary_charts) { _, _ -> open(this@PanelActivity, STATS) } }
             .show()
     }
 
@@ -380,6 +389,202 @@ class PanelActivity : AppCompatActivity() {
 
     private fun prefSwitch(key: String, default: Boolean, title: Int, sub: Int) =
         switchRow(getString(title), getString(sub), userPrefs().getBoolean(key, default)) { on -> change { putBoolean(key, on) } }
+
+    // ---------- Estadísticas ----------
+
+    private fun statsPanel() {
+        header(getString(R.string.stats_title))
+        val history = Usage.history(this)
+        if (history.isEmpty()) {
+            add(Brand.card(muted(getString(R.string.stats_empty))), top = 8)
+            return
+        }
+        val today = Usage.today(this)
+
+        // Un solo filtro, arriba de todo lo que cambia con él
+        val ranges = listOf(7, 30)
+        add(chips(listOf(getString(R.string.stats_range_7), getString(R.string.stats_range_30)), ranges.indexOf(statsRange)) { i ->
+            statsRange = ranges[i]
+            render()
+        }, top = 4)
+
+        val window = StatsMath.window(history, today, statsRange)
+        val avg = StatsMath.average(window)
+        val before = UsageAccess.baseline(this)
+        add(compareCard(history, today, window, avg, before))
+
+        add(label(getString(R.string.stats_by_day)), top = 18)
+        add(Brand.card(dayChart(window, today, before)))
+        add(statTiles(window, today, avg))
+        splitCard(history, today, window)?.let { add(it) }
+
+        Commitment.lastSummary(this)?.let { last ->
+            add(Brand.card(linkRow(getString(R.string.pref_last), last.lines().first()) { showSummary(last, markSeen = false) }), top = 16)
+        }
+    }
+
+    /** Antes de Lúcido contra el promedio de ahora: el número grande es el cambio. */
+    private fun compareCard(history: Map<LocalDate, DayUsage>, today: LocalDate, window: List<DayUsage?>, avg: Long?, before: Long?): View {
+        val days = StatsMath.completed(window).size
+        val title = Brand.text(this, getString(R.string.stats_compare), 15.5f, bold = true)
+        if (before == null) {
+            val granted = UsageAccess.granted(this)
+            val box = column(title, space(4), muted(getString(if (granted) R.string.stats_no_before else R.string.stats_need_access)))
+            if (!granted) box.addView(Brand.secondaryButton(this, getString(R.string.stats_allow)) { UsageAccess.open(this) },
+                LinearLayout.LayoutParams(WRAP, WRAP).apply { topMargin = Brand.px(this@PanelActivity, 12) })
+            return Brand.card(box)
+        }
+        if (avg == null) return Brand.card(column(title, space(4),
+            muted(getString(R.string.stats_before) + ": " + getString(R.string.stats_per_day, formatDuration(before))),
+            muted(getString(R.string.stats_wait))))
+
+        val change = StatsMath.change(before, avg)
+        val sign = if (change < 0) "−" else if (change > 0) "+" else ""
+        val box = column(
+            title,
+            space(8),
+            LinearLayout(this).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                addView(Brand.text(context, "$sign${abs(change)}%", 40f, if (change <= 0) R.color.brand_primary else R.color.brand_warning, bold = true))
+                addView(muted(getString(when {
+                    change < 0 -> R.string.stats_less
+                    change > 0 -> R.string.stats_more
+                    else -> R.string.stats_same
+                })), LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = Brand.px(context, 12) })
+            },
+            space(14),
+            compareRow(getString(R.string.stats_before), null, before, maxOf(before, avg), strong = false),
+            space(14),
+            compareRow(getString(R.string.stats_now), resources.getQuantityString(R.plurals.stats_avg_days, days, days),
+                avg, maxOf(before, avg), strong = true)
+        )
+        val extras = listOfNotNull(
+            (before - avg).takeIf { it > 0 }?.let { getString(R.string.stats_week_less, rough(it * 7)) },
+            StatsMath.recovered(history, today, before)?.let { getString(R.string.stats_recovered, rough(it)) }
+        )
+        if (extras.isNotEmpty()) {
+            box.addView(space(14))
+            box.addView(banner(extras.joinToString("\n")))
+        }
+        return Brand.card(box)
+    }
+
+    private fun compareRow(name: String, sub: String?, value: Long, max: Long, strong: Boolean) = column(
+        LinearLayout(this).apply {
+            gravity = Gravity.BOTTOM
+            addView(Brand.text(context, if (sub != null) "$name · $sub" else name, 13.5f, R.color.brand_text_muted), LinearLayout.LayoutParams(0, WRAP, 1f))
+            addView(Brand.text(context, getString(R.string.stats_per_day, formatDuration(value)), 14f, bold = true))
+        },
+        space(6),
+        FillBar(this, strong).apply { post { setFraction(value.toFloat() / max) } }
+    )
+
+    /** Columnas por día; tocar una (o deslizar) muestra ese día arriba del gráfico. */
+    private fun dayChart(window: List<DayUsage?>, today: LocalDate, before: Long?): View {
+        val n = window.size
+        val days = (0 until n).map { today.minusDays((n - 1 - it).toLong()) }
+        val names = resources.getStringArray(R.array.weekday_entries)
+        val callout = Brand.text(this, "", 16f, bold = true)
+        fun show(i: Int) {
+            val d = days[i]
+            val day = if (i == n - 1) getString(R.string.stats_today) else "${names[d.dayOfWeek.value - 1]} ${d.dayOfMonth}"
+            callout.text = "$day · ${formatDuration(window[i]?.total ?: 0)}"
+        }
+        val chart = DayBars(this).apply {
+            values = window.map { it?.total }
+            labels = days.mapIndexed { i, d ->
+                when {
+                    n <= 7 -> names[d.dayOfWeek.value - 1].take(1)
+                    (n - 1 - i) % 7 == 0 -> d.dayOfMonth.toString()
+                    else -> ""
+                }
+            }
+            limit = Usage.limitMs(this@PanelActivity)
+            if (limit != null) limitFrom = StatsMath.indexOf(Commitment.startDay(this@PanelActivity), today, n)
+            this.before = before
+            limitLabel = getString(R.string.stats_limit_line)
+            beforeLabel = getString(R.string.stats_before_line)
+            selected = n - 1
+            onSelect = { show(it) }
+            contentDescription = getString(R.string.stats_by_day)
+            post { animateIn() }
+        }
+        show(n - 1)
+        return column(callout, muted(getString(R.string.stats_hint)), space(14), chart)
+    }
+
+    /** Promedio, total, mejor día y días dentro del límite (o hoy, si no hay límite). */
+    private fun statTiles(window: List<DayUsage?>, today: LocalDate, avg: Long?): View {
+        val names = resources.getStringArray(R.array.weekday_entries)
+        val completed = StatsMath.completed(window).size
+        val best = StatsMath.best(window)
+        val limit = Usage.limitMs(this)
+        val tiles = listOf(
+            stat(getString(R.string.stats_avg), avg?.let(::formatDuration) ?: "—",
+                resources.getQuantityString(R.plurals.stats_finished_days, completed, completed)),
+            stat(getString(R.string.stats_total), formatDuration(window.filterNotNull().sumOf { it.total }),
+                getString(if (statsRange == 7) R.string.stats_range_7 else R.string.stats_range_30)),
+            stat(getString(R.string.stats_best), best?.let { formatDuration(it.second) } ?: "—",
+                best?.let { (i, _) -> today.minusDays((window.size - 1 - i).toLong()).let { "${names[it.dayOfWeek.value - 1]} ${it.dayOfMonth}" } } ?: ""),
+            if (limit != null) StatsMath.within(window, limit, StatsMath.indexOf(Commitment.startDay(this), today, window.size)).let { (ok, of) ->
+                stat(getString(R.string.stats_within), getString(R.string.stats_of, ok, of), getString(R.string.stats_days_sub))
+            } else stat(getString(R.string.stats_today), formatDuration(window.last()?.total ?: 0),
+                getString(R.string.home_resets, Sleep.fmt(this, Usage.nextReset(this).toLocalTime())))
+        )
+        val gap = Brand.px(this, 12)
+        return column(*tiles.chunked(2).mapIndexed { r, pair ->
+            LinearLayout(this).apply {
+                if (r > 0) setPadding(0, gap, 0, 0)
+                pair.forEachIndexed { i, t -> addView(t, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply { if (i > 0) marginStart = gap }) }
+            }
+        }.toTypedArray())
+    }
+
+    /** Cuánto fue Instagram y cuánto YouTube (desde que Lúcido los separa). */
+    private fun splitCard(history: Map<LocalDate, DayUsage>, today: LocalDate, window: List<DayUsage?>): View? {
+        if (window.filterNotNull().sumOf { it.total } == 0L) return null
+        val (ig, yt) = StatsMath.split(window)
+        val box = column(Brand.text(this, getString(R.string.panel_apps), 15.5f, bold = true))
+        if (ig + yt == 0L) {
+            box.addView(space(4))
+            box.addView(muted(getString(R.string.stats_split_none)))
+            return Brand.card(box)
+        }
+        val max = maxOf(ig, yt).toFloat()
+        val (igPct, ytPct) = StatsMath.percents(ig, yt)
+        fun appRow(icon: Int, name: String, ms: Long, pct: Int) = LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(ImageView(context).apply { setImageResource(icon); contentDescription = name },
+                LinearLayout.LayoutParams(Brand.px(context, 28), Brand.px(context, 28)))
+            addView(column(
+                LinearLayout(context).apply {
+                    addView(Brand.text(context, name, 14f, bold = true), LinearLayout.LayoutParams(0, WRAP, 1f))
+                    addView(Brand.text(context, "${formatDuration(ms)} · $pct%", 13.5f, R.color.brand_text_muted))
+                },
+                space(6),
+                FillBar(context, strong = true).apply { post { setFraction(ms / max) } }
+            ), LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = Brand.px(context, 12) })
+        }
+        box.addView(space(12))
+        box.addView(appRow(R.mipmap.ic_ig, "Instagram", ig, igPct))
+        box.addView(space(12))
+        box.addView(appRow(R.mipmap.ic_yt, "YouTube", yt, ytPct))
+
+        // Si en la ventana hay días de antes de separarlos, decir desde cuándo cuenta
+        val windowStart = today.minusDays(window.size - 1L)
+        val firstSplit = history.filterValues { it.ig + it.yt > 0 }.keys.minOrNull()
+        if (firstSplit != null && history.keys.any { it >= windowStart && it < firstSplit }) {
+            val millis = firstSplit.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            box.addView(space(10))
+            box.addView(muted(getString(R.string.stats_split_since,
+                DateUtils.formatDateTime(this, millis, DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_NO_YEAR))))
+        }
+        return Brand.card(box)
+    }
+
+    /** Duración aproximada para textos como "≈ 13 h menos por semana". */
+    private fun rough(ms: Long) = "≈ " + if (ms >= 2 * 3_600_000L) "${(ms + 1_800_000) / 3_600_000} h"
+        else formatDuration(((ms + 150_000) / 300_000).coerceAtLeast(1) * 300_000)
 
     // ---------- Cambios ----------
 

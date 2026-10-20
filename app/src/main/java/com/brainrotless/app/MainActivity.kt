@@ -279,6 +279,7 @@ class MainActivity : ComponentActivity() {
     /** Muestra la WebView de esa plataforma con un fundido corto; la otra queda viva, en pausa. */
     private fun switchTo(v: WebView) {
         if (v === web && v.visibility == View.VISIBLE) return
+        if (usageMark > 0) countUsage() // lo de hasta ahora, a la app que se estaba viendo
         val old = web
         web = v
         offline.visibility = View.GONE
@@ -389,7 +390,7 @@ class MainActivity : ComponentActivity() {
     private fun countUsage() {
         val now = SystemClock.elapsedRealtime()
         val blocked = lockScreen.visibility == View.VISIBLE || guardScreen.visibility == View.VISIBLE
-        if (usageMark > 0 && !blocked) Usage.add(this, now - usageMark)
+        if (usageMark > 0 && !blocked) Usage.add(this, now - usageMark, if (onYouTube) Usage.App.YT else Usage.App.IG)
         usageMark = now
     }
 

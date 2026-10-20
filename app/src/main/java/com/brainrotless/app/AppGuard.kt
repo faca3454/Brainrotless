@@ -62,7 +62,8 @@ class AppGuard : AccessibilityService() {
     private fun countOfficial() {
         val now = SystemClock.elapsedRealtime()
         val counting = foreground in redirects && getSystemService(PowerManager::class.java)?.isInteractive == true
-        if (counting && officialSince > 0) Usage.add(this, now - officialSince)
+        if (counting && officialSince > 0)
+            Usage.add(this, now - officialSince, if (foreground == "com.google.android.youtube") Usage.App.YT else Usage.App.IG)
         officialSince = if (counting) now else 0
     }
 

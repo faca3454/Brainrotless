@@ -52,6 +52,7 @@ class HomeActivity : ComponentActivity() {
             AlertDialog.Builder(this)
                 .setMessage(text)
                 .setPositiveButton(R.string.start_another) { _, _ -> PanelActivity.open(this, PanelActivity.COMMIT) }
+                .setNeutralButton(R.string.summary_charts) { _, _ -> PanelActivity.open(this, PanelActivity.STATS) }
                 .setNegativeButton(R.string.not_now, null)
                 .show()
         }
@@ -176,6 +177,16 @@ class HomeActivity : ComponentActivity() {
             addView(Brand.text(context, formatDuration(used), 22f, bold = true))
             limit?.let { addView(Brand.text(context, getString(R.string.home_of, formatDuration(it)), 13f, R.color.brand_text_muted).apply { setPadding(0, 0, 0, Brand.px(context, 3)) }) }
         }
+        // Mini gráfico de la semana: avisa que tocando se ven las estadísticas
+        val today = Usage.today(this)
+        val week = StatsMath.window(Usage.history(this), today, 7)
+        val spark = DayBars(this, mini = true).apply {
+            values = week.map { it?.total }
+            this.limit = limit
+            if (limit != null) limitFrom = StatsMath.indexOf(Commitment.startDay(context), today, 7)
+            selected = week.size - 1
+            contentDescription = getString(R.string.stats_open)
+        }
         return Brand.card(row(
             ring,
             column(
@@ -183,8 +194,12 @@ class HomeActivity : ComponentActivity() {
                 amount,
                 Brand.text(this, detail, 13f, if (over) R.color.brand_warning else R.color.brand_text_muted)
             ),
+            chevron = true,
             iconSize = 68
-        ))
+        ).apply {
+            addView(spark, 2, LinearLayout.LayoutParams(Brand.px(context, 52), ViewGroup.LayoutParams.WRAP_CONTENT)
+                .apply { marginStart = Brand.px(context, 8); marginEnd = Brand.px(context, 4) })
+        }) { PanelActivity.open(this, PanelActivity.STATS) }
     }
 
     private fun sleepCard(): View {

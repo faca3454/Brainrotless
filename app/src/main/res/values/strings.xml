@@ -277,4 +277,46 @@
         <item quantity="one">queda %1$d día</item>
         <item quantity="other">quedan %1$d días</item>
     </plurals>
+
+    <!-- Estadísticas -->
+    <string name="stats_title">Estadísticas</string>
+    <string name="stats_range_7">Últimos 7 días</string>
+    <string name="stats_range_30">Últimos 30 días</string>
+    <string name="stats_compare">Antes vs ahora</string>
+    <string name="stats_less">menos que antes de Lúcido</string>
+    <string name="stats_more">más que antes de Lúcido</string>
+    <string name="stats_same">lo mismo que antes de Lúcido</string>
+    <string name="stats_before">Antes de Lúcido</string>
+    <string name="stats_now">Ahora</string>
+    <string name="stats_per_day">%s por día</string>
+    <string name="stats_week_less">%s menos por semana</string>
+    <string name="stats_recovered">Recuperaste %s desde que empezaste</string>
+    <string name="stats_need_access">Para comparar con antes, Lúcido necesita ver cuánto usabas Instagram y YouTube antes de instalarlo.</string>
+    <string name="stats_allow">Permitir</string>
+    <string name="stats_no_before">Android no guardó datos de antes de instalar Lúcido, así que no hay con qué comparar.</string>
+    <string name="stats_wait">Mañana vas a ver tu primer promedio.</string>
+    <string name="stats_by_day">Por día</string>
+    <string name="stats_hint">Tocá una columna para ver ese día</string>
+    <string name="stats_limit_line">límite</string>
+    <string name="stats_before_line">antes</string>
+    <string name="stats_today">Hoy</string>
+    <string name="stats_avg">Promedio por día</string>
+    <string name="stats_total">Total</string>
+    <string name="stats_best">Mejor día</string>
+    <string name="stats_within">Dentro del límite</string>
+    <string name="stats_of">%1$d de %2$d</string>
+    <string name="stats_days_sub">días terminados</string>
+    <string name="stats_split_since">Separado desde el %s</string>
+    <string name="stats_split_none">Desde ahora, Lúcido separa cuánto es Instagram y cuánto YouTube.</string>
+    <string name="stats_empty">Todavía no hay uso registrado. Usá Instagram o YouTube desde Lúcido y acá vas a ver cómo te va.</string>
+    <string name="stats_open">Ver estadísticas</string>
+    <string name="summary_charts">Ver gráficos</string>
+    <plurals name="stats_avg_days">
+        <item quantity="one">promedio de 1 día</item>
+        <item quantity="other">promedio de %1$d días</item>
+    </plurals>
+    <plurals name="stats_finished_days">
+        <item quantity="one">1 día terminado</item>
+        <item quantity="other">%1$d días terminados</item>
+    </plurals>
 </resources>

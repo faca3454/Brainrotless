@@ -106,6 +106,7 @@ object Commitment {
     private fun prefs(c: Context) = c.getSharedPreferences("commitment", Context.MODE_PRIVATE)
 
     fun endMillis(c: Context) = prefs(c).getLong("end", 0)
+    fun startDay(c: Context): LocalDate = Instant.ofEpochMilli(prefs(c).getLong("start", 0)).atZone(ZoneId.systemDefault()).toLocalDate()
     fun active(c: Context) = TrustedClock.millis(c) < endMillis(c)
     fun pausesFor(days: Int) = days / 2
     fun daysLeft(c: Context) = ((endMillis(c) - TrustedClock.millis(c) + DAY_MS - 1) / DAY_MS).coerceAtLeast(0)
@@ -283,6 +284,35 @@ object Usage {
 
     private fun dayKey(c: Context) = "d_${dayStart(c)}"
 
+    /** De qué app es el tiempo que se suma (para separar Instagram y YouTube en las estadísticas). */
+    enum class App(val key: String) { IG("ig"), YT("yt") }
+
+    /**
+     * Uso de cada día con datos, por fecha. Cada día se guarda con la hora de despertarse
+     * ("d_2026-10-20T06:30", y "ig_..."/"yt_..." desde que se separan); si cambió el horario,
+     * dos claves del mismo día se suman.
+     */
+    fun history(c: Context): Map<LocalDate, DayUsage> {
+        val total = HashMap<LocalDate, Long>()
+        val ig = HashMap<LocalDate, Long>()
+        val yt = HashMap<LocalDate, Long>()
+        for ((key, value) in prefs(c).all) {
+            if (value !is Long) continue
+            val target = when {
+                key.startsWith("d_") -> total
+                key.startsWith("ig_") -> ig
+                key.startsWith("yt_") -> yt
+                else -> continue
+            }
+            val day = runCatching { LocalDateTime.parse(key.substringAfter('_')).toLocalDate() }.getOrNull() ?: continue
+            target[day] = (target[day] ?: 0) + value
+        }
+        return total.mapValues { (day, ms) -> DayUsage(ms, ig[day] ?: 0, yt[day] ?: 0) }
+    }
+
+    /** Fecha del día de uso de hoy (antes de despertarse sigue siendo la de ayer). */
+    fun today(c: Context): LocalDate = dayStart(c).toLocalDate()
+
     fun todayMs(c: Context) = prefs(c).getLong(dayKey(c), 0)
     fun limitMinutes(c: Context) = c.userPrefs().getString("daily_limit", "0")?.toIntOrNull()?.takeIf { it > 0 }
     fun limitMs(c: Context) = if (Commitment.active(c)) limitMinutes(c)?.let { it * 60_000L } else null
@@ -290,11 +320,16 @@ object Usage {
     fun remainingMs(c: Context) = limitMs(c)?.let { (it - todayMs(c)).coerceAtLeast(0) }
 
     /** Suma uso (salvo durante una pausa de emergencia) y avisa cuando queda poco o se termina. */
-    fun add(c: Context, ms: Long) {
+    fun add(c: Context, ms: Long, app: App) {
         if (ms <= 0 || Commitment.pauseActive(c)) return
         val before = remainingMs(c)
-        val key = dayKey(c)
-        prefs(c).edit().putLong(key, prefs(c).getLong(key, 0) + ms.coerceAtMost(10 * 60_000)).apply()
+        val day = dayStart(c)
+        val add = ms.coerceAtMost(10 * 60_000)
+        val p = prefs(c)
+        p.edit()
+            .putLong("d_$day", p.getLong("d_$day", 0) + add)
+            .putLong("${app.key}_$day", p.getLong("${app.key}_$day", 0) + add)
+            .apply()
         Widgets.update(c)
         val after = remainingMs(c) ?: return
         if (before == null) return
