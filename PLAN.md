@@ -119,7 +119,8 @@ El "modo solo mensajes" es el mismo que usa el límite diario (punto 5.3).
 - Avisos cuando queda poco (ej. a los 10 y a los 2 minutos).
 - El contador se reinicia **a la hora de despertarse**, no a medianoche.
 - Se puede bajar durante el compromiso, no subir.
-- ⚠️ *Pendiente:* ¿el tiempo que pasás solo en mensajes también suma al límite?
+- **Todo suma al límite**, también el tiempo en mensajes. Una vez alcanzado, los mensajes se
+  siguen pudiendo usar (modo solo mensajes).
 - Medición: tiempo con IG Lite / YT Lite en primer plano (pantalla encendida), guardado por día.
 
 ### 5.4 Al terminar
