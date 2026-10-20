@@ -47,6 +47,11 @@ object Rules {
             .put("igFeed", p.getString("ig_feed", "normal"))
             .put("igBlockExplore", p.getBoolean("ig_block_explore", true))
             .put("igTapToPlay", p.getBoolean("ig_tap_to_play", false))
+        // Hora de dormir: Instagram solo para mensajes
+        Sleep.current(c)?.let {
+            cfg.put("restricted", true)
+                .put("restrictedMsg", "🌙 Hora de dormir: solo mensajes hasta las ${Sleep.fmt(c, it.end.toLocalTime())}")
+        }
         return "window.__noscrollCfg=$cfg;\n" + current(c)
     }
 

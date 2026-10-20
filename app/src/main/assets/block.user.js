@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Brainrotless
 // @description  Bloquea el feed de Reels/Shorts pero deja ver los que te mandan
-// @version      3
+// @version      4
 // @match        *://*.instagram.com/*
 // @match        *://instagram.com/*
 // @match        *://*.youtube.com/*
@@ -17,7 +17,7 @@
 
   // --- Config (la app la inyecta desde Ajustes; en Safari/Userscripts usa estos valores) ---
   const CFG = Object.assign(
-    { igFeed: 'normal', igBlockExplore: true, igTapToPlay: false },
+    { igFeed: 'normal', igBlockExplore: true, igTapToPlay: false, restricted: false, restrictedMsg: '' },
     window.__noscrollCfg || {}
   );
   if (CFG.igBlockFeed) CFG.igFeed = 'blocked'; // versiones viejas de la app mandan igBlockFeed
@@ -26,9 +26,15 @@
   const YT = /(^|\.)youtube\.com$/.test(location.hostname);
   if (!IG && !YT) return;
 
+  // Aviso que dejó la página anterior al redirigir. Se lee antes de la guardia de URL,
+  // que puede redirigir otra vez y seguir corriendo un instante en esta página.
+  let pendingToast = null;
+  try { pendingToast = sessionStorage.getItem('brl_toast'); sessionStorage.removeItem('brl_toast'); } catch (e) {}
+
   // --- 1. Ocultar accesos al feed (cosmético; los selectores pueden romperse) ---
   const CSS = IG
-    ? `a[href="/reels/"]${CFG.igBlockExplore ? ', a[href="/explore/"]' : ''} { display:none !important; }`
+    ? `a[href="/reels/"]${CFG.igBlockExplore ? ', a[href="/explore/"]' : ''} { display:none !important; }` +
+      (CFG.restricted ? 'a[href="/"], video { display:none !important; }' : '')
     : `
       ytm-reel-shelf-renderer, ytm-shorts-lockup-view-model,
       ytm-rich-item-renderer:has(a[href^="/shorts/"]),
@@ -97,6 +103,12 @@
     }
 
     // Instagram
+    // Modo solo mensajes (hora de dormir): fuera de los chats, todo vuelve al inbox
+    if (CFG.restricted && !/^\/(direct|accounts|challenge)\//.test(p)) {
+      try { sessionStorage.setItem('brl_toast', CFG.restrictedMsg); } catch (e) {}
+      location.replace('/direct/inbox/');
+      return;
+    }
     const blocked =
       /^\/reels\/?$/.test(p) ||
       (CFG.igBlockExplore && /^\/explore\/?$/.test(p)) ||
@@ -142,7 +154,30 @@
   setInterval(check, 400); // respaldo por si la SPA cambia la URL por otra vía
   check();
 
-  // --- 4. Videos solo al tocar (Instagram, opcional) ---
+  // --- 4. Modo solo mensajes: sin videos (ni reels que te mandan); los audios sí ---
+  if (IG && CFG.restricted) {
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () {
+      if (!(this instanceof HTMLVideoElement)) return play.call(this);
+      return Promise.reject(new DOMException('Hora de dormir', 'NotAllowedError'));
+    };
+    addEventListener('play', (e) => { if (e.target instanceof HTMLVideoElement) e.target.pause(); }, true);
+
+    // Aviso de por qué te devolvió al inbox
+    const toast = () => {
+      const t = document.createElement('div');
+      t.textContent = pendingToast;
+      t.style.cssText =
+        'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:2147483647;max-width:90vw;' +
+        'background:rgba(0,0,0,.85);color:#fff;padding:10px 16px;border-radius:20px;font:14px sans-serif;' +
+        'text-align:center;pointer-events:none';
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 4000);
+    };
+    if (pendingToast) document.body ? toast() : addEventListener('DOMContentLoaded', toast);
+  }
+
+  // --- 5. Videos solo al tocar (Instagram, opcional) ---
   // Los videos no arrancan ni se precargan hasta que los tocás. Los reels e historias
   // que abrís arrancan solos: ya tocaste para abrirlos.
   if (IG && CFG.igTapToPlay) {
@@ -215,7 +250,7 @@
     }, true);
   }
 
-  // --- 5. Sacar los carteles de "Usá la app" (Instagram) ---
+  // --- 6. Sacar los carteles de "Usá la app" (Instagram) ---
   // Por texto, porque las clases cambian seguido. En una ventana se toca "Ahora no";
   // en un banner fijo se oculta el botón (y el banner, si no tiene nada más).
   if (IG) {
@@ -252,7 +287,7 @@
     }).observe(document, { childList: true, subtree: true }); // document: el <html> puede no existir todavía
   }
 
-  // --- 6. Pull-to-refresh: avisarle a la app si el gesto empieza arriba de todo ---
+  // --- 7. Pull-to-refresh: avisarle a la app si el gesto empieza arriba de todo ---
   // Instagram y YouTube scrollean dentro de contenedores, no la ventana,
   // así que la app no puede saberlo sola.
   if (window.NoScrollBridge) {

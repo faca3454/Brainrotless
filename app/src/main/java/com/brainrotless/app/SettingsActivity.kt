@@ -1,10 +1,15 @@
 package com.brainrotless.app
 
+import android.app.TimePickerDialog
+import android.content.SharedPreferences
 import android.os.Bundle
+import android.text.format.DateFormat
 import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
+import java.time.DayOfWeek
+import java.time.LocalTime
 
 class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,6 +32,8 @@ class SettingsActivity : AppCompatActivity() {
             onClick("perm_links") { Setup.openLinks(requireContext()) }
             onClick("perm_guard") { Setup.openAccessibility(requireContext()) }
             onClick("perm_restricted") { Setup.explainRestricted(requireActivity()) }
+            onClick("sleep_all") { pickNight(null) }
+            for (d in DayOfWeek.values()) onClick("sleep_day_${d.value}") { pickNight(d) }
             onClick("check_now") {
                 Updater.maybeCheck(requireActivity(), force = true)
                 Rules.refreshAsync(requireContext(), force = true) { }
@@ -46,6 +53,52 @@ class SettingsActivity : AppCompatActivity() {
                 status(guardOn, "Abrir Instagram/YouTube oficiales te trae acá")
             findPreference<Preference>("perm_restricted")?.isVisible =
                 Setup.restrictedApplies() && !(listenerOn && guardOn)
+            preferenceManager.sharedPreferences?.registerOnSharedPreferenceChangeListener(prefsListener)
+            refreshSleep()
+        }
+
+        override fun onPause() {
+            super.onPause()
+            preferenceManager.sharedPreferences?.unregisterOnSharedPreferenceChangeListener(prefsListener)
+        }
+
+        // ---------- Modo dormir ----------
+
+        private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key?.startsWith("sleep_") == true) refreshSleep()
+        }
+
+        private fun refreshSleep() {
+            val c = requireContext()
+            val perDay = Sleep.perDay(c)
+            findPreference<Preference>("sleep_all")?.apply {
+                isVisible = !perDay
+                summary = "Todos los días, de ${night(Sleep.get(c, null))}"
+            }
+            for (d in DayOfWeek.values()) findPreference<Preference>("sleep_day_${d.value}")?.apply {
+                isVisible = perDay
+                summary = night(Sleep.get(c, d))
+            }
+            Sleep.reschedule(c)
+        }
+
+        private fun night(t: Pair<LocalTime, LocalTime>) =
+            "${Sleep.fmt(requireContext(), t.first)} a ${Sleep.fmt(requireContext(), t.second)}"
+
+        /** Hora de dormir y después hora de despertar, del horario general (null) o de un día. */
+        private fun pickNight(day: DayOfWeek?) {
+            val c = requireContext()
+            val (sleep, wake) = Sleep.get(c, day)
+            pickTime("Hora de dormir", sleep) { s ->
+                pickTime("Hora de despertar", wake) { w -> Sleep.set(c, day, s, w) }
+            }
+        }
+
+        private fun pickTime(title: String, t: LocalTime, done: (LocalTime) -> Unit) {
+            TimePickerDialog(
+                requireContext(), { _, h, m -> done(LocalTime.of(h, m)) },
+                t.hour, t.minute, DateFormat.is24HourFormat(requireContext())
+            ).apply { setTitle(title) }.show()
         }
 
         private fun status(on: Boolean, what: String) =

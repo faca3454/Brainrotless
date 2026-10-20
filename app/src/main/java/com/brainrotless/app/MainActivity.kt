@@ -10,6 +10,8 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -35,6 +37,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var refresh: SwipeRefreshLayout
     private lateinit var web: WebView
     private lateinit var offline: View
+    private lateinit var sleepScreen: View
+    private lateinit var sleepText: TextView
+    private val handler = Handler(Looper.getMainLooper())
 
     private val bridge = Bridge()
     private var scriptHandler: ScriptHandler? = null
@@ -79,10 +84,13 @@ class MainActivity : ComponentActivity() {
             setOnChildScrollUpCallback { _, _ -> fullscreenView != null || !bridge.atTop }
             setOnRefreshListener { web.reload() }
         }
-        offline = buildOfflineView()
+        offline = buildNotice("Sin conexión", "Revisá el Wi-Fi o los datos", "Reintentar") { web.reload() }
+        sleepScreen = buildNotice("Hora de dormir 🌙", "", "Ir a los mensajes de Instagram") { open(IG_INBOX) }
+        sleepText = sleepScreen.findViewWithTag("subtitle")
         root = FrameLayout(this).apply {
             addView(refresh, FrameLayout.LayoutParams(MATCH, MATCH))
             addView(offline, FrameLayout.LayoutParams(MATCH, MATCH))
+            addView(sleepScreen, FrameLayout.LayoutParams(MATCH, MATCH))
         }
         setContentView(root)
 
@@ -101,6 +109,7 @@ class MainActivity : ComponentActivity() {
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(v: WebView, r: WebResourceRequest): Boolean {
                 val u = r.url
+                if (isYouTube(u.toString()) && Sleep.active(this@MainActivity)) { showSleepScreen(); return true }
                 shortsToWatch(u)?.let { v.loadUrl(it); return true }
                 // intent:// o instagram:// que intentan abrir la app oficial
                 if (u.scheme != "https" && u.scheme != "http") return true
@@ -111,6 +120,8 @@ class MainActivity : ComponentActivity() {
 
             override fun onPageStarted(v: WebView, url: String?, favicon: android.graphics.Bitmap?) {
                 mainFrameError = false
+                // Volver atrás a YouTube no pasa por shouldOverrideUrlLoading
+                if (isYouTube(url) && Sleep.active(this@MainActivity)) { v.stopLoading(); showSleepScreen() }
             }
 
             override fun onPageFinished(v: WebView, url: String) {
@@ -160,28 +171,68 @@ class MainActivity : ComponentActivity() {
             override fun handleOnBackPressed() {
                 when {
                     fullscreenView != null -> exitFullscreen()
+                    sleepScreen.visibility == View.VISIBLE -> finish()
                     web.canGoBack() -> web.goBack()
                     else -> finish()
                 }
             }
         })
 
-        if (savedInstanceState == null) web.loadUrl(urlFromIntent(intent) ?: launcherUrl(intent))
+        if (savedInstanceState == null) open(urlFromIntent(intent) ?: launcherUrl(intent))
         else web.restoreState(savedInstanceState)
 
         maybeAskSetup()
         Rules.refreshAsync(this) { runOnUiThread { installScript() } } // se aplica en la próxima carga
         Updater.maybeCheck(this)
+        Sleep.reschedule(this)
     }
 
     override fun onResume() {
         super.onResume()
-        // Si cambiaron los Ajustes, reinyectar y recargar para aplicarlos ya
-        if (::web.isInitialized && Rules.build(this) != injectedScript) {
-            installScript()
-            web.reload()
+        sleepTicker.run()
+    }
+
+    // ---------- Modo dormir ----------
+
+    /** Revisa justo cuando empieza o termina la noche (y cada minuto, por las dudas). */
+    private val sleepTicker = object : Runnable {
+        override fun run() {
+            applyLock()
+            handler.removeCallbacks(this)
+            handler.postDelayed(this, ((Sleep.msUntilChange(this@MainActivity) ?: 60_000) + 500).coerceIn(1_000, 60_000))
         }
     }
+
+    private fun applyLock() {
+        val night = Sleep.active(this)
+        // Cambió el modo solo mensajes o algún ajuste: reinyectar y recargar para aplicarlo ya
+        val scriptChanged = Rules.build(this) != injectedScript
+        if (scriptChanged) installScript()
+        when {
+            night && isYouTube(web.url) -> showSleepScreen()
+            !night && sleepScreen.visibility == View.VISIBLE -> open(YT_HOME) // se terminó la noche
+            scriptChanged && sleepScreen.visibility != View.VISIBLE -> web.reload()
+        }
+    }
+
+    /** Carga una URL, salvo YouTube en horario de dormir. */
+    private fun open(url: String) {
+        if (isYouTube(url) && Sleep.active(this)) { showSleepScreen(); return }
+        sleepScreen.visibility = View.GONE
+        web.loadUrl(url)
+    }
+
+    private fun showSleepScreen() {
+        val night = Sleep.current(this) ?: return
+        sleepText.text = "YouTube está bloqueado hasta las ${Sleep.fmt(this, night.end.toLocalTime())}"
+        if (sleepScreen.visibility == View.VISIBLE) return
+        sleepScreen.visibility = View.VISIBLE
+        if (fullscreenView != null) exitFullscreen()
+        web.loadUrl("about:blank") // corta el video y el audio
+    }
+
+    private fun isYouTube(url: String?) =
+        url != null && hostIn(Uri.parse(url).host, listOf("youtube.com", "youtu.be"))
 
     // singleTask: links y notificaciones llegan acá si la app ya está abierta
     override fun onNewIntent(intent: Intent) {
@@ -189,11 +240,11 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         if (fullscreenView != null) exitFullscreen()
         val url = urlFromIntent(intent)
-        if (url != null) { web.loadUrl(url); return }
+        if (url != null) { open(url); return }
         // Tocaste el ícono de la otra plataforma: cambiar solo si hace falta
         val wantYT = isYouTubeAlias(intent)
-        val onYT = web.url?.contains("youtube.com") == true
-        if (wantYT != onYT) web.loadUrl(launcherUrl(intent))
+        val onYT = sleepScreen.visibility == View.VISIBLE || isYouTube(web.url)
+        if (wantYT != onYT) open(launcherUrl(intent))
     }
 
     // ---------- Script de bloqueo ----------
@@ -229,8 +280,7 @@ class MainActivity : ComponentActivity() {
 
     private fun isYouTubeAlias(i: Intent) = i.component?.className?.endsWith("YouTube") == true
 
-    private fun launcherUrl(i: Intent) =
-        if (isYouTubeAlias(i)) "https://m.youtube.com" else "https://www.instagram.com/direct/inbox/"
+    private fun launcherUrl(i: Intent) = if (isYouTubeAlias(i)) YT_HOME else IG_INBOX
 
     private fun shortsToWatch(u: Uri): String? {
         if (u.host?.contains("youtube.com") != true) return null
@@ -241,14 +291,15 @@ class MainActivity : ComponentActivity() {
     private fun hostIn(host: String?, list: List<String>) =
         host != null && list.any { host == it || host.endsWith(".$it") }
 
-    // ---------- Sin conexión ----------
+    // ---------- Pantallas de aviso ----------
 
     private val dark
         get() = (resources.configuration.uiMode and
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
 
-    private fun buildOfflineView(): View {
+    /** Pantalla completa con título, texto y un botón (sin conexión, hora de dormir). */
+    private fun buildNotice(title: String, subtitle: String, button: String, onClick: () -> Unit): View {
         val fg = if (dark) Color.WHITE else Color.parseColor("#202020")
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -257,21 +308,22 @@ class MainActivity : ComponentActivity() {
             visibility = View.GONE
             isClickable = true // que no pase el toque a la WebView de atrás
             addView(TextView(context).apply {
-                text = "Sin conexión"
+                text = title
                 setTextColor(fg)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
                 gravity = Gravity.CENTER
             })
             addView(TextView(context).apply {
-                text = "Revisá el Wi-Fi o los datos"
+                text = subtitle
+                tag = "subtitle"
                 setTextColor(fg)
                 alpha = 0.7f
-                setPadding(0, 12, 0, 36)
+                setPadding(48, 12, 48, 36)
                 gravity = Gravity.CENTER
             })
             addView(Button(context).apply {
-                text = "Reintentar"
-                setOnClickListener { web.reload() }
+                text = button
+                setOnClickListener { onClick() }
             })
         }
     }
@@ -343,12 +395,20 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onPause() { super.onPause(); CookieManager.getInstance().flush() }
+    override fun onPause() {
+        super.onPause()
+        handler.removeCallbacks(sleepTicker)
+        CookieManager.getInstance().flush()
+    }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         web.saveState(outState)
     }
 
-    companion object { private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT }
+    companion object {
+        private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
+        private const val IG_INBOX = "https://www.instagram.com/direct/inbox/"
+        private const val YT_HOME = "https://m.youtube.com"
+    }
 }

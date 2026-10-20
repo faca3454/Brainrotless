@@ -11,6 +11,7 @@ Podés ver los reels y shorts que te mandan tus amigos, pero no pasar al siguien
 - **Feed de seguidos** (opcional): el inicio de Instagram muestra solo las cuentas que seguís, en orden, y se termina.
 - **Videos solo al tocar** (opcional): los videos de Instagram no arrancan ni se precargan hasta que los tocás. Los reels que te mandan arrancan solos.
 - **Sin carteles de "Usá la app"** en Instagram.
+- **Modo dormir** (opcional): en tu horario (uno para todos los días o uno por noche), Instagram queda solo para mensajes y YouTube se bloquea, también desde las apps oficiales. Avisa unos minutos antes y la pausa del bloqueo no funciona.
 - **Links** (WhatsApp, Telegram, etc.) y **notificaciones** de Instagram/YouTube se abren en Brainrotless.
 - **Apps oficiales**: si las abrís a mano, te redirige. Hay un botón en los ajustes rápidos para pausarlo unos minutos.
 - **Ajustes**: mantené presionado el ícono de IG Lite o YT Lite → *Ajustes*.

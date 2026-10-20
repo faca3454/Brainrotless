@@ -30,14 +30,50 @@
             app:summary="Ahorra datos: los videos no arrancan solos. Los reels que te mandan, sí" />
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="Modo dormir">
+        <SwitchPreferenceCompat
+            app:key="sleep_on"
+            app:defaultValue="false"
+            app:title="Activar modo dormir"
+            app:summary="En tu horario, Instagram queda solo para mensajes y YouTube se bloquea" />
+        <Preference app:key="sleep_all" app:title="Horario" app:dependency="sleep_on" />
+        <SwitchPreferenceCompat
+            app:key="sleep_per_day"
+            app:defaultValue="false"
+            app:title="Horario distinto por día"
+            app:dependency="sleep_on" />
+        <Preference app:key="sleep_day_1" app:title="Noche de lunes a martes"
+            app:dependency="sleep_on" app:isPreferenceVisible="false" />
+        <Preference app:key="sleep_day_2" app:title="Noche de martes a miércoles"
+            app:dependency="sleep_on" app:isPreferenceVisible="false" />
+        <Preference app:key="sleep_day_3" app:title="Noche de miércoles a jueves"
+            app:dependency="sleep_on" app:isPreferenceVisible="false" />
+        <Preference app:key="sleep_day_4" app:title="Noche de jueves a viernes"
+            app:dependency="sleep_on" app:isPreferenceVisible="false" />
+        <Preference app:key="sleep_day_5" app:title="Noche de viernes a sábado"
+            app:dependency="sleep_on" app:isPreferenceVisible="false" />
+        <Preference app:key="sleep_day_6" app:title="Noche de sábado a domingo"
+            app:dependency="sleep_on" app:isPreferenceVisible="false" />
+        <Preference app:key="sleep_day_7" app:title="Noche de domingo a lunes"
+            app:dependency="sleep_on" app:isPreferenceVisible="false" />
+        <ListPreference
+            app:key="sleep_warn"
+            app:defaultValue="15"
+            app:title="Aviso antes de empezar"
+            app:entries="@array/sleep_warn_entries"
+            app:entryValues="@array/sleep_warn_values"
+            app:useSimpleSummaryProvider="true"
+            app:dependency="sleep_on" />
+    </PreferenceCategory>
+
     <PreferenceCategory app:title="Pausa del bloqueo">
         <ListPreference
             app:key="bypass_minutes"
             app:defaultValue="10"
             app:title="Duración de la pausa"
+            app:summary="%s. No funciona en horario de dormir"
             app:entries="@array/bypass_entries"
-            app:entryValues="@array/bypass_values"
-            app:useSimpleSummaryProvider="true" />
+            app:entryValues="@array/bypass_values" />
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Actualizaciones">
