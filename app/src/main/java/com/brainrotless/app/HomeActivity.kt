@@ -2,6 +2,7 @@ package com.brainrotless.app
 
 import android.app.AlertDialog
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.text.format.DateFormat
@@ -21,9 +22,13 @@ import java.util.Date
 class HomeActivity : ComponentActivity() {
     private lateinit var list: LinearLayout
     private var firstShow = true
+    private var lang = "" // idioma con el que se armó la pantalla
+
+    override fun attachBaseContext(base: Context) = super.attachBaseContext(Lang.wrap(base))
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        lang = Lang.current(this)
         val pad = Brand.px(this, 20)
         list = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -33,17 +38,19 @@ class HomeActivity : ComponentActivity() {
             isFillViewport = true
             addView(list, ViewGroup.LayoutParams(MATCH, ViewGroup.LayoutParams.WRAP_CONTENT))
         })
+        Lang.askIfNeeded(this)
     }
 
     override fun onResume() {
         super.onResume()
+        if (Lang.current(this) != lang) return recreate() // cambiaron el idioma en Ajustes
         render()
         Commitment.onEnd(this)?.let { text ->
             Commitment.markSummarySeen(this)
             AlertDialog.Builder(this)
                 .setMessage(text)
-                .setPositiveButton("Empezar otro") { _, _ -> openSettings(start = true) }
-                .setNegativeButton("Ahora no", null)
+                .setPositiveButton(R.string.start_another) { _, _ -> openSettings(start = true) }
+                .setNegativeButton(R.string.not_now, null)
                 .show()
         }
     }
@@ -58,7 +65,7 @@ class HomeActivity : ComponentActivity() {
         add(commitmentCard())
         // Ajustes al pie, empujado hacia abajo si sobra lugar
         list.addView(View(this), LinearLayout.LayoutParams(MATCH, 0, 1f))
-        add(Brand.secondaryButton(this, "Ajustes") { openSettings() }, top = 20)
+        add(Brand.secondaryButton(this, getString(R.string.settings)) { openSettings() }, top = 20)
 
         // Entrada suave la primera vez (después, sin animar: que se sienta instantáneo)
         if (firstShow) {
@@ -86,7 +93,7 @@ class HomeActivity : ComponentActivity() {
         }, LinearLayout.LayoutParams(Brand.px(context, 48), Brand.px(context, 48)))
         addView(column(
             Brand.text(context, getString(R.string.app_name), 26f, bold = true),
-            Brand.text(context, "Instagram y YouTube, sin piloto automático", 13.5f, R.color.brand_text_muted)
+            Brand.text(context, getString(R.string.tagline), 13.5f, R.color.brand_text_muted)
         ), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
             marginStart = Brand.px(context, 14)
         })
@@ -97,7 +104,7 @@ class HomeActivity : ComponentActivity() {
         val notif = Setup.listenerOn(this)
         val guard = Setup.guardOn(this)
         if (notif && guard) return null
-        val box = column(Brand.text(this, "Terminá de configurar", 16f, bold = true))
+        val box = column(Brand.text(this, getString(R.string.home_setup_title), 16f, bold = true))
         box.background = Brand.rounded(this, R.color.brand_tonal, 20f)
         val pad = Brand.px(this, 16)
         box.setPadding(pad, pad, pad, Brand.px(this, 8))
@@ -106,9 +113,9 @@ class HomeActivity : ComponentActivity() {
             Brand.text(this, label, 15f),
             onClick = if (done) null else action
         ))
-        step(notif, "Notificaciones: que abran acá") { Setup.openNotifications(this) }
-        step(guard, "Bloquear apps oficiales (Accesibilidad)") { Setup.openAccessibility(this) }
-        if (Setup.restrictedApplies()) step(false, "¿Un permiso aparece gris?") { Setup.explainRestricted(this) }
+        step(notif, getString(R.string.home_step_notif)) { Setup.openNotifications(this) }
+        step(guard, getString(R.string.home_step_guard)) { Setup.openAccessibility(this) }
+        if (Setup.restrictedApplies()) step(false, getString(R.string.gray_title)) { Setup.explainRestricted(this) }
         return box
     }
 
@@ -117,16 +124,16 @@ class HomeActivity : ComponentActivity() {
         val yt = Lock.yt(context)
         val reels = Lock.reelsAllowed(context)
         val igSub = when {
-            ig != null -> "Solo mensajes por ahora"
-            reels -> "Reels hasta tu límite"
-            context.userPrefs().getString("ig_feed", "normal") == "following" -> "Mensajes y cuentas que seguís"
-            context.userPrefs().getString("ig_feed", "normal") == "blocked" -> "Mensajes y perfiles"
-            else -> "Sin Reels infinitos"
+            ig != null -> getString(R.string.ig_sub_restricted)
+            reels -> getString(R.string.ig_sub_reels)
+            context.userPrefs().getString("ig_feed", "normal") == "following" -> getString(R.string.ig_sub_following)
+            context.userPrefs().getString("ig_feed", "normal") == "blocked" -> getString(R.string.ig_sub_blocked)
+            else -> getString(R.string.ig_sub_normal)
         }
         val ytSub = when {
-            yt != null -> "Bloqueado hasta las ${Lock.until(context, yt)}"
-            reels -> "Shorts hasta tu límite"
-            else -> "Videos, sin Shorts infinitos"
+            yt != null -> getString(R.string.yt_sub_blocked, Lock.until(context, yt))
+            reels -> getString(R.string.yt_sub_shorts)
+            else -> getString(R.string.yt_sub_normal)
         }
         addView(appTile(R.mipmap.ic_ig, "Instagram", igSub, "Instagram"), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
         addView(appTile(R.mipmap.ic_yt, "YouTube", ytSub, "YouTube", warning = yt != null),
@@ -153,20 +160,20 @@ class HomeActivity : ComponentActivity() {
         ring.post { ring.setProgress(limit?.let { used.toFloat() / it }, warning = over) }
         val reset = Sleep.fmt(this, Usage.nextReset(this).toLocalTime())
         val detail = when {
-            Commitment.pauseActive(this) -> "Pausa de emergencia hasta las " +
-                DateFormat.getTimeFormat(this).format(Date(Commitment.pauseUntil(this)))
-            over -> "Llegaste a tu límite · vuelve a las $reset"
-            else -> "Se reinicia a las $reset"
+            Commitment.pauseActive(this) ->
+                getString(R.string.home_pause_until, DateFormat.getTimeFormat(this).format(Date(Commitment.pauseUntil(this))))
+            over -> getString(R.string.home_over, reset)
+            else -> getString(R.string.home_resets, reset)
         }
         val amount = LinearLayout(this).apply {
             gravity = Gravity.BOTTOM
             addView(Brand.text(context, formatDuration(used), 22f, bold = true))
-            limit?.let { addView(Brand.text(context, "  de ${formatDuration(it)}", 13f, R.color.brand_text_muted).apply { setPadding(0, 0, 0, Brand.px(context, 3)) }) }
+            limit?.let { addView(Brand.text(context, getString(R.string.home_of, formatDuration(it)), 13f, R.color.brand_text_muted).apply { setPadding(0, 0, 0, Brand.px(context, 3)) }) }
         }
         return Brand.card(row(
             ring,
             column(
-                Brand.text(this, "Hoy en Instagram y YouTube", 13f, R.color.brand_text_muted),
+                Brand.text(this, getString(R.string.home_today), 13f, R.color.brand_text_muted),
                 amount,
                 Brand.text(this, detail, 13f, if (over) R.color.brand_warning else R.color.brand_text_muted)
             ),
@@ -176,26 +183,27 @@ class HomeActivity : ComponentActivity() {
 
     private fun sleepCard(): View {
         val sub = when {
-            !Sleep.enabled(this) -> "Apagado · Tocá para elegir tu horario"
-            Sleep.current(this) != null -> "Activo hasta las ${Sleep.fmt(this, Sleep.current(this)!!.end.toLocalTime())}"
+            !Sleep.enabled(this) -> getString(R.string.home_sleep_off)
+            Sleep.current(this) != null -> getString(R.string.home_sleep_now, Sleep.fmt(this, Sleep.current(this)!!.end.toLocalTime()))
             else -> Sleep.nextNight(this)?.let { n ->
-                "Próxima noche, de ${Sleep.fmt(this, n.start.toLocalTime())} a ${Sleep.fmt(this, n.end.toLocalTime())}"
-            } ?: "Sin horario"
+                getString(R.string.home_sleep_next, Sleep.fmt(this, n.start.toLocalTime()), Sleep.fmt(this, n.end.toLocalTime()))
+            } ?: getString(R.string.home_sleep_none)
         }
-        return linkCard(R.drawable.ic_moon, "Modo dormir", sub, pill = null) { openSettings(focus = "sleep_on") }
+        return linkCard(R.drawable.ic_moon, getString(R.string.home_sleep), sub, pill = null) { openSettings(focus = "sleep_on") }
     }
 
     private fun commitmentCard(): View {
         if (!Commitment.active(this))
-            return linkCard(R.drawable.ic_flag, "Compromiso", "Proponete al menos ${Commitment.MIN_DAYS} días sin aflojar", pill = null) {
+            return linkCard(R.drawable.ic_flag, getString(R.string.home_commit), getString(R.string.home_commit_idle, Commitment.MIN_DAYS), pill = null) {
                 openSettings(focus = "commit")
             }
         val left = Commitment.daysLeft(this)
         val pauses = Commitment.pausesLeft(this)
         return linkCard(
-            R.drawable.ic_flag, "Compromiso",
-            "$pauses ${if (pauses == 1) "pausa" else "pausas"} de emergencia · ${if (Protection.adminActive(this)) "protegido" else "sin protección"}",
-            pill = "$left ${if (left == 1L) "día" else "días"}"
+            R.drawable.ic_flag, getString(R.string.home_commit),
+            resources.getQuantityString(R.plurals.pauses_n, pauses, pauses) + " · " +
+                getString(if (Protection.adminActive(this)) R.string.home_protected else R.string.home_unprotected),
+            pill = resources.getQuantityString(R.plurals.days_n, left.toInt(), left.toInt())
         ) { openSettings(focus = "commit") }
     }
 

@@ -36,9 +36,9 @@ object Updater {
                 if (a.isFinishing || a.isDestroyed) return@runOnUiThread
                 when {
                     rel == null ->
-                        if (force) toast(a, "No se pudo verificar. ¿Hay internet?")
+                        if (force) toast(a, a.getString(R.string.update_failed))
                     isNewer(rel.version, current) -> showDialog(a, rel)
-                    force -> toast(a, "Ya tenés la última versión ($current)")
+                    force -> toast(a, a.getString(R.string.update_latest, current))
                 }
             }
         }
@@ -46,15 +46,14 @@ object Updater {
 
     private fun showDialog(a: Activity, rel: Release) {
         AlertDialog.Builder(a)
-            .setTitle("Lúcido ${rel.version} disponible")
+            .setTitle(a.getString(R.string.update_title, rel.version))
             .setMessage(
-                (rel.notes.take(600).ifBlank { "Hay una versión nueva." }) +
-                    "\n\nSe descarga el APK; abrilo para instalar encima (no perdés la sesión)."
+                rel.notes.take(600).ifBlank { a.getString(R.string.update_new) } + a.getString(R.string.update_install)
             )
-            .setPositiveButton("Descargar") { _, _ ->
+            .setPositiveButton(R.string.update_download) { _, _ ->
                 runCatching { a.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(rel.apkUrl))) }
             }
-            .setNegativeButton("Más tarde", null)
+            .setNegativeButton(R.string.update_later, null)
             .show()
     }
 

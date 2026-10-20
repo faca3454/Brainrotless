@@ -3,6 +3,7 @@ package com.brainrotless.app
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
@@ -55,6 +56,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var lockBarText: TextView
     private lateinit var lockBarPause: Button
     private var usageMark = 0L // desde cuándo se cuenta el uso sin sumar
+    private var lang = "" // idioma con el que se armó la pantalla
     private lateinit var guardScreen: View // accesibilidad apagada durante un compromiso
 
     private val bridge = Bridge()
@@ -88,12 +90,18 @@ class MainActivity : ComponentActivity() {
     private var fullscreenView: View? = null
     private var fullscreenCallback: WebChromeClient.CustomViewCallback? = null
 
+    override fun attachBaseContext(base: Context) = super.attachBaseContext(Lang.wrap(base))
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        lang = Lang.current(this)
 
         igWeb = buildWebView()
         ytWeb = buildWebView().apply { visibility = View.GONE }
         web = igWeb
+        // Crear una WebView puede devolver los textos al idioma del sistema: volver al elegido
+        Lang.applyTo(this, resources)
+        Lang.applyTo(this)
         val webs = FrameLayout(this).apply {
             addView(ytWeb, FrameLayout.LayoutParams(MATCH, MATCH))
             addView(igWeb, FrameLayout.LayoutParams(MATCH, MATCH))
@@ -106,16 +114,14 @@ class MainActivity : ComponentActivity() {
             setProgressBackgroundColorSchemeColor(Brand.color(context, R.color.brand_surface))
             setOnRefreshListener { web.reload() }
         }
-        offline = buildNotice("Sin conexión", "Revisá el Wi-Fi o los datos", "Reintentar") { web.reload() }
-        lockScreen = buildNotice("", "", "Ir a los mensajes de Instagram", "") { goTo(youtube = false) }
+        offline = buildNotice(getString(R.string.offline_title), getString(R.string.offline_text), getString(R.string.retry)) { web.reload() }
+        lockScreen = buildNotice("", "", getString(R.string.go_to_messages), "") { goTo(youtube = false) }
         lockTitle = lockScreen.findViewWithTag("title")
         lockText = lockScreen.findViewWithTag("subtitle")
         lockPause = lockScreen.findViewWithTag("button2")
         lockPause.setOnClickListener { usePause() }
         guardScreen = buildNotice(
-            "Lúcido está apagado",
-            "Tu compromiso sigue. Volvé a activar 'Bloquear apps oficiales' en Accesibilidad para seguir usando IG Lite y YT Lite.",
-            "Activar"
+            getString(R.string.guard_off_title), getString(R.string.guard_off_text), getString(R.string.turn_on)
         ) { Setup.openAccessibility(this) }
         lockBar = buildLockBar()
         lockBarText = lockBar.findViewWithTag("text")
@@ -195,7 +201,7 @@ class MainActivity : ComponentActivity() {
             // De noche los navegadores están bloqueados: avisar en vez de abrir uno
             Sleep.current(this@MainActivity)?.takeIf { Sleep.blocksBrowsers(this@MainActivity) }?.let {
                 val until = Sleep.fmt(this@MainActivity, it.end.toLocalTime())
-                Toast.makeText(this@MainActivity, "🌙 Los links externos se abren después de las $until", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MainActivity, getString(R.string.external_links_night, until), Toast.LENGTH_LONG).show()
                 return true
             }
             runCatching { startActivity(Intent(Intent.ACTION_VIEW, u)) }
@@ -293,6 +299,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (Lang.current(this) != lang) return recreate() // cambiaron el idioma en Ajustes
         usageMark = SystemClock.elapsedRealtime()
         lockTicker.run()
         Commitment.onEnd(this)?.let(::showSummary)
@@ -303,10 +310,10 @@ class MainActivity : ComponentActivity() {
         Commitment.markSummarySeen(this)
         AlertDialog.Builder(this)
             .setMessage(text)
-            .setPositiveButton("Empezar otro") { _, _ ->
+            .setPositiveButton(R.string.start_another) { _, _ ->
                 startActivity(Intent(this, SettingsActivity::class.java).putExtra(SettingsActivity.EXTRA_START_COMMITMENT, true))
             }
-            .setNegativeButton("Ahora no", null)
+            .setNegativeButton(R.string.not_now, null)
             .show()
     }
 
@@ -366,13 +373,12 @@ class MainActivity : ComponentActivity() {
     private fun showLockScreen() {
         val r = Lock.yt(this) ?: return
         val until = Lock.until(this, r)
-        lockTitle.text = if (r == Lock.Reason.NIGHT) "Hora de dormir 🌙" else "Límite de hoy ⏱"
-        lockText.text = if (r == Lock.Reason.NIGHT) "YouTube está bloqueado hasta las $until"
-            else "Usaste tu tiempo de hoy. YouTube vuelve a las $until"
+        lockTitle.text = getString(if (r == Lock.Reason.NIGHT) R.string.lock_night_title else R.string.lock_limit_title)
+        lockText.text = getString(if (r == Lock.Reason.NIGHT) R.string.lock_night_text else R.string.lock_limit_text, until)
         // De noche la pausa no abre YouTube: solo se ofrece por el límite
         val canPause = r == Lock.Reason.LIMIT && Commitment.canPause(this)
         lockPause.visibility = if (canPause) View.VISIBLE else View.GONE
-        lockPause.text = "Pausa de emergencia, 15 min (quedan ${Commitment.pausesLeft(this)})"
+        lockPause.text = getString(R.string.lock_pause_button, left(Commitment.pausesLeft(this)))
         if (lockScreen.visibility == View.VISIBLE) return
         countUsage()
         lockScreen.visibility = View.VISIBLE
@@ -384,21 +390,23 @@ class MainActivity : ComponentActivity() {
     private fun refreshLockBar() {
         val ig = Lock.ig(this)
         val text = when {
-            Commitment.pauseActive(this) -> "🆘 Pausa de emergencia hasta las " +
-                DateFormat.getTimeFormat(this).format(java.util.Date(Commitment.pauseUntil(this))) + " (no suma al límite)"
+            Commitment.pauseActive(this) ->
+                getString(R.string.pause_bar, DateFormat.getTimeFormat(this).format(java.util.Date(Commitment.pauseUntil(this))))
             ig != null && !onYouTube && lockScreen.visibility != View.VISIBLE -> Lock.igMessage(this, ig)
             else -> null
         }
         lockBar.visibility = if (text != null) View.VISIBLE else View.GONE
         lockBarText.text = text
         lockBarPause.visibility = if (ig != null && Commitment.canPause(this)) View.VISIBLE else View.GONE
-        lockBarPause.text = "Pausa (${Commitment.pausesLeft(this)})"
+        lockBarPause.text = getString(R.string.pause_chip, Commitment.pausesLeft(this))
     }
+
+    private fun left(n: Int) = resources.getQuantityString(R.plurals.left_n, n, n)
 
     private fun usePause() {
         if (!Commitment.startPause(this)) return
-        val what = if (Sleep.active(this)) "Instagram completo" else "Instagram y YouTube"
-        Toast.makeText(this, "🆘 Pausa de emergencia: $what por 15 minutos", Toast.LENGTH_LONG).show()
+        val msg = if (Sleep.active(this)) R.string.pause_started_ig else R.string.pause_started_all
+        Toast.makeText(this, getString(msg), Toast.LENGTH_LONG).show()
         applyLock()
     }
 
@@ -517,6 +525,8 @@ class MainActivity : ComponentActivity() {
     // ---------- Configuración inicial ----------
 
     private fun maybeAskSetup() {
+        // Primero el idioma: al elegirlo la pantalla se vuelve a crear y recién ahí sigue esto
+        if (!Lang.hasChosen(this)) { Lang.askIfNeeded(this); return }
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -528,13 +538,13 @@ class MainActivity : ComponentActivity() {
 
         fun mark(on: Boolean) = if (on) "✓" else "○"
         val steps = listOfNotNull(
-            "${mark(listenerOn)}  Notificaciones → activar Lúcido",
-            "○  Links → agregar dominios de Instagram/YouTube",
-            "${mark(guardOn)}  Bloquear apps oficiales → Accesibilidad → Lúcido",
-            if (Setup.restrictedApplies()) "⚠  ¿Un permiso aparece gris? Tocá acá" else null
+            getString(R.string.setup_step_notif, mark(listenerOn)),
+            getString(R.string.setup_step_links),
+            getString(R.string.setup_step_guard, mark(guardOn)),
+            if (Setup.restrictedApplies()) getString(R.string.setup_step_gray) else null
         ).toTypedArray()
         AlertDialog.Builder(this)
-            .setTitle("Configurar Lúcido")
+            .setTitle(R.string.setup_title)
             .setItems(steps) { _, which ->
                 when (which) {
                     0 -> Setup.openNotifications(this)
@@ -543,18 +553,13 @@ class MainActivity : ComponentActivity() {
                     3 -> Setup.explainRestricted(this)
                 }
             }
-            .setNeutralButton("Ayuda") { _, _ ->
+            .setNeutralButton(R.string.help) { _, _ ->
                 AlertDialog.Builder(this)
-                    .setMessage(
-                        "Si un permiso aparece gris o bloqueado, tocá '¿Un permiso aparece gris?' en la " +
-                            "lista y seguí los pasos.\n\nPara que los links abran acá, en Instagram y " +
-                            "YouTube oficiales desactivá 'Abrir vínculos compatibles'.\n\n" +
-                            "Estos pasos también están en Ajustes (mantené presionado el ícono)."
-                    )
-                    .setPositiveButton("OK", null)
+                    .setMessage(R.string.setup_help)
+                    .setPositiveButton(R.string.ok, null)
                     .show()
             }
-            .setNegativeButton("Listo") { _, _ -> prefs.edit().putBoolean("done", true).apply() }
+            .setNegativeButton(R.string.done) { _, _ -> prefs.edit().putBoolean("done", true).apply() }
             .show()
     }
 

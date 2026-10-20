@@ -179,7 +179,7 @@ object Commitment {
     fun markSummarySeen(c: Context) = prefs(c).edit().putBoolean("summary_seen", true).apply()
     fun lastSummary(c: Context) = c.getSharedPreferences("commitment_history", Context.MODE_PRIVATE).getString("last", null)
 
-    private fun title(c: Context) = "🎉 Terminaste tu compromiso de ${prefs(c).getInt("days", 0)} días"
+    private fun title(c: Context) = c.getString(R.string.summary_title, prefs(c).getInt("days", 0))
 
     /** Uso por día antes y durante, días que llegó al límite y pausas usadas. */
     private fun summary(c: Context): String {
@@ -191,13 +191,13 @@ object Commitment {
         val change = before?.takeIf { it > 0 }?.let { ((perDay - it) * 100 / it).toInt() }
         val limit = Usage.limitMinutes(c)?.let { it * 60_000L }
         return buildString {
-            append("Uso de Instagram + YouTube por día:\n")
-            before?.let { append("• Antes de Lúcido: ${formatDuration(it)}\n") }
-            append("• Durante el compromiso: ${formatDuration(perDay)}")
-            change?.let { append(if (it <= 0) " (bajó un ${-it}%)" else " (subió un $it%)") }
-            if (before == null) append("\n\n(Para comparar con tu uso de antes, activá 'Comparar con tu uso de antes' en Ajustes.)")
-            limit?.let { l -> append("\n\nDías que llegaste al límite: ${perDayUsage.count { it >= l }} de $days") }
-            append("\nPausas de emergencia usadas: ${used(c).size} de ${prefs(c).getInt("pauses", 0)}")
+            append(c.getString(R.string.summary_usage))
+            before?.let { append(c.getString(R.string.summary_before, formatDuration(it))) }
+            append(c.getString(R.string.summary_during, formatDuration(perDay)))
+            change?.let { append(if (it <= 0) c.getString(R.string.summary_down, -it) else c.getString(R.string.summary_up, it)) }
+            if (before == null) append(c.getString(R.string.summary_no_baseline))
+            limit?.let { l -> append(c.getString(R.string.summary_limit_days, perDayUsage.count { it >= l }, days)) }
+            append(c.getString(R.string.summary_pauses, used(c).size, prefs(c).getInt("pauses", 0)))
         }
     }
 
@@ -223,7 +223,7 @@ object Commitment {
         val nm = NotificationManagerCompat.from(c)
         nm.createNotificationChannel(
             NotificationChannelCompat.Builder("commitment", NotificationManagerCompat.IMPORTANCE_DEFAULT)
-                .setName("Compromiso").build()
+                .setName(c.getString(R.string.channel_commitment)).build()
         )
         val pi = PendingIntent.getActivity(
             c, 4, Intent(c, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
@@ -232,7 +232,7 @@ object Commitment {
         val n = NotificationCompat.Builder(c, "commitment")
             .setSmallIcon(R.drawable.ic_notif)
             .setContentTitle(title(c))
-            .setContentText("Tocá para ver cuánto bajó tu uso")
+            .setContentText(c.getString(R.string.end_notif_text))
             .setContentIntent(pi)
             .setAutoCancel(true)
             .build()
@@ -295,7 +295,7 @@ object Usage {
         if (before == null) return
         for (min in listOf(10, 2)) {
             if (before > min * 60_000 && after in 1..min * 60_000L)
-                Toast.makeText(c, "⏱ Te quedan $min minutos de Instagram y YouTube por hoy", Toast.LENGTH_LONG).show()
+                Toast.makeText(c, c.getString(R.string.minutes_left, min), Toast.LENGTH_LONG).show()
         }
         if (before > 0 && after == 0L) notifyLimit(c)
     }
@@ -305,12 +305,12 @@ object Usage {
         val nm = NotificationManagerCompat.from(c)
         nm.createNotificationChannel(
             NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_DEFAULT)
-                .setName("Límite diario").build()
+                .setName(c.getString(R.string.channel_limit)).build()
         )
-        val text = "Hasta las ${Sleep.fmt(c, nextReset(c).toLocalTime())}, Instagram queda solo para mensajes y YouTube se bloquea."
+        val text = c.getString(R.string.limit_notif_text, Sleep.fmt(c, nextReset(c).toLocalTime()))
         val b = NotificationCompat.Builder(c, CHANNEL)
             .setSmallIcon(R.drawable.ic_notif)
-            .setContentTitle("⏱ Llegaste a tu límite de hoy")
+            .setContentTitle(c.getString(R.string.limit_notif_title))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setAutoCancel(true)
@@ -321,7 +321,7 @@ object Usage {
             val pi = PendingIntent.getActivity(
                 c, 1, open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             )
-            b.addAction(0, "Pausa de emergencia (quedan ${Commitment.pausesLeft(c)})", pi)
+            b.addAction(0, c.getString(R.string.limit_notif_pause, Commitment.pausesLeft(c).let { c.resources.getQuantityString(R.plurals.left_n, it, it) }), pi)
         }
         runCatching { nm.notify(NOTIF_ID, b.build()) }
     }
@@ -366,8 +366,8 @@ object Lock {
     }
 
     fun igMessage(c: Context, r: Reason) = when (r) {
-        Reason.NIGHT -> "🌙 Hora de dormir: solo mensajes hasta las ${until(c, r)}"
-        Reason.LIMIT -> "⏱ Llegaste a tu límite de hoy: solo mensajes hasta las ${until(c, r)}"
+        Reason.NIGHT -> c.getString(R.string.ig_night_msg, until(c, r))
+        Reason.LIMIT -> c.getString(R.string.ig_limit_msg, until(c, r))
     }
 
     /** Ms hasta el próximo cambio: noche, fin de la pausa, avisos y fin del límite si se está usando, día nuevo. */

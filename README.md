@@ -7,6 +7,7 @@ Podés ver los reels y shorts que te mandan tus amigos, pero no pasar al siguien
 
 ## Qué hace
 
+- **Idioma**: español o inglés. Se elige la primera vez que abrís la app y se cambia en Ajustes → *Idioma*.
 - **Lúcido** (el ícono de la app): la pantalla de inicio, con acceso a Instagram y YouTube, cuánto los usaste hoy, el modo dormir, el compromiso y lo que falte configurar.
 - **IG Lite** y **YT Lite**: Instagram y YouTube web dentro de la app, con el feed de Reels, Shorts y Explorar bloqueado.
 - **Reels que te mandan**: se abren normal, pero la pantalla no te deja deslizar al siguiente.

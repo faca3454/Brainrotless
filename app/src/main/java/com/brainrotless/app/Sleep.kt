@@ -168,16 +168,16 @@ object Sleep {
 
         nm.createNotificationChannel(
             NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_DEFAULT)
-                .setName("Modo dormir").build()
+                .setName(c.getString(R.string.channel_sleep)).build()
         )
         val start = fmt(c, night.start.toLocalTime())
         val end = fmt(c, night.end.toLocalTime())
         val n = NotificationCompat.Builder(c, CHANNEL)
             .setSmallIcon(R.drawable.ic_notif)
-            .setContentTitle("🌙 A las $start empieza tu horario de dormir")
-            .setContentText("Hasta las $end, Instagram queda solo para mensajes y YouTube se bloquea.")
+            .setContentTitle(c.getString(R.string.sleep_warn_title, start))
+            .setContentText(c.getString(R.string.sleep_warn_text, end))
             .setStyle(NotificationCompat.BigTextStyle()
-                .bigText("Hasta las $end, Instagram queda solo para mensajes y YouTube se bloquea."))
+                .bigText(c.getString(R.string.sleep_warn_text, end)))
             .setTimeoutAfter(Duration.between(now, night.start).toMillis())
             .build()
         runCatching { nm.notify(NOTIF_ID, n) }

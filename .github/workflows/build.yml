@@ -99,12 +99,12 @@ jobs:
             echo "::error title=Falló la compilación::${msg}"
             exit "$status"
           fi
-          cp app/build/outputs/apk/release/app-release.apk "Brainrotless-$VERSION_NAME.apk"
+          cp app/build/outputs/apk/release/app-release.apk "Lucido-$VERSION_NAME.apk"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Brainrotless-${{ env.VERSION_NAME }}
-          path: Brainrotless-*.apk
+          name: Lucido-${{ env.VERSION_NAME }}
+          path: Lucido-*.apk
 
       - name: Publicar en Releases
         if: env.RELEASE_TAG != ''
@@ -116,8 +116,8 @@ jobs:
             exit 1
           fi
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" Brainrotless-*.apk --clobber
+            gh release upload "$RELEASE_TAG" Lucido-*.apk --clobber
           else
-            gh release create "$RELEASE_TAG" Brainrotless-*.apk --target "$GITHUB_SHA" \
-              --title "Brainrotless $VERSION_NAME" --generate-notes
+            gh release create "$RELEASE_TAG" Lucido-*.apk --target "$GITHUB_SHA" \
+              --title "Lúcido $VERSION_NAME" --generate-notes
           fi

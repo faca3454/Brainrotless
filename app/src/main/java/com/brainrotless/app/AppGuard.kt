@@ -52,7 +52,7 @@ class AppGuard : AccessibilityService() {
             if (!debounce()) return
             performGlobalAction(GLOBAL_ACTION_HOME)
             val until = Sleep.current(this)?.let { Sleep.fmt(this, it.end.toLocalTime()) }
-            Toast.makeText(this, "🌙 Hora de dormir: navegadores bloqueados hasta las $until", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.browsers_blocked, until), Toast.LENGTH_LONG).show()
             return
         }
         val alias = redirects[pkg] ?: return
@@ -142,7 +142,7 @@ class BypassTile : TileService() {
             else -> Tile.STATE_INACTIVE
         }
         if (Build.VERSION.SDK_INT >= 29)
-            t.subtitle = lock?.let { "Bloqueado hasta las ${Lock.until(this, it)}" }
+            t.subtitle = lock?.let { getString(R.string.tile_blocked, Lock.until(this, it)) }
         t.updateTile()
     }
 }

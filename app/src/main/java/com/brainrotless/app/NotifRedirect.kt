@@ -25,7 +25,7 @@ class NotifRedirect : NotificationListenerService() {
     override fun onListenerConnected() {
         NotificationManagerCompat.from(this).createNotificationChannel(
             NotificationChannelCompat.Builder(CHANNEL, NotificationManagerCompat.IMPORTANCE_HIGH)
-                .setName("Mensajes y avisos").build()
+                .setName(getString(R.string.channel_redirect)).build()
         )
         // Redirigir también las que ya estaban en la bandeja
         runCatching { activeNotifications?.forEach(::onNotificationPosted) }

@@ -1,4 +1,13 @@
 <resources>
+    <string-array name="language_entries" translatable="false">
+        <item>Español</item>
+        <item>English</item>
+    </string-array>
+    <string-array name="language_values" translatable="false">
+        <item>es</item>
+        <item>en</item>
+    </string-array>
+
     <string-array name="ig_feed_entries">
         <item>Normal</item>
         <item>Solo cuentas que seguís</item>

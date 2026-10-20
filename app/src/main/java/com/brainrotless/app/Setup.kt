@@ -68,19 +68,12 @@ object Setup {
     /** Explica cómo destrabar un permiso gris y lleva a la info de la app, donde está la opción. */
     fun explainRestricted(a: Activity) {
         AlertDialog.Builder(a)
-            .setTitle("¿Un permiso aparece gris?")
-            .setMessage(
-                "Android lo bloquea en apps instaladas fuera del Play Store.\n\n" +
-                    "1. Si todavía no lo hiciste, tocá el permiso gris una vez y aceptá el aviso " +
-                    "\"Ajuste restringido\". Sin eso, la opción del paso 2 no aparece.\n\n" +
-                    "2. Tocá Abrir. En la info de Lúcido, tocá ⋮ (arriba a la derecha) → " +
-                    "\"Permitir ajustes restringidos\".\n\n" +
-                    "3. Volvé y activá el permiso."
-            )
-            .setPositiveButton("Abrir") { _, _ ->
+            .setTitle(R.string.gray_title)
+            .setMessage(R.string.gray_msg)
+            .setPositiveButton(R.string.open) { _, _ ->
                 open(a, Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${a.packageName}")))
             }
-            .setNegativeButton("Cancelar", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 

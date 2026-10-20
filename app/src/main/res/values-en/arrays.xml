@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="ig_feed_entries">
+        <item>Normal</item>
+        <item>Only accounts you follow</item>
+        <item>Blocked (messages and profiles only)</item>
+    </string-array>
+    <string-array name="sleep_warn_entries">
+        <item>No heads-up</item>
+        <item>5 minutes before</item>
+        <item>10 minutes before</item>
+        <item>15 minutes before</item>
+        <item>30 minutes before</item>
+    </string-array>
+    <string-array name="limit_entries">
+        <item>No limit</item>
+        <item>30 minutes</item>
+        <item>45 minutes</item>
+        <item>1 hour</item>
+        <item>1.5 hours</item>
+        <item>2 hours</item>
+        <item>3 hours</item>
+    </string-array>
+    <string-array name="bypass_entries">
+        <item>5 minutes</item>
+        <item>10 minutes</item>
+        <item>15 minutes</item>
+        <item>30 minutes</item>
+    </string-array>
+</resources>
