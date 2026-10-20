@@ -381,7 +381,7 @@ class PanelActivity : AppCompatActivity() {
 
         add(label(getString(R.string.pref_cat_comfort)), top = 18)
         add(Brand.card(column(
-            prefSwitch("smooth_transitions", true, R.string.pref_smooth, R.string.pref_smooth_summary),
+            prefSwitch("smooth_transitions", false, R.string.pref_smooth, R.string.pref_smooth_summary),
             space(12),
             prefSwitch("swipe_reply", true, R.string.pref_swipe, R.string.pref_swipe_summary)
         )))

@@ -320,19 +320,11 @@
     }).observe(document, { childList: true, subtree: true }); // document: el <html> puede no existir todavía
   }
 
-  // --- 7. Transiciones suaves (opcional) ---
-  // Fundido corto al cambiar de página dentro del sitio. La URL cambia en el acto (el sitio
-  // puede leerla enseguida); solo se espera a que termine de dibujarse para el fundido.
+  // --- 7. Transiciones suaves (opcional, apagadas por defecto) ---
+  // Fundido corto al cambiar de página dentro del sitio, de cómo se veía a la página en vivo. No se
+  // espera a que la nueva termine de dibujarse: congelaba la pantalla. Mientras dura, no toma toques.
   if (CFG.smooth && document.startViewTransition) {
     const VIDEO_PAGE = /^\/(reels?|stories|shorts|watch)(\/|$)/; // un video congelado se nota
-    const settle = () => new Promise((done) => {
-      let quiet = 0, max = 0;
-      const obs = new MutationObserver(() => { clearTimeout(quiet); quiet = setTimeout(finish, 50); });
-      const finish = () => { obs.disconnect(); clearTimeout(quiet); clearTimeout(max); done(); };
-      obs.observe(document, { childList: true, subtree: true });
-      quiet = setTimeout(finish, 50);
-      max = setTimeout(finish, 200);
-    });
     let running = false;
     const push = history.pushState;
     history.pushState = function (...a) {
@@ -342,7 +334,7 @@
           !VIDEO_PAGE.test(from) && !VIDEO_PAGE.test(location.pathname)) {
         running = true;
         try {
-          document.startViewTransition(settle).finished.finally(() => { running = false; });
+          document.startViewTransition(() => {}).finished.finally(() => { running = false; });
         } catch (e) { running = false; }
       }
       return r;

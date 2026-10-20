@@ -162,7 +162,7 @@
     <string name="pref_tap_summary">Ahorra datos: los videos no arrancan solos. Los reels que te mandan, sí</string>
     <string name="pref_cat_comfort">Comodidad</string>
     <string name="pref_smooth">Transiciones suaves</string>
-    <string name="pref_smooth_summary">Fundido corto al cambiar de página</string>
+    <string name="pref_smooth_summary">Fundido corto al cambiar de página. Mientras dura, no responde a los toques</string>
     <string name="pref_swipe">Deslizar para responder (experimental)</string>
     <string name="pref_swipe_summary">En los chats de Instagram, deslizá un mensaje a la derecha para responderlo</string>
     <string name="pref_sleep_on_summary">En tu horario, Instagram queda solo para mensajes y YouTube se bloquea</string>

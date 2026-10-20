@@ -50,7 +50,7 @@ object Rules {
             .put("igTapToPlay", p.getBoolean("ig_tap_to_play", false))
             .put("igReels", reels)
             .put("ytShorts", reels)
-            .put("smooth", p.getBoolean("smooth_transitions", true))
+            .put("smooth", p.getBoolean("smooth_transitions", false))
             .put("swipeReply", p.getBoolean("swipe_reply", true))
             .put("debug", BuildConfig.DEBUG) // APK de prueba: el script puede mandar diagnósticos
         // Hora de dormir o límite diario: Instagram solo para mensajes

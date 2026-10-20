@@ -162,7 +162,7 @@
     <string name="pref_tap_summary">Saves data: videos don\'t autoplay. Reels people send you still do</string>
     <string name="pref_cat_comfort">Comfort</string>
     <string name="pref_smooth">Smooth transitions</string>
-    <string name="pref_smooth_summary">A short fade when changing pages</string>
+    <string name="pref_smooth_summary">A short fade when changing pages. Taps are ignored while it lasts</string>
     <string name="pref_swipe">Swipe to reply (experimental)</string>
     <string name="pref_swipe_summary">In Instagram chats, swipe a message to the right to reply to it</string>
     <string name="pref_sleep_on_summary">During your bedtime, Instagram is messages only and YouTube is blocked</string>
