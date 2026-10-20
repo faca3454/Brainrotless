@@ -15,7 +15,7 @@ Lúcido es una app para Android que abre Instagram y YouTube sin el scroll infin
   <a href="https://github.com/faca3454/Brainrotless/releases/latest"><b>⬇ Descargar la última versión</b></a> · Android 8 o más nuevo
 </p>
 
-*Antes se llamaba Brainrotless.*
+
 
 ## Qué hace
 
@@ -91,11 +91,3 @@ Para qué es cada permiso:
 - **Notificaciones**: para avisarte antes del modo dormir, cuando llegás al límite y el resumen semanal.
 
 Las reglas de bloqueo se descargan de este repositorio por HTTPS para seguir funcionando cuando Instagram o YouTube cambian algo. Si preferís que no, apagá *Actualizar reglas de bloqueo* en Ajustes.
-
-## In English
-
-Lúcido is a free Android app that opens Instagram and YouTube without the endless Reels and Shorts scroll, and helps you use them less: sleep mode, focus hours, a daily limit you can't loosen, stats and streaks. No ads, no accounts, nothing leaves your phone. The app is available in English: pick it the first time you open it. [Download the latest version](https://github.com/faca3454/Brainrotless/releases/latest) (Android 8+). Lúcido is not affiliated with Instagram, Meta, YouTube or Google.
-
----
-
-¿Querés colaborar o compilarla vos? Mirá las [notas de mantenimiento](docs/mantenimiento.md).
