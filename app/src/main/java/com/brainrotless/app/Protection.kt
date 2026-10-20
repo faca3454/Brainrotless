@@ -10,7 +10,6 @@ import android.app.usage.UsageStatsManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -18,9 +17,8 @@ import android.os.CountDownTimer
 import android.os.Process
 import android.provider.Settings
 import android.service.notification.StatusBarNotification
-import android.util.TypedValue
 import android.view.Gravity
-import android.widget.Button
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.ComponentActivity
@@ -30,7 +28,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import kotlin.math.max
 
-/** Uso de Instagram y YouTube oficiales antes de instalar Brainrotless (para la estadística final). */
+/** Uso de Instagram y YouTube oficiales antes de instalar Lúcido (para la estadística final). */
 object UsageAccess {
     private val OFFICIAL = listOf("com.instagram.android", "com.google.android.youtube")
     private const val DAY_MS = 24 * 60 * 60 * 1000L
@@ -53,7 +51,7 @@ object UsageAccess {
     }
 
     /**
-     * Promedio diario en las 4 semanas antes de instalar Brainrotless. Se calcula una vez y se
+     * Promedio diario en las 4 semanas antes de instalar Lúcido. Se calcula una vez y se
      * guarda, porque Android va borrando los datos viejos. null si no hay permiso o datos.
      */
     fun baseline(c: Context): Long? {
@@ -91,7 +89,7 @@ object Protection {
             .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, admin(a))
             .putExtra(
                 DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                "Mientras dure tu compromiso, para desinstalar Brainrotless vas a tener que quitar este " +
+                "Mientras dure tu compromiso, para desinstalar Lúcido vas a tener que quitar este " +
                     "permiso primero, con 2 minutos de espera. Al terminar el compromiso se quita solo."
             )
         runCatching { a.startActivity(i) }
@@ -118,7 +116,7 @@ object Protection {
             "Mientras tanto, IG Lite y YT Lite no abren."
         val n = NotificationCompat.Builder(c, CHANNEL)
             .setSmallIcon(R.drawable.ic_notif)
-            .setContentTitle("⚠ Brainrotless está apagado")
+            .setContentTitle("⚠ Lúcido está apagado")
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setOngoing(true)
@@ -134,7 +132,7 @@ object Protection {
 /** Administrador de dispositivo: sin él activo no se puede desinstalar la app. No usa ninguna política. */
 class Admin : DeviceAdminReceiver() {
     override fun onDisableRequested(c: Context, i: Intent): CharSequence {
-        if (!Commitment.active(c)) return "Brainrotless ya no va a estar protegido contra la desinstalación."
+        if (!Commitment.active(c)) return "Lúcido ya no va a estar protegido contra la desinstalación."
         runCatching { c.startActivity(Intent(c, WaitActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         return "Vas a romper tu compromiso: quedan ${Commitment.daysLeft(c)} días."
     }
@@ -146,39 +144,27 @@ class WaitActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val dark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-            android.content.res.Configuration.UI_MODE_NIGHT_YES
-        val fg = if (dark) Color.WHITE else Color.parseColor("#202020")
-        fun text(s: String, sp: Float) = TextView(this).apply {
-            text = s
-            setTextColor(fg)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, sp)
-            gravity = Gravity.CENTER
-            setPadding(48, 16, 48, 16)
-        }
-        val countdown = text("", 40f)
-        val proceed = Button(this).apply {
-            text = "Continuar"
-            isEnabled = false
-            setOnClickListener { finish() } // vuelve a la ventana del sistema para confirmar
-        }
+        fun centered(v: TextView) = v.apply { gravity = Gravity.CENTER; setPadding(0, Brand.px(context, 8), 0, Brand.px(context, 8)) }
+        val countdown = centered(Brand.text(this, "", 44f, R.color.brand_primary, bold = true))
+        // Vuelve a la ventana del sistema para confirmar
+        val proceed = Brand.secondaryButton(this, "Continuar") { finish() }.apply { isEnabled = false; alpha = 0.4f }
+        val wrap = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         setContentView(LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setBackgroundColor(if (dark) Color.BLACK else Color.WHITE)
-            addView(text("Pará un momento ✋", 24f))
-            addView(text("Estás por quitar la protección de tu compromiso (quedan " +
-                "${Commitment.daysLeft(this@WaitActivity)} días). Si igual querés hacerlo, esperá:", 16f))
+            val pad = Brand.px(context, 32)
+            setPadding(pad, pad, pad, pad)
+            addView(ImageView(context).apply { setImageResource(R.drawable.ic_logo) },
+                LinearLayout.LayoutParams(Brand.px(context, 56), Brand.px(context, 56)).apply { bottomMargin = Brand.px(context, 20) })
+            addView(centered(Brand.text(context, "Pará un momento ✋", 24f, bold = true)))
+            addView(centered(Brand.text(context, "Estás por quitar la protección de tu compromiso (quedan " +
+                "${Commitment.daysLeft(this@WaitActivity)} días). Si igual querés hacerlo, esperá:", 16f, R.color.brand_text_muted)))
             addView(countdown)
-            addView(Button(context).apply {
-                text = "Mantener mi compromiso"
-                setOnClickListener {
-                    startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    finish()
-                }
-            })
-            addView(proceed)
+            addView(Brand.primaryButton(context, "Mantener mi compromiso") {
+                startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                finish()
+            }, wrap)
+            addView(proceed, LinearLayout.LayoutParams(wrap).apply { topMargin = Brand.px(context, 10) })
         })
 
         val back = object : OnBackPressedCallback(true) { override fun handleOnBackPressed() {} }
@@ -191,6 +177,7 @@ class WaitActivity : ComponentActivity() {
             override fun onFinish() {
                 countdown.text = "0:00"
                 proceed.isEnabled = true
+                proceed.alpha = 1f
                 back.isEnabled = false
             }
         }.start()

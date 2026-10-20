@@ -13,7 +13,7 @@ import androidx.core.app.NotificationManagerCompat
 
 /**
  * Intercepta las notificaciones de las apps oficiales, las borra
- * y publica una copia que al tocarla abre Brainrotless en vez de la app oficial.
+ * y publica una copia que al tocarla abre Lúcido en vez de la app oficial.
  */
 class NotifRedirect : NotificationListenerService() {
 
@@ -31,7 +31,7 @@ class NotifRedirect : NotificationListenerService() {
         runCatching { activeNotifications?.forEach(::onNotificationPosted) }
     }
 
-    // Si se cierra el aviso de "Brainrotless está apagado" durante un compromiso, vuelve a aparecer
+    // Si se cierra el aviso de "Lúcido está apagado" durante un compromiso, vuelve a aparecer
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         if (Protection.isGuardNotice(sbn)) Protection.updateGuardNotice(this)
     }

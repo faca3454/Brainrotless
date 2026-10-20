@@ -112,6 +112,8 @@ object Sleep {
     private fun next(c: Context, now: LocalDateTime) =
         if (enabled(c)) SleepSchedule.next(now, times(c)) else null
 
+    fun nextNight(c: Context) = next(c, TrustedClock.now(c))
+
     /** Milisegundos hasta que empiece o termine una noche; null si el modo está apagado. */
     fun msUntilChange(c: Context): Long? {
         val now = TrustedClock.now(c)

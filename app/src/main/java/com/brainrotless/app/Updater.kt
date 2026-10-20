@@ -46,7 +46,7 @@ object Updater {
 
     private fun showDialog(a: Activity, rel: Release) {
         AlertDialog.Builder(a)
-            .setTitle("Brainrotless ${rel.version} disponible")
+            .setTitle("Lúcido ${rel.version} disponible")
             .setMessage(
                 (rel.notes.take(600).ifBlank { "Hay una versión nueva." }) +
                     "\n\nSe descarga el APK; abrilo para instalar encima (no perdés la sesión)."

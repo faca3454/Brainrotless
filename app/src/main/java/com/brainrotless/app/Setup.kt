@@ -41,7 +41,7 @@ object Setup {
     }
 
     fun openNotifications(c: Context) {
-        // Directo al interruptor de Brainrotless (Android 11+); si no, la lista
+        // Directo al interruptor de Lúcido (Android 11+); si no, la lista
         val cn = ComponentName(c, NotifRedirect::class.java).flattenToString()
         if (Build.VERSION.SDK_INT >= 30 && open(
                 c, Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
@@ -73,7 +73,7 @@ object Setup {
                 "Android lo bloquea en apps instaladas fuera del Play Store.\n\n" +
                     "1. Si todavía no lo hiciste, tocá el permiso gris una vez y aceptá el aviso " +
                     "\"Ajuste restringido\". Sin eso, la opción del paso 2 no aparece.\n\n" +
-                    "2. Tocá Abrir. En la info de Brainrotless, tocá ⋮ (arriba a la derecha) → " +
+                    "2. Tocá Abrir. En la info de Lúcido, tocá ⋮ (arriba a la derecha) → " +
                     "\"Permitir ajustes restringidos\".\n\n" +
                     "3. Volvé y activá el permiso."
             )

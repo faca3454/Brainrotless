@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Brainrotless
+// @name         Lúcido
 // @description  Bloquea el feed de Reels/Shorts pero deja ver los que te mandan
-// @version      6
+// @version      7
 // @match        *://*.instagram.com/*
 // @match        *://instagram.com/*
 // @match        *://*.youtube.com/*
@@ -326,81 +326,146 @@
   }
 
   // --- 8. Deslizar un mensaje a la derecha para responder (Instagram, opcional) ---
-  // Instagram web no lo trae: el mensaje se mueve con el dedo y, al soltar, se toca su botón
-  // "Responder" (el que aparece al pasar el mouse o al mantener presionado). Depende del HTML
-  // de Instagram: si deja de andar, se arregla acá.
+  // Instagram web no lo trae. El mensaje se mueve con el dedo y, al soltar, se imita lo que hace
+  // la persona a mano: mantenerlo presionado y tocar "Responder" en el menú. Depende del HTML de
+  // Instagram: si deja de andar, se arregla acá.
   if (IG && CFG.swipeReply) {
     const REPLY = /^(responder|reply)$/i;
     const label = (el) => (el.getAttribute('aria-label') || el.textContent || '').replace(/\s+/g, ' ').trim();
-    const findReply = (root) => {
-      for (const el of root.querySelectorAll('[aria-label], [role="button"], [role="menuitem"], button')) {
-        if (REPLY.test(label(el))) return el.closest('[role="button"], [role="menuitem"], button') || el;
-      }
-      return null;
-    };
-    // La fila del mensaje: el primer ancestro que ocupa todo el ancho de una lista con varias filas
-    const rowOf = (el) => {
-      if (el.closest && el.closest('textarea, input, [contenteditable="true"], [role="textbox"], form')) return null;
-      for (; el && el.nodeType === 1 && el !== document.body; el = el.parentElement) {
-        const list = el.parentElement;
-        if (list && list.children.length >= 3 && el.offsetWidth >= list.offsetWidth * 0.9 &&
-            list.offsetWidth >= innerWidth * 0.8 && el.offsetHeight < innerHeight * 0.6) return el;
-      }
-      return null;
-    };
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    const reply = async (row) => {
-      const bubble = row.querySelector('[dir="auto"]') || row;
-      for (const type of ['mouseover', 'mouseenter', 'mousemove'])
-        bubble.dispatchEvent(new MouseEvent(type, { bubbles: true, view: window }));
-      await sleep(80);
-      let btn = findReply(row);
-      if (!btn) { // si no hay barra al pasar el mouse, probar con el menú de mantener presionado
-        bubble.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, view: window }));
-        await sleep(350);
-        btn = findReply(document.querySelector('[role="dialog"], [role="menu"]') || document.body);
+
+    const scrollerOf = (el) => {
+      for (; el && el.nodeType === 1; el = el.parentElement) {
+        const oy = getComputedStyle(el).overflowY;
+        if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight) return el;
       }
-      if (btn) btn.click();
+      return null;
+    };
+    // La burbuja tocada: dentro de la lista que scrollea (no el encabezado ni la caja de texto), el
+    // ancestro más grande que todavía no ocupa todo el ancho (las filas sí lo ocupan; las burbujas no).
+    const bubbleOf = (target) => {
+      let el = target.nodeType === 1 ? target : target.parentElement;
+      if (!el || el.closest('textarea, input, [contenteditable="true"], [role="textbox"], form')) return null;
+      const list = scrollerOf(el);
+      if (!list) return null;
+      const full = list.clientWidth * 0.85;
+      while (el.parentElement && el.parentElement !== list && el.parentElement.getBoundingClientRect().width < full)
+        el = el.parentElement;
+      const r = el.getBoundingClientRect();
+      return r.width < full && r.height < innerHeight * 0.6 ? el : null;
     };
 
-    let row = null, arrow = null, sx = 0, sy = 0, dx = 0, decided = false;
+    // Eventos de mentira para "mantener presionado": táctiles, de puntero y el menú contextual,
+    // así anda con cualquiera de las formas en que el sitio lo detecte
+    let simulating = false;
+    const fire = (el, type, x, y) => {
+      const base = { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y };
+      if (type.startsWith('touch')) {
+        if (typeof Touch !== 'function') return;
+        const t = new Touch({ identifier: 9999, target: el, clientX: x, clientY: y, pageX: x + scrollX, pageY: y + scrollY });
+        const now = type === 'touchstart' ? [t] : [];
+        el.dispatchEvent(new TouchEvent(type, { ...base, touches: now, targetTouches: now, changedTouches: [t] }));
+      } else if (type.startsWith('pointer')) {
+        el.dispatchEvent(new PointerEvent(type, { ...base, pointerId: 9999, pointerType: 'touch', isPrimary: true, buttons: type === 'pointerdown' ? 1 : 0 }));
+      } else {
+        el.dispatchEvent(new MouseEvent(type, { ...base, view: window, button: type === 'contextmenu' ? 2 : 0 }));
+      }
+    };
+    const longPress = async (el, x, y) => {
+      simulating = true;
+      try {
+        fire(el, 'pointerdown', x, y);
+        fire(el, 'touchstart', x, y);
+        await sleep(650);
+        fire(el, 'contextmenu', x, y);
+        await sleep(60);
+        // "Cancelar" en vez de "soltar": el menú queda abierto y no cuenta como un toque
+        fire(el, 'pointercancel', x, y);
+        fire(el, 'touchcancel', x, y);
+      } finally {
+        simulating = false;
+      }
+    };
+
+    const reply = async (bubble, target, x, y) => {
+      const list = scrollerOf(bubble);
+      const box = bubble.getBoundingClientRect();
+      // Un botón dentro de la lista solo vale si se ve y está a la altura de este mensaje
+      // (puede haber quedado el de otro mensaje); uno en un menú aparte, sí
+      const mine = (b) => {
+        if (!list || !list.contains(b)) return true;
+        const r = b.getBoundingClientRect();
+        const cy = (r.top + r.bottom) / 2;
+        return r.width > 0 && r.height > 0 && cy >= box.top - 4 && cy <= box.bottom + 4;
+      };
+      const findReply = (root) => {
+        for (const el of root.querySelectorAll('[aria-label], [role="button"], [role="menuitem"], button')) {
+          if (!REPLY.test(label(el))) continue;
+          const b = el.closest('[role="button"], [role="menuitem"], button') || el;
+          if (mine(b)) return b;
+        }
+        return null;
+      };
+      // 1. Barra que aparece al pasar el mouse (Instagram en pantallas grandes)
+      for (const type of ['mouseover', 'mouseenter', 'mousemove']) fire(target, type, x, y);
+      await sleep(80);
+      let btn = findReply(list || bubble.parentElement || document.body);
+      // 2. Mantener presionado y elegir "Responder" en el menú (Instagram en el celular)
+      if (!btn) {
+        await longPress(target, x, y);
+        for (let i = 0; i < 15 && !btn; i++) {
+          const menus = [...document.querySelectorAll('[role="dialog"], [role="menu"], [role="listbox"]')];
+          for (const m of [...menus, document.body]) if (!btn) btn = findReply(m);
+          if (!btn) await sleep(100);
+        }
+      }
+      if (!btn) return;
+      const r = btn.getBoundingClientRect();
+      fire(btn, 'pointerdown', r.left + r.width / 2, r.top + r.height / 2);
+      fire(btn, 'pointerup', r.left + r.width / 2, r.top + r.height / 2);
+      btn.click();
+    };
+
+    let bubble = null, target = null, arrow = null, sx = 0, sy = 0, dx = 0, decided = false;
     addEventListener('touchstart', (e) => {
-      row = null;
-      if (!/^\/direct\/t\//.test(location.pathname) || e.touches.length !== 1) return;
-      row = rowOf(e.target);
+      bubble = null;
+      if (simulating || !/^\/direct\/t\//.test(location.pathname) || e.touches.length !== 1) return;
+      target = e.target;
+      bubble = bubbleOf(target);
       sx = e.touches[0].clientX;
       sy = e.touches[0].clientY;
       dx = 0;
       decided = false;
     }, { capture: true, passive: true });
     addEventListener('touchmove', (e) => {
-      if (!row) return;
+      if (!bubble || simulating) return;
       const mx = e.touches[0].clientX - sx, my = e.touches[0].clientY - sy;
       if (!decided) {
         if (Math.abs(mx) < 10 && Math.abs(my) < 10) return;
         decided = true;
-        if (!(mx > 0 && Math.abs(mx) > Math.abs(my) * 1.5)) { row = null; return; } // vertical: scroll normal
-        const r = row.getBoundingClientRect();
+        if (!(mx > 0 && Math.abs(mx) > Math.abs(my) * 1.5)) { bubble = null; return; } // vertical: scroll normal
+        const r = bubble.getBoundingClientRect();
         arrow = document.createElement('div');
         arrow.textContent = '↩';
-        arrow.style.cssText = `position:fixed;left:12px;top:${r.top + r.height / 2 - 14}px;font:22px/28px sans-serif;` +
-          'opacity:0;pointer-events:none;z-index:2147483647;color:#888';
+        arrow.style.cssText = `position:fixed;left:${Math.max(8, r.left - 30)}px;top:${r.top + r.height / 2 - 14}px;` +
+          'font:22px/28px sans-serif;opacity:0;pointer-events:none;z-index:2147483647;color:#888;transition:transform .15s';
         document.body.appendChild(arrow);
       }
       if (e.cancelable) e.preventDefault();
       dx = Math.max(0, Math.min(mx, 90));
-      row.style.transition = 'none';
-      row.style.transform = `translateX(${dx}px)`;
+      bubble.style.transition = 'none';
+      bubble.style.transform = `translateX(${dx}px)`;
       arrow.style.opacity = String(Math.min(dx / 60, 1));
+      arrow.style.transform = dx >= 60 ? 'scale(1.25)' : ''; // pasó el punto: soltar responde
     }, { capture: true, passive: false });
     const end = (cancel) => () => {
-      if (!row || !decided) { row = null; return; }
-      const r = row;
-      row = null;
-      r.style.transition = 'transform .2s';
-      r.style.transform = '';
+      if (simulating || !bubble || !decided) { bubble = null; return; }
+      const b = bubble;
+      bubble = null;
+      b.style.transition = 'transform .2s';
+      b.style.transform = '';
       if (arrow) { arrow.remove(); arrow = null; }
-      if (!cancel && dx >= 60) reply(r);
+      if (!cancel && dx >= 60) setTimeout(() => reply(b, target, sx, sy), 220); // cuando volvió a su lugar
     };
     addEventListener('touchend', end(false), { capture: true, passive: true });
     addEventListener('touchcancel', end(true), { capture: true, passive: true });

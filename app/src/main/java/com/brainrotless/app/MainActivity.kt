@@ -14,13 +14,13 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.text.format.DateFormat
-import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.*
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -102,6 +102,8 @@ class MainActivity : ComponentActivity() {
             addView(webs, ViewGroup.LayoutParams(MATCH, MATCH))
             // La página avisa (vía JS) si el gesto empezó arriba de todo
             setOnChildScrollUpCallback { _, _ -> fullscreenView != null || !bridge.atTop }
+            setColorSchemeColors(Brand.color(context, R.color.brand_primary))
+            setProgressBackgroundColorSchemeColor(Brand.color(context, R.color.brand_surface))
             setOnRefreshListener { web.reload() }
         }
         offline = buildNotice("Sin conexión", "Revisá el Wi-Fi o los datos", "Reintentar") { web.reload() }
@@ -111,7 +113,7 @@ class MainActivity : ComponentActivity() {
         lockPause = lockScreen.findViewWithTag("button2")
         lockPause.setOnClickListener { usePause() }
         guardScreen = buildNotice(
-            "Brainrotless está apagado",
+            "Lúcido está apagado",
             "Tu compromiso sigue. Volvé a activar 'Bloquear apps oficiales' en Accesibilidad para seguir usando IG Lite y YT Lite.",
             "Activar"
         ) { Setup.openAccessibility(this) }
@@ -474,63 +476,42 @@ class MainActivity : ComponentActivity() {
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
 
-    /** Pantalla completa con título, texto y uno o dos botones (sin conexión, bloqueo de YouTube). */
+    /** Pantalla completa con el logo, título, texto y uno o dos botones (sin conexión, bloqueos). */
     private fun buildNotice(
         title: String, subtitle: String, button: String, button2: String? = null, onClick: () -> Unit
-    ): View {
-        val fg = if (dark) Color.WHITE else Color.parseColor("#202020")
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
+    ) = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER
+        setBackgroundColor(Brand.color(context, R.color.brand_bg))
+        visibility = View.GONE
+        isClickable = true // que no pase el toque a la WebView de atrás
+        val pad = Brand.px(context, 32)
+        setPadding(pad, pad, pad, pad)
+        val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
+        addView(ImageView(context).apply { setImageResource(R.drawable.ic_logo) },
+            LinearLayout.LayoutParams(Brand.px(context, 56), Brand.px(context, 56)).apply { bottomMargin = Brand.px(context, 20) })
+        addView(Brand.text(context, title, 22f, bold = true).apply { tag = "title"; gravity = Gravity.CENTER })
+        addView(Brand.text(context, subtitle, 15f, R.color.brand_text_muted).apply {
+            tag = "subtitle"
             gravity = Gravity.CENTER
-            setBackgroundColor(if (dark) Color.BLACK else Color.WHITE)
+            setPadding(0, Brand.px(context, 8), 0, Brand.px(context, 24))
+        })
+        addView(Brand.primaryButton(context, button, onClick), LinearLayout.LayoutParams(wrap, wrap))
+        if (button2 != null) addView(Brand.secondaryButton(context, button2).apply {
+            tag = "button2"
             visibility = View.GONE
-            isClickable = true // que no pase el toque a la WebView de atrás
-            addView(TextView(context).apply {
-                text = title
-                tag = "title"
-                setTextColor(fg)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
-                gravity = Gravity.CENTER
-            })
-            addView(TextView(context).apply {
-                text = subtitle
-                tag = "subtitle"
-                setTextColor(fg)
-                alpha = 0.7f
-                setPadding(48, 12, 48, 36)
-                gravity = Gravity.CENTER
-            })
-            addView(Button(context).apply {
-                text = button
-                setOnClickListener { onClick() }
-            })
-            if (button2 != null) addView(Button(context).apply {
-                text = button2
-                tag = "button2"
-                visibility = View.GONE
-            })
-        }
+        }, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = Brand.px(context, 10) })
     }
 
-    private fun buildLockBar(): View {
-        val fg = if (dark) Color.WHITE else Color.parseColor("#202020")
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(32, 4, 16, 4)
-            setBackgroundColor(Color.parseColor(if (dark) "#1E1E1E" else "#F0F0F0"))
-            visibility = View.GONE
-            addView(TextView(context).apply {
-                tag = "text"
-                setTextColor(fg)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            addView(Button(context).apply {
-                tag = "pause"
-                isAllCaps = false
-                setOnClickListener { usePause() }
-            })
-        }
+    private fun buildLockBar() = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(Brand.px(context, 16), Brand.px(context, 6), Brand.px(context, 10), Brand.px(context, 6))
+        setBackgroundColor(Brand.color(context, R.color.brand_surface_alt))
+        visibility = View.GONE
+        addView(Brand.text(context, "", 13f).apply { tag = "text" },
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        addView(Brand.accentChip(context, "Pausa") { usePause() }.apply { tag = "pause" })
     }
 
     // ---------- Configuración inicial ----------
@@ -547,13 +528,13 @@ class MainActivity : ComponentActivity() {
 
         fun mark(on: Boolean) = if (on) "✓" else "○"
         val steps = listOfNotNull(
-            "${mark(listenerOn)}  Notificaciones → activar Brainrotless",
+            "${mark(listenerOn)}  Notificaciones → activar Lúcido",
             "○  Links → agregar dominios de Instagram/YouTube",
-            "${mark(guardOn)}  Bloquear apps oficiales → Accesibilidad → Brainrotless",
+            "${mark(guardOn)}  Bloquear apps oficiales → Accesibilidad → Lúcido",
             if (Setup.restrictedApplies()) "⚠  ¿Un permiso aparece gris? Tocá acá" else null
         ).toTypedArray()
         AlertDialog.Builder(this)
-            .setTitle("Configurar Brainrotless")
+            .setTitle("Configurar Lúcido")
             .setItems(steps) { _, which ->
                 when (which) {
                     0 -> Setup.openNotifications(this)

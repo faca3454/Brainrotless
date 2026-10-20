@@ -1,12 +1,12 @@
 <resources>
-    <string name="app_name">Brainrotless</string>
+    <string name="app_name">Lúcido</string>
     <string name="label_ig">IG Lite</string>
     <string name="label_yt">YT Lite</string>
-    <string name="settings_title">Ajustes de Brainrotless</string>
+    <string name="settings_title">Ajustes de Lúcido</string>
     <string name="shortcut_settings">Ajustes</string>
     <string name="tile_label">Apps oficiales</string>
-    <string name="guard_label">Brainrotless: bloquear apps oficiales</string>
-    <string name="app_guard_desc">Cuando abrís Instagram o YouTube oficiales, te lleva a Brainrotless. Con el modo dormir, también cierra los navegadores en tu horario. Solo detecta qué app está en pantalla; no lee contenido ni lo que escribís.</string>
-    <string name="admin_label">Brainrotless: protección del compromiso</string>
-    <string name="admin_desc">Mientras dura un compromiso, evita que se desinstale Brainrotless sin pasar por un aviso. No controla nada del teléfono y se quita solo al terminar.</string>
+    <string name="guard_label">Lúcido: bloquear apps oficiales</string>
+    <string name="app_guard_desc">Cuando abrís Instagram o YouTube oficiales, te lleva a Lúcido. Con el modo dormir, también cierra los navegadores en tu horario. Solo detecta qué app está en pantalla; no lee contenido ni lo que escribís.</string>
+    <string name="admin_label">Lúcido: protección del compromiso</string>
+    <string name="admin_desc">Mientras dura un compromiso, evita que se desinstale Lúcido sin pasar por un aviso. No controla nada del teléfono y se quita solo al terminar.</string>
 </resources>

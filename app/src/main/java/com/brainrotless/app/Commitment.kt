@@ -192,7 +192,7 @@ object Commitment {
         val limit = Usage.limitMinutes(c)?.let { it * 60_000L }
         return buildString {
             append("Uso de Instagram + YouTube por día:\n")
-            before?.let { append("• Antes de Brainrotless: ${formatDuration(it)}\n") }
+            before?.let { append("• Antes de Lúcido: ${formatDuration(it)}\n") }
             append("• Durante el compromiso: ${formatDuration(perDay)}")
             change?.let { append(if (it <= 0) " (bajó un ${-it}%)" else " (subió un $it%)") }
             if (before == null) append("\n\n(Para comparar con tu uso de antes, activá 'Comparar con tu uso de antes' en Ajustes.)")

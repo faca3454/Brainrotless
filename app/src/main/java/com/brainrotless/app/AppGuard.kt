@@ -15,7 +15,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
 
 /**
- * Si se abre la app oficial (ícono, recientes, widget, compartir), salta a Brainrotless.
+ * Si se abre la app oficial (ícono, recientes, widget, compartir), salta a Lúcido.
  * De noche (modo dormir) también cierra los navegadores.
  */
 class AppGuard : AccessibilityService() {

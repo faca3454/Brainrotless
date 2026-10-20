@@ -34,6 +34,7 @@ class SettingsActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_START_COMMITMENT = "start_commitment" // desde el resumen: "Empezar otro"
+        const val EXTRA_FOCUS = "focus" // desde el inicio: llevar a esa sección
     }
 
     class SettingsFragment : PreferenceFragmentCompat() {
@@ -103,6 +104,10 @@ class SettingsActivity : AppCompatActivity() {
             if (i.getBooleanExtra(EXTRA_START_COMMITMENT, false)) {
                 i.removeExtra(EXTRA_START_COMMITMENT)
                 if (!Commitment.active(requireContext())) startCommitment()
+            }
+            i.getStringExtra(EXTRA_FOCUS)?.let { key ->
+                i.removeExtra(EXTRA_FOCUS)
+                scrollToPreference(key)
             }
         }
 
@@ -192,7 +197,7 @@ class SettingsActivity : AppCompatActivity() {
                 isVisible = active
                 summary = if (Protection.adminActive(c))
                     "✓ Activado. Para desinstalar hay que quitarlo primero, con 2 minutos de espera"
-                else "Tocá para que no se pueda desinstalar Brainrotless sin pasar por un aviso"
+                else "Tocá para que no se pueda desinstalar Lúcido sin pasar por un aviso"
             }
             findPreference<Preference>("usage_access")?.summary = if (UsageAccess.granted(c)) {
                 UsageAccess.baseline(c) // calcularlo ya, antes de que Android borre los datos viejos
@@ -296,7 +301,7 @@ class SettingsActivity : AppCompatActivity() {
             AlertDialog.Builder(c)
                 .setTitle("Dos cosas más (opcionales)")
                 .setMessage(
-                    "• Proteger contra desinstalación: para desinstalar Brainrotless vas a tener que quitar un " +
+                    "• Proteger contra desinstalación: para desinstalar Lúcido vas a tener que quitar un " +
                         "permiso, con 2 minutos de espera. Al terminar se quita solo.\n\n" +
                         "• Comparar con tu uso de antes: al terminar vas a ver cuánto bajó tu uso de Instagram y YouTube."
                 )
