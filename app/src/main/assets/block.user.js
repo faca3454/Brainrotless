@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Lúcido
 // @description  Bloquea el feed de Reels/Shorts pero deja ver los que te mandan
-// @version      8
+// @version      9
 // @match        *://*.instagram.com/*
 // @match        *://instagram.com/*
 // @match        *://*.youtube.com/*
@@ -61,15 +61,23 @@
   };
   document.documentElement ? addStyle() : addEventListener('DOMContentLoaded', addStyle);
 
+  // Lo que una sección rehace al cambiar la URL: corre ahora y después en cada cambio (desde check)
+  const onRoute = [];
+  const route = (f) => { onRoute.push(f); f(); };
+
   // --- 2. Reels: que la pantalla no se mueva al deslizar ---
   // Bloquea el gesto sobre el contenedor que pasa de un video al siguiente.
   // Los comentarios y todo lo que no tenga videos adentro sigue scrolleando.
+  // Un touchmove que puede frenar el gesto hace que el navegador espere a la página en cada
+  // movimiento: por eso va en ese contenedor y en la página entera solo en /reel/.
   if (IG && !CFG.igReels) {
     const onReel = () => /^\/reels?\/[\w-]+/.test(location.pathname);
+    // Con snap vertical cuenta aunque todavía no desborde: el visor puede sumar el siguiente reel después
     const scrollerOf = (el) => {
       for (; el && el.nodeType === 1; el = el.parentElement) {
-        const oy = getComputedStyle(el).overflowY;
-        if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight) return el;
+        const s = getComputedStyle(el);
+        if ((s.overflowY === 'auto' || s.overflowY === 'scroll') &&
+            (el.scrollHeight > el.clientHeight || /^(y|block|both)/.test(s.scrollSnapType))) return el;
       }
       return null; // scrollea la página entera
     };
@@ -82,12 +90,26 @@
     };
 
     let blocking = false;
-    addEventListener('touchstart', (e) => {
-      if (e.touches.length === 1) blocking = blocks(e.target);
-    }, { capture: true, passive: true });
-    addEventListener('touchmove', (e) => {
-      if (blocking && e.cancelable) e.preventDefault();
-    }, { capture: true, passive: false });
+    const START = { capture: true, passive: true }, MOVE = { capture: true, passive: false };
+    const start = (e) => { if (e.touches.length === 1) blocking = blocks(e.target); };
+    const move = (e) => { if (blocking && e.cancelable) e.preventDefault(); };
+    const listen = (el, on) => {
+      const f = on ? 'addEventListener' : 'removeEventListener';
+      el[f]('touchstart', start, START);
+      el[f]('touchmove', move, MOVE);
+    };
+    route(() => listen(window, onReel()));
+    // El visor puede abrirse encima del chat sin cambiar la URL: se engancha su contenedor
+    // (el que tiene scroll-snap) apenas un video carga o arranca, antes de que lo deslices
+    const hooked = new WeakSet();
+    const hook = (e) => {
+      const s = e.target instanceof HTMLVideoElement && scrollerOf(e.target);
+      if (!s || hooked.has(s) || getComputedStyle(s).scrollSnapType === 'none') return;
+      hooked.add(s);
+      listen(s, true);
+    };
+    addEventListener('loadstart', hook, true);
+    addEventListener('playing', hook, true);
     addEventListener('wheel', (e) => {
       if (blocks(e.target)) e.preventDefault();
     }, { capture: true, passive: false });
@@ -101,8 +123,10 @@
   // --- 3. Guardia de URL (respaldo; no depende del DOM) ---
   let allowedReel = null;
   let prevFollowing = false; // veníamos del feed de seguidos
+  let lastPath = null;
   const check = (nav) => {
     const p = location.pathname;
+    if (p !== lastPath) { lastPath = p; for (const f of onRoute) f(); }
 
     if (YT) {
       // Short -> reproductor clásico: se ve igual, pero sin swipe al siguiente
@@ -465,10 +489,21 @@
         `cerca: ${near.join(' | ').slice(0, 2000)}\nmenús: ${menus.join(' || ')}\n${html}`);
     };
 
+    // La lista de mensajes con touch-action: pan-y: deslizar de costado no la mueve y el navegador
+    // scrollea sin esperar a la página. Tiene que estar antes del gesto: se marca al entrar al chat
+    // (lo que hay en el centro de la pantalla) y, por las dudas, al deslizar una burbuja.
+    const panY = (el) => { const s = el && scrollerOf(el); if (s) s.style.touchAction = 'pan-y'; };
+    const inChat = () => /^\/direct\/t\//.test(location.pathname);
+    route(() => {
+      if (inChat()) for (const ms of [500, 1500, 4000]) setTimeout(() => {
+        if (inChat()) panY(document.elementFromPoint(innerWidth / 2, innerHeight / 2));
+      }, ms);
+    });
+
     let bubble = null, target = null, arrow = null, sx = 0, sy = 0, dx = 0, decided = false;
     addEventListener('touchstart', (e) => {
       bubble = null;
-      if (simulating || !/^\/direct\/t\//.test(location.pathname) || e.touches.length !== 1) return;
+      if (simulating || !inChat() || e.touches.length !== 1) return;
       target = e.target;
       bubble = bubbleOf(target);
       sx = e.touches[0].clientX;
@@ -483,6 +518,7 @@
         if (Math.abs(mx) < 10 && Math.abs(my) < 10) return;
         decided = true;
         if (!(mx > 0 && Math.abs(mx) > Math.abs(my) * 1.5)) { bubble = null; return; } // vertical: scroll normal
+        panY(bubble);
         const r = bubble.getBoundingClientRect();
         arrow = document.createElement('div');
         arrow.textContent = '↩';
@@ -490,13 +526,12 @@
           'font:22px/28px sans-serif;opacity:0;pointer-events:none;z-index:2147483647;color:#888;transition:transform .15s';
         document.body.appendChild(arrow);
       }
-      if (e.cancelable) e.preventDefault();
       dx = Math.max(0, Math.min(mx, 90));
       bubble.style.transition = 'none';
       bubble.style.transform = `translateX(${dx}px)`;
       arrow.style.opacity = String(Math.min(dx / 60, 1));
       arrow.style.transform = dx >= 60 ? 'scale(1.25)' : ''; // pasó el punto: soltar responde
-    }, { capture: true, passive: false });
+    }, { capture: true, passive: true });
     const end = (cancel) => () => {
       if (simulating || !bubble || !decided) { bubble = null; return; }
       const b = bubble;
