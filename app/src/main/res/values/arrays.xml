@@ -25,6 +25,25 @@
         <item>30</item>
     </string-array>
 
+    <string-array name="limit_entries">
+        <item>Sin límite</item>
+        <item>30 minutos</item>
+        <item>45 minutos</item>
+        <item>1 hora</item>
+        <item>1 hora y media</item>
+        <item>2 horas</item>
+        <item>3 horas</item>
+    </string-array>
+    <string-array name="limit_values">
+        <item>0</item>
+        <item>30</item>
+        <item>45</item>
+        <item>60</item>
+        <item>90</item>
+        <item>120</item>
+        <item>180</item>
+    </string-array>
+
     <string-array name="bypass_entries">
         <item>5 minutos</item>
         <item>10 minutos</item>

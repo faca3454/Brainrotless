@@ -10,7 +10,9 @@ import android.os.Bundle
 import android.service.quicksettings.TileService
 import android.text.format.DateFormat
 import android.widget.FrameLayout
+import android.widget.NumberPicker
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
@@ -31,6 +33,10 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     class SettingsFragment : PreferenceFragmentCompat() {
+        private companion object {
+            const val LOOSEN_MSG = "Durante el compromiso solo podés hacerlo más estricto"
+        }
+
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             Setup.migratePrefs(requireContext()) // antes de inflar, que guarda los valores por defecto
             setPreferencesFromResource(R.xml.preferences, rootKey)
@@ -41,6 +47,20 @@ class SettingsActivity : AppCompatActivity() {
             onClick("perm_restricted") { Setup.explainRestricted(requireActivity()) }
             onClick("bypass_now") { toggleBypass() }
             onClick("bypass_tile") { addTile() }
+            onClick("commit") { if (!Commitment.active(requireContext())) startCommitment() }
+            onClick("pause_now") {
+                if (Commitment.startPause(requireContext()))
+                    Toast.makeText(requireContext(), "🆘 Pausa de emergencia: 15 minutos", Toast.LENGTH_LONG).show()
+                refreshCommitment()
+            }
+            // Durante el compromiso: endurecer sí, aflojar no
+            guard("sleep_on") { s, v -> s.copy(sleepOn = v as Boolean) }
+            guard("sleep_browsers") { s, v -> s.copy(browsers = v as Boolean) }
+            guard("daily_limit") { s, v -> s.copy(limitMinutes = (v as String).toInt().takeIf { it > 0 }) }
+            guard("sleep_per_day") { s, v ->
+                val c = requireContext()
+                s.copy(nights = DayOfWeek.values().associateWith { Sleep.get(c, if (v as Boolean) it else null) })
+            }
             onClick("sleep_all") { pickNight(null) }
             for (d in DayOfWeek.values()) onClick("sleep_day_${d.value}") { pickNight(d) }
             onClick("check_now") {
@@ -65,6 +85,7 @@ class SettingsActivity : AppCompatActivity() {
             preferenceManager.sharedPreferences?.registerOnSharedPreferenceChangeListener(prefsListener)
             refreshSleep()
             refreshBypass()
+            refreshCommitment()
         }
 
         override fun onPause() {
@@ -121,10 +142,115 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        // ---------- Compromiso ----------
+
+        private fun guard(key: String, change: (Strictness, Any) -> Strictness) {
+            findPreference<Preference>(key)?.setOnPreferenceChangeListener { _, v ->
+                val forbidden = Commitment.forbids(requireContext()) { change(it, v) }
+                if (forbidden) Toast.makeText(requireContext(), LOOSEN_MSG, Toast.LENGTH_LONG).show()
+                !forbidden
+            }
+        }
+
+        private fun refreshCommitment() {
+            val c = requireContext()
+            val active = Commitment.active(c)
+            val time = DateFormat.getTimeFormat(c)
+            findPreference<Preference>("commit")?.apply {
+                title = if (active) "Compromiso activo" else "Empezar compromiso"
+                summary = if (active) {
+                    val end = Date(Commitment.endMillis(c))
+                    "Hasta el ${DateFormat.getDateFormat(c).format(end)} a las ${time.format(end)} · " +
+                        "${Commitment.pausesLeft(c)} pausas de emergencia"
+                } else "Mínimo ${Commitment.MIN_DAYS} días sin poder aflojar el modo dormir ni el límite diario"
+            }
+            findPreference<Preference>("usage_today")?.summary = buildString {
+                append(minutes(Usage.todayMs(c)))
+                Usage.limitMs(c)?.let { append(" de ${minutes(it)}") }
+                append(" · se reinicia a las ${Sleep.fmt(c, Usage.nextReset(c).toLocalTime())}")
+            }
+            findPreference<Preference>("pause_now")?.apply {
+                isVisible = active
+                isEnabled = Commitment.canPause(c)
+                summary = when {
+                    Commitment.pauseActive(c) -> "En curso hasta las ${time.format(Date(Commitment.pauseUntil(c)))}"
+                    Commitment.canPause(c) -> "15 minutos · quedan ${Commitment.pausesLeft(c)}"
+                    else -> "Al llegar al límite o de noche (máximo 2 por día) · quedan ${Commitment.pausesLeft(c)}"
+                }
+            }
+        }
+
+        private fun minutes(ms: Long): String {
+            val m = ms / 60_000
+            return if (m < 60) "$m min" else "${m / 60} h ${m % 60} min"
+        }
+
+        private fun startCommitment() {
+            val c = requireContext()
+            if (!Sleep.enabled(c) && Usage.limitMinutes(c) == null) {
+                AlertDialog.Builder(c)
+                    .setMessage("Primero activá el modo dormir o elegí un límite diario: eso es lo que el compromiso no te va a dejar aflojar.")
+                    .setPositiveButton("OK", null).show()
+                return
+            }
+            val picker = NumberPicker(c).apply {
+                minValue = Commitment.MIN_DAYS
+                maxValue = 365
+                value = Commitment.MIN_DAYS
+                wrapSelectorWheel = false
+            }
+            AlertDialog.Builder(c)
+                .setTitle("¿Cuántos días?")
+                .setMessage("Mínimo ${Commitment.MIN_DAYS}. Te da una pausa de emergencia cada 2 días.")
+                .setView(picker)
+                .setPositiveButton("Siguiente") { _, _ -> confirmCommitment(picker.value) }
+                .setNegativeButton("Cancelar", null)
+                .show()
+        }
+
+        private fun confirmCommitment(days: Int) {
+            val c = requireContext()
+            val end = Date(System.currentTimeMillis() + days * 24 * 60 * 60 * 1000L)
+            val rules = buildList {
+                if (Sleep.enabled(c)) {
+                    add("• Apagar el modo dormir, acostarte más tarde ni despertarte más temprano")
+                    if (c.userPrefs().getBoolean("sleep_browsers", true)) add("• Desbloquear los navegadores de noche")
+                }
+                Usage.limitMinutes(c)?.let { add("• Subir el límite diario (${minutes(it * 60_000L)} entre Instagram y YouTube)") }
+            }
+            val pauses = Commitment.pausesFor(days)
+            val dialog = AlertDialog.Builder(c)
+                .setTitle("Compromiso de $days días")
+                .setMessage(
+                    "Hasta el ${DateFormat.getDateFormat(c).format(end)} no vas a poder:\n\n" +
+                        rules.joinToString("\n") +
+                        "\n\nSí vas a poder hacerlo más estricto.\n\n" +
+                        "Tenés $pauses pausas de emergencia de 15 minutos (máximo 2 por día), para cuando " +
+                        "llegues al límite o de noche (de noche solo abren Instagram).\n\n" +
+                        "Una vez que empieza, no se puede cancelar."
+                )
+                .setPositiveButton("Empezar") { _, _ ->
+                    Commitment.start(c, days)
+                    Sleep.reschedule(c)
+                    refreshCommitment()
+                    Toast.makeText(c, "Compromiso empezado: $days días 💪", Toast.LENGTH_LONG).show()
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
+            // 5 segundos para leerlo antes de poder confirmar
+            val start = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            start.isEnabled = false
+            for (left in 5 downTo 0) start.postDelayed({
+                start.text = if (left > 0) "Empezar ($left)" else "Empezar"
+                start.isEnabled = left == 0
+            }, (5 - left) * 1000L)
+        }
+
         // ---------- Modo dormir ----------
 
         private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key?.startsWith("sleep_") == true) refreshSleep()
+            if (key?.startsWith("sleep_") == true || key == "daily_limit") refreshCommitment()
         }
 
         private fun refreshSleep() {
@@ -153,8 +279,14 @@ class SettingsActivity : AppCompatActivity() {
         private fun pickNight(day: DayOfWeek?) {
             val c = requireContext()
             val (sleep, wake) = Sleep.get(c, day)
-            pickTime("Hora de dormir", sleep) { s ->
-                pickTime("Hora de despertar", wake) { w -> Sleep.set(c, day, s, w) }
+            pickTime("Hora de dormir", sleep) { newSleep ->
+                pickTime("Hora de despertar", wake) { newWake ->
+                    // El horario general rige todos los días; el de un día, solo ese
+                    val days = day?.let { listOf(it) } ?: DayOfWeek.values().toList()
+                    if (Commitment.forbids(c) { s -> s.copy(nights = s.nights + days.associateWith { newSleep to newWake }) })
+                        Toast.makeText(c, LOOSEN_MSG, Toast.LENGTH_LONG).show()
+                    else Sleep.set(c, day, newSleep, newWake)
+                }
             }
         }
 

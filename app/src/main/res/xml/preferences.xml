@@ -71,6 +71,22 @@
             app:dependency="sleep_on" />
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="Compromiso">
+        <ListPreference
+            app:key="daily_limit"
+            app:defaultValue="0"
+            app:title="Límite diario (Instagram + YouTube)"
+            app:summary="%s · corre durante el compromiso"
+            app:entries="@array/limit_entries"
+            app:entryValues="@array/limit_values" />
+        <Preference app:key="usage_today" app:title="Uso de hoy" app:selectable="false" />
+        <Preference app:key="commit" app:title="Empezar compromiso" />
+        <Preference
+            app:key="pause_now"
+            app:title="Usar pausa de emergencia"
+            app:isPreferenceVisible="false" />
+    </PreferenceCategory>
+
     <PreferenceCategory app:title="Pausa del bloqueo">
         <Preference app:key="bypass_now" app:title="Pausar ahora" />
         <ListPreference

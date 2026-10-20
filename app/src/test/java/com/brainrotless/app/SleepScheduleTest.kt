@@ -46,6 +46,14 @@ class SleepScheduleTest {
         assertNull(SleepSchedule.next(at(20, 12), t))
     }
 
+    @Test fun el_dia_de_uso_empieza_al_despertarse() {
+        val t = every("00:00", "06:30")
+        assertEquals(at(20, 6, 30), SleepSchedule.lastWake(at(20, 15), t))
+        assertEquals(at(20, 6, 30), SleepSchedule.lastWake(at(21, 3), t)) // de madrugada sigue siendo el mismo día
+        assertEquals(at(21, 6, 30), SleepSchedule.nextWake(at(20, 15), t))
+        assertEquals(at(20, 6, 30), SleepSchedule.nextWake(at(20, 6), t))
+    }
+
     @Test fun siesta_de_tarde() {
         val t = every("14:00", "15:30")
         assertEquals(Night(at(20, 14), at(20, 15, 30)), SleepSchedule.current(at(20, 15), t))

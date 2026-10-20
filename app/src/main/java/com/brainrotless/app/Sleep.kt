@@ -49,6 +49,13 @@ object SleepSchedule {
 
     fun next(now: LocalDateTime, times: (DayOfWeek) -> Pair<LocalTime, LocalTime>) =
         nights(now.toLocalDate().minusDays(1), 9, times).firstOrNull { it.start.isAfter(now) }
+
+    /** Última hora de despertar: ahí empieza el día de uso (y se reinicia el límite). */
+    fun lastWake(now: LocalDateTime, times: (DayOfWeek) -> Pair<LocalTime, LocalTime>) =
+        nights(now.toLocalDate().minusDays(3), 4, times).map { it.end }.filter { !it.isAfter(now) }.maxOrNull()
+
+    fun nextWake(now: LocalDateTime, times: (DayOfWeek) -> Pair<LocalTime, LocalTime>) =
+        nights(now.toLocalDate().minusDays(1), 9, times).map { it.end }.filter { it.isAfter(now) }.minOrNull()
 }
 
 /**
@@ -91,7 +98,11 @@ object Sleep {
         return { _ -> all }
     }
 
-    fun current(c: Context, now: LocalDateTime = LocalDateTime.now()) =
+    /** Horario que rige la noche que empieza ese día (aunque el modo esté apagado). */
+    fun schedule(c: Context, d: DayOfWeek) = times(c)(d)
+
+    // La hora viene de TrustedClock: durante un compromiso, cambiar la hora del teléfono no saltea la noche
+    fun current(c: Context, now: LocalDateTime = TrustedClock.now(c)) =
         if (enabled(c)) SleepSchedule.current(now, times(c)) else null
 
     fun active(c: Context) = current(c) != null
@@ -103,7 +114,7 @@ object Sleep {
 
     /** Milisegundos hasta que empiece o termine una noche; null si el modo está apagado. */
     fun msUntilChange(c: Context): Long? {
-        val now = LocalDateTime.now()
+        val now = TrustedClock.now(c)
         val at = listOfNotNull(current(c, now)?.end, next(c, now)?.start).minOrNull() ?: return null
         return Duration.between(now, at).toMillis()
     }
@@ -126,11 +137,11 @@ object Sleep {
         am.cancel(pi)
         if (!enabled(c)) { NotificationManagerCompat.from(c).cancel(NOTIF_ID); return }
 
-        val now = LocalDateTime.now()
+        val now = TrustedClock.now(c)
         val next = next(c, now)
         val warnAt = next?.start?.minusMinutes(warnMinutes(c))?.takeIf { warnMinutes(c) > 0 && it.isAfter(now) }
         val at = listOfNotNull(current(c, now)?.end, warnAt, next?.start).minOrNull() ?: return
-        val ms = at.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val ms = TrustedClock.systemMillis(c, at)
 
         if (Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms())
             am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, ms, pi)
@@ -142,7 +153,7 @@ object Sleep {
     @SuppressLint("MissingPermission") // sin permiso, notify() falla en silencio
     fun onAlarm(c: Context) {
         val nm = NotificationManagerCompat.from(c)
-        val now = LocalDateTime.now()
+        val now = TrustedClock.now(c)
         if (current(c, now) != null) {
             Bypass.stop(c)
             nm.cancel(NOTIF_ID) // ya empezó: el aviso sobra
@@ -173,7 +184,11 @@ object Sleep {
 /** Alarmas del modo dormir; también reprograma al reiniciar, actualizar la app o cambiar la hora. */
 class SleepAlarm : BroadcastReceiver() {
     override fun onReceive(c: Context, i: Intent) {
-        if (i.action == null) Sleep.onAlarm(c) // la nuestra no tiene acción; las del sistema sí
+        when (i.action) {
+            null -> Sleep.onAlarm(c) // la nuestra no tiene acción; las del sistema sí
+            Intent.ACTION_TIME_CHANGED -> TrustedClock.onTimeSet(c)
+            Intent.ACTION_BOOT_COMPLETED -> TrustedClock.onBoot(c)
+        }
         Sleep.reschedule(c)
     }
 }

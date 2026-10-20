@@ -113,6 +113,16 @@ app oficial abierta, te saca en el acto.
 
 ## 5. Compromiso
 
+**5.1 a 5.3 hechos; falta probar en el teléfono.** Decisiones tomadas al programarlo:
+- El límite diario solo corre durante un compromiso (fuera de él, "Uso de hoy" igual muestra el tiempo).
+- La pausa de emergencia se puede usar al llegar al límite **o de noche** (aunque no se haya llegado
+  al límite), como se acordó para la noche.
+- Para empezar un compromiso hace falta tener el modo dormir prendido o un límite elegido.
+- La confirmación tiene 5 segundos de espera antes de poder tocar "Empezar".
+- Cambiar la hora del teléfono durante el compromiso se compensa (TrustedClock): no adelanta el
+  final ni saltea la noche. Cambiar la zona horaria no se compensa.
+- El uso de las apps oficiales con la pausa del bloqueo también suma al límite.
+
 ### 5.1 Configuración
 - Duración: **mínimo 7 días**, máximo lo que elija el usuario.
 - Antes de confirmar, un aviso claro de lo que no se va a poder cambiar.

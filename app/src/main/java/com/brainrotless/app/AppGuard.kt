@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
@@ -30,8 +31,20 @@ class AppGuard : AccessibilityService() {
         if (e.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = e.packageName?.toString() ?: return
         if (pkg == "com.android.systemui") return // la cortina de notificaciones no cambia la app de abajo
+        countOfficial()
         foreground = pkg
+        countOfficial()
         enforce(pkg)
+    }
+
+    // Uso de las apps oficiales (con la pausa del bloqueo): también suma al límite diario
+    private var officialSince = 0L
+
+    private fun countOfficial() {
+        val now = SystemClock.elapsedRealtime()
+        val counting = foreground in redirects && getSystemService(PowerManager::class.java)?.isInteractive == true
+        if (counting && officialSince > 0) Usage.add(this, now - officialSince)
+        officialSince = if (counting) now else 0
     }
 
     private fun enforce(pkg: String) {
@@ -59,26 +72,30 @@ class AppGuard : AccessibilityService() {
         return true
     }
 
-    // Cuando empieza la noche, sacar al usuario de lo que tenga abierto (navegador o app
-    // oficial con la pausa), sin esperar a que cambie de pantalla
+    // Cuando empieza la noche o se llega al límite, sacar al usuario de lo que tenga abierto
+    // (navegador o app oficial con la pausa), sin esperar a que cambie de pantalla
     private val handler = Handler(Looper.getMainLooper())
-    private var wasNight = false
-    private val nightTicker = object : Runnable {
+    private var wasLocked = false
+    private fun locked() = Lock.any(this) || Sleep.blocksBrowsers(this)
+
+    private val lockTicker = object : Runnable {
         override fun run() {
-            val night = Sleep.active(this@AppGuard)
-            if (night && !wasNight) foreground?.let(::enforce)
-            wasNight = night
-            handler.postDelayed(this, ((Sleep.msUntilChange(this@AppGuard) ?: 60_000) + 500).coerceIn(1_000, 60_000))
+            countOfficial()
+            val locked = locked()
+            if (locked && !wasLocked) foreground?.let(::enforce)
+            wasLocked = locked
+            handler.removeCallbacks(this)
+            handler.postDelayed(this, (Lock.msUntilChange(this@AppGuard) + 500).coerceIn(1_000, 60_000))
         }
     }
 
     override fun onServiceConnected() {
-        wasNight = Sleep.active(this)
-        nightTicker.run()
+        wasLocked = locked()
+        lockTicker.run()
     }
 
     override fun onDestroy() {
-        handler.removeCallbacks(nightTicker)
+        handler.removeCallbacks(lockTicker)
         super.onDestroy()
     }
 
@@ -90,8 +107,8 @@ object Bypass {
     private fun prefs(c: Context) = c.getSharedPreferences("bypass", Context.MODE_PRIVATE)
     private fun minutes(c: Context) = c.userPrefs().getString("bypass_minutes", "10")?.toIntOrNull() ?: 10
 
-    // De noche no hay pausa: las apps oficiales dejarían ver todo
-    fun active(c: Context) = !Sleep.active(c) && prefs(c).getLong("until", 0) > System.currentTimeMillis()
+    // De noche o pasado el límite no hay pausa: las apps oficiales dejarían ver todo
+    fun active(c: Context) = !Lock.any(c) && prefs(c).getLong("until", 0) > System.currentTimeMillis()
     fun start(c: Context) =
         prefs(c).edit().putLong("until", System.currentTimeMillis() + minutes(c) * 60_000L).apply()
     fun stop(c: Context) = prefs(c).edit().putLong("until", 0).apply()
@@ -103,22 +120,22 @@ class BypassTile : TileService() {
     override fun onStartListening() = refresh()
 
     override fun onClick() {
-        if (Sleep.active(this)) return refresh()
+        if (Lock.any(this)) return refresh()
         if (Bypass.active(this)) Bypass.stop(this) else Bypass.start(this)
         refresh()
     }
 
     private fun refresh() {
         val t = qsTile ?: return
-        val night = Sleep.current(this)
+        val lock = Lock.yt(this) ?: Lock.ig(this)
         t.label = getString(R.string.tile_label)
         t.state = when {
-            night != null -> Tile.STATE_UNAVAILABLE
+            lock != null -> Tile.STATE_UNAVAILABLE
             Bypass.active(this) -> Tile.STATE_ACTIVE
             else -> Tile.STATE_INACTIVE
         }
         if (Build.VERSION.SDK_INT >= 29)
-            t.subtitle = night?.let { "Bloqueado hasta las ${Sleep.fmt(this, it.end.toLocalTime())}" }
+            t.subtitle = lock?.let { "Bloqueado hasta las ${Lock.until(this, it)}" }
         t.updateTile()
     }
 }

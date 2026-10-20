@@ -12,6 +12,8 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
+import android.text.format.DateFormat
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -37,10 +39,19 @@ class MainActivity : ComponentActivity() {
     private lateinit var root: FrameLayout
     private lateinit var refresh: SwipeRefreshLayout
     private lateinit var web: WebView
+    private lateinit var content: LinearLayout
     private lateinit var offline: View
-    private lateinit var sleepScreen: View
-    private lateinit var sleepText: TextView
     private val handler = Handler(Looper.getMainLooper())
+
+    // Bloqueo de YouTube (noche o límite) y barra de "solo mensajes" arriba de Instagram
+    private lateinit var lockScreen: View
+    private lateinit var lockTitle: TextView
+    private lateinit var lockText: TextView
+    private lateinit var lockPause: Button
+    private lateinit var lockBar: View
+    private lateinit var lockBarText: TextView
+    private lateinit var lockBarPause: Button
+    private var usageMark = 0L // desde cuándo se cuenta el uso sin sumar
 
     private val bridge = Bridge()
     private var scriptHandler: ScriptHandler? = null
@@ -86,12 +97,23 @@ class MainActivity : ComponentActivity() {
             setOnRefreshListener { web.reload() }
         }
         offline = buildNotice("Sin conexión", "Revisá el Wi-Fi o los datos", "Reintentar") { web.reload() }
-        sleepScreen = buildNotice("Hora de dormir 🌙", "", "Ir a los mensajes de Instagram") { open(IG_INBOX) }
-        sleepText = sleepScreen.findViewWithTag("subtitle")
+        lockScreen = buildNotice("", "", "Ir a los mensajes de Instagram", "") { open(IG_INBOX) }
+        lockTitle = lockScreen.findViewWithTag("title")
+        lockText = lockScreen.findViewWithTag("subtitle")
+        lockPause = lockScreen.findViewWithTag("button2")
+        lockPause.setOnClickListener { usePause() }
+        lockBar = buildLockBar()
+        lockBarText = lockBar.findViewWithTag("text")
+        lockBarPause = lockBar.findViewWithTag("pause")
+        content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(lockBar, LinearLayout.LayoutParams(MATCH, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(refresh, LinearLayout.LayoutParams(MATCH, 0, 1f))
+        }
         root = FrameLayout(this).apply {
-            addView(refresh, FrameLayout.LayoutParams(MATCH, MATCH))
+            addView(content, FrameLayout.LayoutParams(MATCH, MATCH))
             addView(offline, FrameLayout.LayoutParams(MATCH, MATCH))
-            addView(sleepScreen, FrameLayout.LayoutParams(MATCH, MATCH))
+            addView(lockScreen, FrameLayout.LayoutParams(MATCH, MATCH))
         }
         setContentView(root)
 
@@ -110,7 +132,7 @@ class MainActivity : ComponentActivity() {
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(v: WebView, r: WebResourceRequest): Boolean {
                 val u = r.url
-                if (isYouTube(u.toString()) && Sleep.active(this@MainActivity)) { showSleepScreen(); return true }
+                if (isYouTube(u.toString()) && Lock.yt(this@MainActivity) != null) { showLockScreen(); return true }
                 shortsToWatch(u)?.let { v.loadUrl(it); return true }
                 // intent:// o instagram:// que intentan abrir la app oficial
                 if (u.scheme != "https" && u.scheme != "http") return true
@@ -128,7 +150,7 @@ class MainActivity : ComponentActivity() {
             override fun onPageStarted(v: WebView, url: String?, favicon: android.graphics.Bitmap?) {
                 mainFrameError = false
                 // Volver atrás a YouTube no pasa por shouldOverrideUrlLoading
-                if (isYouTube(url) && Sleep.active(this@MainActivity)) { v.stopLoading(); showSleepScreen() }
+                if (isYouTube(url) && Lock.yt(this@MainActivity) != null) { v.stopLoading(); showLockScreen() }
             }
 
             override fun onPageFinished(v: WebView, url: String) {
@@ -166,7 +188,7 @@ class MainActivity : ComponentActivity() {
                 fullscreenView = view
                 fullscreenCallback = callback
                 root.addView(view, FrameLayout.LayoutParams(MATCH, MATCH))
-                refresh.visibility = View.GONE
+                content.visibility = View.GONE
                 setBarsHidden(true)
                 requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
             }
@@ -178,7 +200,7 @@ class MainActivity : ComponentActivity() {
             override fun handleOnBackPressed() {
                 when {
                     fullscreenView != null -> exitFullscreen()
-                    sleepScreen.visibility == View.VISIBLE -> finish()
+                    lockScreen.visibility == View.VISIBLE -> finish()
                     web.canGoBack() -> web.goBack()
                     else -> finish()
                 }
@@ -187,6 +209,7 @@ class MainActivity : ComponentActivity() {
 
         if (savedInstanceState == null) open(urlFromIntent(intent) ?: launcherUrl(intent))
         else web.restoreState(savedInstanceState)
+        handlePauseIntent(intent)
 
         maybeAskSetup()
         Rules.refreshAsync(this) { runOnUiThread { installScript() } } // se aplica en la próxima carga
@@ -196,46 +219,93 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        sleepTicker.run()
+        usageMark = SystemClock.elapsedRealtime()
+        lockTicker.run()
     }
 
-    // ---------- Modo dormir ----------
+    // ---------- Bloqueos: noche, límite diario y pausa de emergencia ----------
 
-    /** Revisa justo cuando empieza o termina la noche (y cada minuto, por las dudas). */
-    private val sleepTicker = object : Runnable {
+    /** Revisa justo cuando algo cambia (noche, límite, avisos, fin de la pausa) y cada minuto, por las dudas. */
+    private val lockTicker = object : Runnable {
         override fun run() {
             applyLock()
             handler.removeCallbacks(this)
-            handler.postDelayed(this, ((Sleep.msUntilChange(this@MainActivity) ?: 60_000) + 500).coerceIn(1_000, 60_000))
+            handler.postDelayed(this, (Lock.msUntilChange(this@MainActivity) + 500).coerceIn(1_000, 60_000))
         }
     }
 
     private fun applyLock() {
-        val night = Sleep.active(this)
+        countUsage()
+        val yt = Lock.yt(this)
         // Cambió el modo solo mensajes o algún ajuste: reinyectar y recargar para aplicarlo ya
         val scriptChanged = Rules.build(this) != injectedScript
         if (scriptChanged) installScript()
         when {
-            night && isYouTube(web.url) -> showSleepScreen()
-            !night && sleepScreen.visibility == View.VISIBLE -> open(YT_HOME) // se terminó la noche
-            scriptChanged && sleepScreen.visibility != View.VISIBLE -> web.reload()
+            yt != null && isYouTube(web.url) -> showLockScreen()
+            yt == null && lockScreen.visibility == View.VISIBLE -> open(YT_HOME) // se terminó el bloqueo
+            scriptChanged && lockScreen.visibility != View.VISIBLE -> web.reload()
         }
+        if (lockScreen.visibility == View.VISIBLE) showLockScreen() // refrescar texto y pausa
+        refreshLockBar()
     }
 
-    /** Carga una URL, salvo YouTube en horario de dormir. */
+    /** Todo el tiempo con Instagram o YouTube en pantalla suma al límite (salvo la pantalla de bloqueo). */
+    private fun countUsage() {
+        val now = SystemClock.elapsedRealtime()
+        if (usageMark > 0 && lockScreen.visibility != View.VISIBLE) Usage.add(this, now - usageMark)
+        usageMark = now
+    }
+
+    /** Carga una URL, salvo YouTube bloqueado. */
     private fun open(url: String) {
-        if (isYouTube(url) && Sleep.active(this)) { showSleepScreen(); return }
-        sleepScreen.visibility = View.GONE
+        if (isYouTube(url) && Lock.yt(this) != null) { showLockScreen(); return }
+        lockScreen.visibility = View.GONE
         web.loadUrl(url)
     }
 
-    private fun showSleepScreen() {
-        val night = Sleep.current(this) ?: return
-        sleepText.text = "YouTube está bloqueado hasta las ${Sleep.fmt(this, night.end.toLocalTime())}"
-        if (sleepScreen.visibility == View.VISIBLE) return
-        sleepScreen.visibility = View.VISIBLE
+    private fun showLockScreen() {
+        val r = Lock.yt(this) ?: return
+        val until = Lock.until(this, r)
+        lockTitle.text = if (r == Lock.Reason.NIGHT) "Hora de dormir 🌙" else "Límite de hoy ⏱"
+        lockText.text = if (r == Lock.Reason.NIGHT) "YouTube está bloqueado hasta las $until"
+            else "Usaste tu tiempo de hoy. YouTube vuelve a las $until"
+        // De noche la pausa no abre YouTube: solo se ofrece por el límite
+        val canPause = r == Lock.Reason.LIMIT && Commitment.canPause(this)
+        lockPause.visibility = if (canPause) View.VISIBLE else View.GONE
+        lockPause.text = "Pausa de emergencia, 15 min (quedan ${Commitment.pausesLeft(this)})"
+        if (lockScreen.visibility == View.VISIBLE) return
+        countUsage()
+        lockScreen.visibility = View.VISIBLE
         if (fullscreenView != null) exitFullscreen()
         web.loadUrl("about:blank") // corta el video y el audio
+    }
+
+    /** Barra arriba de la página: "solo mensajes" con el botón de pausa, o la pausa en curso. */
+    private fun refreshLockBar() {
+        val ig = Lock.ig(this)
+        val text = when {
+            Commitment.pauseActive(this) -> "🆘 Pausa de emergencia hasta las " +
+                DateFormat.getTimeFormat(this).format(java.util.Date(Commitment.pauseUntil(this))) + " (no suma al límite)"
+            ig != null && !isYouTube(web.url) && lockScreen.visibility != View.VISIBLE -> Lock.igMessage(this, ig)
+            else -> null
+        }
+        lockBar.visibility = if (text != null) View.VISIBLE else View.GONE
+        lockBarText.text = text
+        lockBarPause.visibility = if (ig != null && Commitment.canPause(this)) View.VISIBLE else View.GONE
+        lockBarPause.text = "Pausa (${Commitment.pausesLeft(this)})"
+    }
+
+    private fun usePause() {
+        if (!Commitment.startPause(this)) return
+        val what = if (Sleep.active(this)) "Instagram completo" else "Instagram y YouTube"
+        Toast.makeText(this, "🆘 Pausa de emergencia: $what por 15 minutos", Toast.LENGTH_LONG).show()
+        applyLock()
+    }
+
+    private fun handlePauseIntent(i: Intent) {
+        if (!i.getBooleanExtra(EXTRA_PAUSE, false)) return
+        i.removeExtra(EXTRA_PAUSE)
+        usePause()
     }
 
     private fun isYouTube(url: String?) =
@@ -246,11 +316,12 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         if (fullscreenView != null) exitFullscreen()
+        handlePauseIntent(intent)
         val url = urlFromIntent(intent)
         if (url != null) { open(url); return }
         // Tocaste el ícono de la otra plataforma: cambiar solo si hace falta
         val wantYT = isYouTubeAlias(intent)
-        val onYT = sleepScreen.visibility == View.VISIBLE || isYouTube(web.url)
+        val onYT = lockScreen.visibility == View.VISIBLE || isYouTube(web.url)
         if (wantYT != onYT) open(launcherUrl(intent))
     }
 
@@ -305,8 +376,10 @@ class MainActivity : ComponentActivity() {
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
 
-    /** Pantalla completa con título, texto y un botón (sin conexión, hora de dormir). */
-    private fun buildNotice(title: String, subtitle: String, button: String, onClick: () -> Unit): View {
+    /** Pantalla completa con título, texto y uno o dos botones (sin conexión, bloqueo de YouTube). */
+    private fun buildNotice(
+        title: String, subtitle: String, button: String, button2: String? = null, onClick: () -> Unit
+    ): View {
         val fg = if (dark) Color.WHITE else Color.parseColor("#202020")
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -316,6 +389,7 @@ class MainActivity : ComponentActivity() {
             isClickable = true // que no pase el toque a la WebView de atrás
             addView(TextView(context).apply {
                 text = title
+                tag = "title"
                 setTextColor(fg)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
                 gravity = Gravity.CENTER
@@ -331,6 +405,32 @@ class MainActivity : ComponentActivity() {
             addView(Button(context).apply {
                 text = button
                 setOnClickListener { onClick() }
+            })
+            if (button2 != null) addView(Button(context).apply {
+                text = button2
+                tag = "button2"
+                visibility = View.GONE
+            })
+        }
+    }
+
+    private fun buildLockBar(): View {
+        val fg = if (dark) Color.WHITE else Color.parseColor("#202020")
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(32, 4, 16, 4)
+            setBackgroundColor(Color.parseColor(if (dark) "#1E1E1E" else "#F0F0F0"))
+            visibility = View.GONE
+            addView(TextView(context).apply {
+                tag = "text"
+                setTextColor(fg)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            addView(Button(context).apply {
+                tag = "pause"
+                isAllCaps = false
+                setOnClickListener { usePause() }
             })
         }
     }
@@ -387,7 +487,7 @@ class MainActivity : ComponentActivity() {
         fullscreenView = null
         fullscreenCallback?.onCustomViewHidden()
         fullscreenCallback = null
-        refresh.visibility = View.VISIBLE
+        content.visibility = View.VISIBLE
         setBarsHidden(false)
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     }
@@ -404,7 +504,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        handler.removeCallbacks(sleepTicker)
+        countUsage()
+        usageMark = 0
+        handler.removeCallbacks(lockTicker)
         CookieManager.getInstance().flush()
     }
 
@@ -417,5 +519,6 @@ class MainActivity : ComponentActivity() {
         private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
         private const val IG_INBOX = "https://www.instagram.com/direct/inbox/"
         private const val YT_HOME = "https://m.youtube.com"
+        const val EXTRA_PAUSE = "pause" // desde la notificación del límite: usar la pausa de emergencia
     }
 }
