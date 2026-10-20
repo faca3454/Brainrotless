@@ -581,4 +581,85 @@
       NoScrollBridge.setAtTop(top);
     }, { capture: true, passive: true });
   }
+
+  // --- 10. Mediciones (solo APK de prueba) ---
+  // Tareas largas, cuánto tarda cada cambio de página en dibujarse y cada video en arrancar (de play()
+  // a 'playing'). Al salir de la app se copia un resumen al portapapeles, para pegarlo en el chat.
+  if (CFG.debug && window.NoScrollBridge && NoScrollBridge.report) {
+    // Solo el tipo de pantalla: nada de usuarios ni chats
+    const screen = () => {
+      const p = location.pathname;
+      const m = p.match(/^\/(direct\/\w+|reels?|p|stories|explore|accounts|watch|shorts|results|feed)\b/);
+      return m ? '/' + m[1] : p === '/' ? '/' : '/@';
+    };
+
+    const visits = [[0, screen()]]; // [desde cuándo, pantalla]: las tareas largas se avisan tarde
+    const long = {}; // pantalla → [cantidad, ms en total, ms la más larga]
+    try {
+      new PerformanceObserver((list) => {
+        for (const e of list.getEntries()) {
+          const k = visits.filter(([t]) => t <= e.startTime).pop()[1], t = long[k] || (long[k] = [0, 0, 0]);
+          t[0]++; t[1] += e.duration; t[2] = Math.max(t[2], e.duration);
+        }
+      }).observe({ type: 'longtask', buffered: true });
+    } catch (e) {}
+
+    // Cambio de página: hasta el último cuadro con cambios, cuando pasa medio segundo sin ninguno
+    // (10 s como mucho). Si cambiás de página antes, queda lo que se llegó a medir, con *.
+    const navs = [];
+    let stop = null;
+    const measure = (t0, label) => {
+      if (stop) stop(true, '*');
+      if (t0) visits.push([t0, screen()]);
+      let last = t0, frame = false, quiet = 0;
+      const obs = new MutationObserver(() => {
+        if (!frame) { frame = true; requestAnimationFrame(() => { frame = false; last = performance.now(); }); }
+        clearTimeout(quiet);
+        quiet = setTimeout(() => stop(true), 500);
+      });
+      const max = setTimeout(() => stop(true, '+'), 10000);
+      stop = (save, more = '') => {
+        obs.disconnect(); clearTimeout(quiet); clearTimeout(max); stop = null;
+        if (save) navs.push(`${label} ${Math.round(last - t0)}${more}`);
+      };
+      obs.observe(document, { childList: true, subtree: true });
+      quiet = setTimeout(() => stop(true), 500);
+    };
+    measure(0, screen() + ' (carga)');
+    const push = history.pushState;
+    history.pushState = function (...a) { const r = push.apply(this, a); measure(performance.now(), screen()); return r; };
+    addEventListener('popstate', () => measure(performance.now(), screen()));
+
+    const asked = new WeakMap(), videos = [];
+    addEventListener('play', (e) => { if (e.target instanceof HTMLVideoElement) asked.set(e.target, performance.now()); }, true);
+    addEventListener('playing', (e) => {
+      const t = asked.get(e.target);
+      if (t === undefined) return;
+      asked.delete(e.target);
+      videos.push(Math.round(performance.now() - t));
+    }, true);
+
+    // Si copiaste algo en la página (un link, un texto), salir no lo pisa: se copia la próxima vez
+    let copied = false;
+    addEventListener('copy', () => { copied = true; }, true);
+    const write = navigator.clipboard && navigator.clipboard.writeText;
+    if (write) navigator.clipboard.writeText = function (...a) { copied = true; return write.apply(this, a); };
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'hidden') return;
+      if (copied) { copied = false; return; }
+      if (!navs.length && !videos.length && !Object.keys(long).length) return;
+      const sorted = [...videos].sort((a, b) => a - b);
+      const chrome = (navigator.userAgent.match(/Chrome\/[\d.]+/) || ['?'])[0];
+      NoScrollBridge.report([
+        `Lúcido rendimiento · ${location.hostname} · ${chrome} · ${Math.round(performance.now() / 60000)} min`,
+        'Tareas largas (cantidad, ms en total, la más larga):',
+        ...Object.entries(long).map(([k, [n, sum, max]]) => `  ${k}: ${n}, ${Math.round(sum)}, ${Math.round(max)}`),
+        'Cambios de página (ms hasta dibujarse; + = seguía cambiando a los 10 s, * = cambiaste antes):',
+        '  ' + navs.slice(-30).join(' · '),
+        `Videos, de play() a playing (ms): ${sorted.length ? `mediana ${sorted[sorted.length >> 1]}, máx ${sorted[sorted.length - 1]} (n=${sorted.length})` : 'ninguno'}`,
+        '  ' + videos.slice(-30).join(' '),
+      ].join('\n'));
+    });
+  }
 })();

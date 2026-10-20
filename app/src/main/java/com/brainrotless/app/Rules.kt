@@ -62,7 +62,7 @@ object Rules {
             .put("ytShorts", reels)
             .put("smooth", p.getBoolean("smooth_transitions", false))
             .put("swipeReply", p.getBoolean("swipe_reply", true))
-            .put("debug", BuildConfig.DEBUG) // APK de prueba: el script puede mandar diagnósticos
+            .put("debug", testBuild) // APK de prueba: el script puede mandar diagnósticos y mediciones
         // Hora de dormir o límite diario: Instagram solo para mensajes
         Lock.ig(c)?.let { cfg.put("restricted", true).put("restrictedMsg", Lock.igMessage(c, it)) }
         val config = cfg.toString()

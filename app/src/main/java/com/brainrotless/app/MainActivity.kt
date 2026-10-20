@@ -528,13 +528,14 @@ class MainActivity : ComponentActivity() {
         @Volatile private var top = false
         val atTop get() = top
         @JavascriptInterface fun setAtTop(value: Boolean) { top = value }
-        @JavascriptInterface fun report(text: String) { if (BuildConfig.DEBUG) onReport(text.take(10_000)) }
+        @JavascriptInterface fun report(text: String) { if (testBuild) onReport(text.take(10_000)) }
     }
 
-    /** Diagnóstico del script (APK de prueba): al portapapeles, para pegarlo en el chat. */
+    /** Diagnóstico o mediciones del script (APK de prueba): al portapapeles, para pegarlo en el chat. */
     private fun copyDiagnostic(text: String) {
         getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Lúcido", text))
-        Toast.makeText(this, getString(R.string.diag_copied), Toast.LENGTH_LONG).show()
+        val msg = if (text.startsWith(PERF_REPORT)) R.string.perf_copied else R.string.diag_copied
+        Toast.makeText(this, getString(msg), Toast.LENGTH_LONG).show()
     }
 
     // ---------- Intents ----------
@@ -695,5 +696,6 @@ class MainActivity : ComponentActivity() {
         private const val IG_INBOX = "https://www.instagram.com/direct/inbox/"
         private const val YT_HOME = "https://m.youtube.com"
         const val EXTRA_PAUSE = "pause" // desde la notificación del límite: usar la pausa de emergencia
+        private const val PERF_REPORT = "Lúcido rendimiento" // así empieza el resumen de mediciones del script
     }
 }
