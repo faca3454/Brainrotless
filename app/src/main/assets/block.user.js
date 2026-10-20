@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Brainrotless
 // @description  Bloquea el feed de Reels/Shorts pero deja ver los que te mandan
-// @version      4
+// @version      5
 // @match        *://*.instagram.com/*
 // @match        *://instagram.com/*
 // @match        *://*.youtube.com/*
@@ -17,7 +17,7 @@
 
   // --- Config (la app la inyecta desde Ajustes; en Safari/Userscripts usa estos valores) ---
   const CFG = Object.assign(
-    { igFeed: 'normal', igBlockExplore: true, igTapToPlay: false, restricted: false, restrictedMsg: '' },
+    { igFeed: 'normal', igBlockExplore: true, igTapToPlay: false, igReels: false, restricted: false, restrictedMsg: '' },
     window.__noscrollCfg || {}
   );
   if (CFG.igBlockFeed) CFG.igFeed = 'blocked'; // versiones viejas de la app mandan igBlockFeed
@@ -32,8 +32,10 @@
   try { pendingToast = sessionStorage.getItem('brl_toast'); sessionStorage.removeItem('brl_toast'); } catch (e) {}
 
   // --- 1. Ocultar accesos al feed (cosmético; los selectores pueden romperse) ---
+  // igReels: la app deja ver Reels mientras no se llegue al límite diario (ni sea de noche)
+  const hidden = [!CFG.igReels && 'a[href="/reels/"]', CFG.igBlockExplore && 'a[href="/explore/"]'].filter(Boolean);
   const CSS = IG
-    ? `a[href="/reels/"]${CFG.igBlockExplore ? ', a[href="/explore/"]' : ''} { display:none !important; }` +
+    ? (hidden.length ? `${hidden.join(', ')} { display:none !important; }` : '') +
       (CFG.restricted ? 'a[href="/"], video { display:none !important; }' : '')
     : `
       ytm-reel-shelf-renderer, ytm-shorts-lockup-view-model,
@@ -55,7 +57,7 @@
   // --- 2. Reels: que la pantalla no se mueva al deslizar ---
   // Bloquea el gesto sobre el contenedor que pasa de un video al siguiente.
   // Los comentarios y todo lo que no tenga videos adentro sigue scrolleando.
-  if (IG) {
+  if (IG && !CFG.igReels) {
     const onReel = () => /^\/reels?\/[\w-]+/.test(location.pathname);
     const scrollerOf = (el) => {
       for (; el && el.nodeType === 1; el = el.parentElement) {
@@ -110,7 +112,7 @@
       return;
     }
     const blocked =
-      /^\/reels\/?$/.test(p) ||
+      (!CFG.igReels && /^\/reels\/?$/.test(p)) ||
       (CFG.igBlockExplore && /^\/explore\/?$/.test(p)) ||
       (CFG.igFeed === 'blocked' && p === '/');
     if (blocked) {
@@ -128,7 +130,7 @@
     }
     prevFollowing = following || (p === '/' && prevFollowing);
     const m = p.match(/^\/reels?\/([\w-]+)/);
-    if (!m) { allowedReel = null; return; }
+    if (!m || CFG.igReels) { allowedReel = null; return; }
     const id = m[1];
     if (allowedReel === null) {
       allowedReel = id;                               // reel abierto a propósito (DM, link, perfil)

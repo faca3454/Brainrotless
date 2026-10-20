@@ -24,6 +24,11 @@
             app:title="Bloquear Explorar"
             app:summary="La búsqueda de usuarios sigue funcionando" />
         <SwitchPreferenceCompat
+            app:key="ig_reels_in_limit"
+            app:defaultValue="true"
+            app:title="Reels dentro del límite diario"
+            app:summary="Con un compromiso con límite, podés ver Reels hasta llegar al límite. De noche, no" />
+        <SwitchPreferenceCompat
             app:key="ig_tap_to_play"
             app:defaultValue="false"
             app:title="Videos solo al tocar"
@@ -84,6 +89,11 @@
         <Preference
             app:key="pause_now"
             app:title="Usar pausa de emergencia"
+            app:isPreferenceVisible="false" />
+        <Preference
+            app:key="debug_end"
+            app:title="Terminar compromiso (solo prueba)"
+            app:summary="Aparece solo en los APK de prueba; en las versiones de Releases no está"
             app:isPreferenceVisible="false" />
     </PreferenceCategory>
 

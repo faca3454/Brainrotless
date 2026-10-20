@@ -47,6 +47,7 @@ object Rules {
             .put("igFeed", p.getString("ig_feed", "normal"))
             .put("igBlockExplore", p.getBoolean("ig_block_explore", true))
             .put("igTapToPlay", p.getBoolean("ig_tap_to_play", false))
+            .put("igReels", Lock.reelsAllowed(c))
         // Hora de dormir o límite diario: Instagram solo para mensajes
         Lock.ig(c)?.let { cfg.put("restricted", true).put("restrictedMsg", Lock.igMessage(c, it)) }
         return "window.__noscrollCfg=$cfg;\n" + current(c)

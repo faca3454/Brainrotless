@@ -122,6 +122,11 @@ app oficial abierta, te saca en el acto.
 - Cambiar la hora del teléfono durante el compromiso se compensa (TrustedClock): no adelanta el
   final ni saltea la noche. Cambiar la zona horaria no se compensa.
 - El uso de las apps oficiales con la pausa del bloqueo también suma al límite.
+- **Reels dentro del límite** (pedido después): con un límite corriendo, Instagram deja ver y
+  scrollear Reels hasta llegar al límite. De noche no, y la pausa de emergencia tampoco los abre
+  (se usa pasado el límite). Sin compromiso con límite, los Reels siguen bloqueados como siempre.
+  Ajuste "Reels dentro del límite diario", prendido por defecto.
+- Los APK de prueba tienen "Terminar compromiso (solo prueba)"; los de Releases no.
 
 ### 5.1 Configuración
 - Duración: **mínimo 7 días**, máximo lo que elija el usuario.

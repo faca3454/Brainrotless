@@ -48,6 +48,11 @@ class SettingsActivity : AppCompatActivity() {
             onClick("bypass_now") { toggleBypass() }
             onClick("bypass_tile") { addTile() }
             onClick("commit") { if (!Commitment.active(requireContext())) startCommitment() }
+            onClick("debug_end") {
+                Commitment.cancelForTesting(requireContext())
+                Sleep.reschedule(requireContext())
+                refreshCommitment()
+            }
             onClick("pause_now") {
                 if (Commitment.startPause(requireContext()))
                     Toast.makeText(requireContext(), "🆘 Pausa de emergencia: 15 minutos", Toast.LENGTH_LONG).show()
@@ -169,6 +174,7 @@ class SettingsActivity : AppCompatActivity() {
                 Usage.limitMs(c)?.let { append(" de ${minutes(it)}") }
                 append(" · se reinicia a las ${Sleep.fmt(c, Usage.nextReset(c).toLocalTime())}")
             }
+            findPreference<Preference>("debug_end")?.isVisible = BuildConfig.DEBUG && active
             findPreference<Preference>("pause_now")?.apply {
                 isVisible = active
                 isEnabled = Commitment.canPause(c)

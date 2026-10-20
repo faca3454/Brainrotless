@@ -140,6 +140,12 @@ object Commitment {
         active(c) && !pauseActive(c) && pausesLeft(c) > 0 && usedToday(c) < PAUSES_PER_DAY &&
             (Usage.overLimit(c) || Sleep.active(c))
 
+    /** Solo en los APK de prueba (Ajustes → "Terminar compromiso"). */
+    fun cancelForTesting(c: Context) {
+        prefs(c).edit().putLong("end", 0).putLong("pause_until", 0).apply()
+        TrustedClock.reset(c)
+    }
+
     fun startPause(c: Context): Boolean {
         if (!canPause(c)) return false
         val now = TrustedClock.millis(c)
@@ -238,6 +244,14 @@ object Lock {
     }
 
     fun any(c: Context) = ig(c) != null || yt(c) != null
+
+    /**
+     * Reels con scroll: solo con un límite diario corriendo, mientras quede tiempo y no sea de noche.
+     * Ni la pausa de emergencia los abre (se usa pasado el límite).
+     */
+    fun reelsAllowed(c: Context) =
+        c.userPrefs().getBoolean("ig_reels_in_limit", true) && !Sleep.active(c) &&
+            (Usage.remainingMs(c) ?: 0) > 0
 
     /** Hora en que termina el bloqueo. */
     fun until(c: Context, r: Reason): String {
