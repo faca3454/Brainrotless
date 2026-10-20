@@ -67,9 +67,8 @@ ocultos, casi nunca pasa.
 **Hecho; falta probar en el teléfono.** Quedan para más adelante, porque dependen de otras partes:
 - Detectar si cambian la hora del teléfono: solo importa con el compromiso (punto 5); sin compromiso
   el modo se puede apagar desde Ajustes.
-- Sacar al usuario de una app oficial que ya estaba abierta (con la pausa) justo cuando empieza la
-  noche: hoy la pausa se corta y te saca en el próximo cambio de pantalla. Para hacerlo en el acto,
-  `AppGuard` tiene que ver todas las apps (punto 4).
+- ~~Sacar al usuario de una app oficial que ya estaba abierta (con la pausa) justo cuando empieza la
+  noche~~: hecho en el punto 4.
 - La pausa de emergencia de noche (opción B) es parte del compromiso (punto 5).
 
 - **Horario configurable por día de la semana**; por defecto, el mismo para todos.
@@ -91,7 +90,12 @@ El "modo solo mensajes" es el mismo que usa el límite diario (punto 5.3).
 
 ---
 
-## 4. Navegadores bloqueados de noche (anti-gooning)
+## 4. Navegadores bloqueados de noche (anti-gooning) ✅
+
+**Hecho; falta probar en el teléfono.** Ajuste "Bloquear navegadores" dentro de Modo dormir
+(prendido por defecto), que muestra qué navegadores detectó. Además de los que se declaran
+navegador, cuenta las apps que abren cualquier link web. Si la noche empieza con un navegador o una
+app oficial abierta, te saca en el acto.
 
 - **Solo durante el horario de dormir.** No hay filtro 24/7.
 - **Qué apps cuentan:** solo las que son navegadores (Chrome, Brave, Opera GX, Firefox, Samsung

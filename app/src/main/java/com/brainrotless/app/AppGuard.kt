@@ -5,12 +5,18 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import android.view.accessibility.AccessibilityEvent
+import android.widget.Toast
 
-/** Si se abre la app oficial (ícono, recientes, widget, compartir), salta a Brainrotless. */
+/**
+ * Si se abre la app oficial (ícono, recientes, widget, compartir), salta a Brainrotless.
+ * De noche (modo dormir) también cierra los navegadores.
+ */
 class AppGuard : AccessibilityService() {
 
     private val redirects = mapOf(
@@ -18,21 +24,62 @@ class AppGuard : AccessibilityService() {
         "com.google.android.youtube" to "$PKG.YouTube"
     )
     private var lastJump = 0L
+    private var foreground: String? = null // última app que pasó a primer plano
 
     override fun onAccessibilityEvent(e: AccessibilityEvent) {
         if (e.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
-        val alias = redirects[e.packageName?.toString()] ?: return
-        if (Bypass.active(this)) return
+        val pkg = e.packageName?.toString() ?: return
+        if (pkg == "com.android.systemui") return // la cortina de notificaciones no cambia la app de abajo
+        foreground = pkg
+        enforce(pkg)
+    }
 
-        val now = SystemClock.elapsedRealtime()
-        if (now - lastJump < 1500) return // el evento se dispara varias veces seguidas
-        lastJump = now
-
+    private fun enforce(pkg: String) {
+        if (Sleep.blocksBrowsers(this) && pkg in Browsers.packages(this)) {
+            if (!debounce()) return
+            performGlobalAction(GLOBAL_ACTION_HOME)
+            val until = Sleep.current(this)?.let { Sleep.fmt(this, it.end.toLocalTime()) }
+            Toast.makeText(this, "🌙 Hora de dormir: navegadores bloqueados hasta las $until", Toast.LENGTH_LONG).show()
+            return
+        }
+        val alias = redirects[pkg] ?: return
+        if (Bypass.active(this) || !debounce()) return
         startActivity(
             Intent(Intent.ACTION_MAIN)
                 .setComponent(ComponentName(this, alias))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
+    }
+
+    /** El evento se dispara varias veces seguidas: actuar una sola vez. */
+    private fun debounce(): Boolean {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastJump < 1500) return false
+        lastJump = now
+        return true
+    }
+
+    // Cuando empieza la noche, sacar al usuario de lo que tenga abierto (navegador o app
+    // oficial con la pausa), sin esperar a que cambie de pantalla
+    private val handler = Handler(Looper.getMainLooper())
+    private var wasNight = false
+    private val nightTicker = object : Runnable {
+        override fun run() {
+            val night = Sleep.active(this@AppGuard)
+            if (night && !wasNight) foreground?.let(::enforce)
+            wasNight = night
+            handler.postDelayed(this, ((Sleep.msUntilChange(this@AppGuard) ?: 60_000) + 500).coerceIn(1_000, 60_000))
+        }
+    }
+
+    override fun onServiceConnected() {
+        wasNight = Sleep.active(this)
+        nightTicker.run()
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacks(nightTicker)
+        super.onDestroy()
     }
 
     override fun onInterrupt() {}

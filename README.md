@@ -11,7 +11,7 @@ Podés ver los reels y shorts que te mandan tus amigos, pero no pasar al siguien
 - **Feed de seguidos** (opcional): el inicio de Instagram muestra solo las cuentas que seguís, en orden, y se termina.
 - **Videos solo al tocar** (opcional): los videos de Instagram no arrancan ni se precargan hasta que los tocás. Los reels que te mandan arrancan solos.
 - **Sin carteles de "Usá la app"** en Instagram.
-- **Modo dormir** (opcional): en tu horario (uno para todos los días o uno por noche), Instagram queda solo para mensajes y YouTube se bloquea, también desde las apps oficiales. Avisa unos minutos antes y la pausa del bloqueo no funciona.
+- **Modo dormir** (opcional): en tu horario (uno para todos los días o uno por noche), Instagram queda solo para mensajes, YouTube se bloquea (también desde las apps oficiales) y los navegadores (Chrome, Brave, Opera…) no abren. Avisa unos minutos antes y la pausa del bloqueo no funciona.
 - **Links** (WhatsApp, Telegram, etc.) y **notificaciones** de Instagram/YouTube se abren en Brainrotless.
 - **Apps oficiales**: si las abrís a mano, te redirige. Para pausarlo unos minutos: Ajustes → *Pausar ahora*, o el botón *Apps oficiales* de los ajustes rápidos (Ajustes → *Agregar botón a ajustes rápidos*).
 - **Ajustes**: mantené presionado el ícono de IG Lite o YT Lite → *Ajustes*.
@@ -60,7 +60,7 @@ Sin el secret, los builds de `main` salen firmados con clave de debug (sirven pa
 ## Seguridad y privacidad
 
 - Todo corre en el teléfono. No hay servidor, cuentas ni analíticas. Las sesiones quedan en la WebView del dispositivo.
-- El servicio de accesibilidad solo recibe eventos de las apps de Instagram y YouTube, y solo mira qué app pasó a primer plano. No lee contenido.
+- El servicio de accesibilidad solo mira qué app pasó a primer plano: para redirigir Instagram y YouTube oficiales y, con el modo dormir, cerrar los navegadores en tu horario. No lee contenido ni lo que escribís, y no guarda ni envía nada.
 - Las reglas remotas se descargan por HTTPS únicamente desde este repo, y se inyectan en Instagram y YouTube con tu sesión iniciada. Por eso, **quien tenga acceso de escritura al repo puede cambiar lo que corre en la app de todos**. Protegé la cuenta de GitHub con 2FA. Si no querés depender de eso, desactivá *Actualizar reglas de bloqueo* en Ajustes.
 - La seguridad de la clave de firma depende de la contraseña del secret.
 

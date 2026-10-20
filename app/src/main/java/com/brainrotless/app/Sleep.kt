@@ -96,6 +96,8 @@ object Sleep {
 
     fun active(c: Context) = current(c) != null
 
+    fun blocksBrowsers(c: Context) = c.userPrefs().getBoolean("sleep_browsers", true) && active(c)
+
     private fun next(c: Context, now: LocalDateTime) =
         if (enabled(c)) SleepSchedule.next(now, times(c)) else null
 

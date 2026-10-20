@@ -1,5 +1,6 @@
 package com.brainrotless.app
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.PendingIntent
 import android.content.Intent
@@ -30,6 +31,7 @@ class NotifRedirect : NotificationListenerService() {
         runCatching { activeNotifications?.forEach(::onNotificationPosted) }
     }
 
+    @SuppressLint("MissingPermission") // sin permiso de notificaciones, notify() falla en silencio (runCatching)
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         val url = targets[sbn.packageName] ?: return
         val n = sbn.notification

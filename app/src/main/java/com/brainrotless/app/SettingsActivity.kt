@@ -138,6 +138,11 @@ class SettingsActivity : AppCompatActivity() {
                 isVisible = perDay
                 summary = night(Sleep.get(c, d))
             }
+            findPreference<Preference>("sleep_browsers")?.summary = when {
+                !Setup.guardOn(c) -> "⚠ Activá 'Bloquear apps oficiales' (arriba) para que funcione"
+                else -> Browsers.names(c).takeIf { it.isNotEmpty() }?.joinToString(", ")
+                    ?.let { "No abren en tu horario: $it" } ?: "No hay navegadores instalados"
+            }
             Sleep.reschedule(c)
         }
 

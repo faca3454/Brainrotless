@@ -56,6 +56,11 @@
             app:dependency="sleep_on" app:isPreferenceVisible="false" />
         <Preference app:key="sleep_day_7" app:title="Noche de domingo a lunes"
             app:dependency="sleep_on" app:isPreferenceVisible="false" />
+        <SwitchPreferenceCompat
+            app:key="sleep_browsers"
+            app:defaultValue="true"
+            app:title="Bloquear navegadores"
+            app:dependency="sleep_on" />
         <ListPreference
             app:key="sleep_warn"
             app:defaultValue="15"

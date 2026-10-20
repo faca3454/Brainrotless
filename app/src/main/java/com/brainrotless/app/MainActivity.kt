@@ -21,6 +21,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -114,6 +115,12 @@ class MainActivity : ComponentActivity() {
                 // intent:// o instagram:// que intentan abrir la app oficial
                 if (u.scheme != "https" && u.scheme != "http") return true
                 if (hostIn(u.host, inAppHosts)) return false
+                // De noche los navegadores están bloqueados: avisar en vez de abrir uno
+                Sleep.current(this@MainActivity)?.takeIf { Sleep.blocksBrowsers(this@MainActivity) }?.let {
+                    val until = Sleep.fmt(this@MainActivity, it.end.toLocalTime())
+                    Toast.makeText(this@MainActivity, "🌙 Los links externos se abren después de las $until", Toast.LENGTH_LONG).show()
+                    return true
+                }
                 runCatching { startActivity(Intent(Intent.ACTION_VIEW, u)) }
                 return true
             }

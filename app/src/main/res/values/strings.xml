@@ -6,5 +6,5 @@
     <string name="shortcut_settings">Ajustes</string>
     <string name="tile_label">Apps oficiales</string>
     <string name="guard_label">Brainrotless: bloquear apps oficiales</string>
-    <string name="app_guard_desc">Cuando abrís Instagram o YouTube oficiales, te lleva a Brainrotless. Solo detecta qué app está en pantalla; no lee contenido ni lo que escribís.</string>
+    <string name="app_guard_desc">Cuando abrís Instagram o YouTube oficiales, te lleva a Brainrotless. Con el modo dormir, también cierra los navegadores en tu horario. Solo detecta qué app está en pantalla; no lee contenido ni lo que escribís.</string>
 </resources>
