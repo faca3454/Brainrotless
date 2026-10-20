@@ -1,4 +1,15 @@
 <resources>
+    <string-array name="ig_feed_entries">
+        <item>Normal</item>
+        <item>Solo cuentas que seguís</item>
+        <item>Bloqueado (solo mensajes y perfiles)</item>
+    </string-array>
+    <string-array name="ig_feed_values">
+        <item>normal</item>
+        <item>following</item>
+        <item>blocked</item>
+    </string-array>
+
     <string-array name="bypass_entries">
         <item>5 minutos</item>
         <item>10 minutos</item>

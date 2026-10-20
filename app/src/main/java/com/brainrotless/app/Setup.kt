@@ -30,6 +30,16 @@ object Setup {
         return enabled.split(':').any { it.startsWith("${c.packageName}/") && it.endsWith("AppGuard") }
     }
 
+    /** Ajustes que cambiaron de forma entre versiones. */
+    fun migratePrefs(c: Context) {
+        val p = c.userPrefs()
+        if (!p.contains("ig_block_feed")) return
+        p.edit()
+            .putString("ig_feed", if (p.getBoolean("ig_block_feed", false)) "blocked" else "normal")
+            .remove("ig_block_feed")
+            .apply()
+    }
+
     fun openNotifications(c: Context) {
         // Directo al interruptor de Brainrotless (Android 11+); si no, la lista
         val cn = ComponentName(c, NotifRedirect::class.java).flattenToString()

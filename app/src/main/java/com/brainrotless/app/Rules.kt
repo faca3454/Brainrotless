@@ -41,10 +41,12 @@ object Rules {
 
     /** Script final que se inyecta: configuración de Ajustes + reglas. */
     fun build(c: Context): String {
+        Setup.migratePrefs(c)
         val p = c.userPrefs()
         val cfg = JSONObject()
-            .put("igBlockFeed", p.getBoolean("ig_block_feed", false))
+            .put("igFeed", p.getString("ig_feed", "normal"))
             .put("igBlockExplore", p.getBoolean("ig_block_explore", true))
+            .put("igTapToPlay", p.getBoolean("ig_tap_to_play", false))
         return "window.__noscrollCfg=$cfg;\n" + current(c)
     }
 

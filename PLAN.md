@@ -11,7 +11,9 @@ Recordatorio de cómo está armada la app hoy:
 
 ---
 
-## 1. Reels que te mandan: sin poder bajar al siguiente
+## 1. Reels que te mandan: sin poder bajar al siguiente ✅
+
+**Hecho y probado en el teléfono.**
 
 **Problema:** hoy abrís un reel desde un chat y podés seguir deslizando a otros reels.
 La guardia actual falla por alguna de estas causas:
@@ -32,7 +34,12 @@ Solo toca `block.user.js`, así que se puede publicar sin sacar un APK nuevo.
 
 ---
 
-## 2. Instagram: ajustes de uso
+## 2. Instagram: ajustes de uso ✅
+
+**Hecho; falta probar en el teléfono.** Las redirecciones de bloqueo (Reels, Explorar → mensajes)
+siguen recargando la página: sin poder probar el router de Instagram, una navegación "suave" podría
+dejar el contenido bloqueado en pantalla con otra URL. Como los accesos a esas pantallas están
+ocultos, casi nunca pasa.
 
 ### 2.1 Videos solo al tocar (ahorro de datos real)
 - Ajuste global, prendido o apagado. Solo Instagram.
@@ -42,8 +49,8 @@ Solo toca `block.user.js`, así que se puede publicar sin sacar un APK nuevo.
 - No usar solo `mediaPlaybackRequiresUserGesture` del WebView: rompería esa excepción.
 
 ### 2.2 Feed de seguidos
-- Ajuste que se prende y apaga. Hay que ver si conviene que reemplace al actual "Bloquear feed de
-  inicio" con 3 opciones: feed normal / solo seguidos / bloqueado.
+- Reemplaza al viejo "Bloquear feed de inicio" con 3 opciones: normal / solo seguidos / bloqueado.
+  Por defecto, normal (hasta confirmar que el feed de seguidos anda en el teléfono).
 - `/` → `/?variant=following`: solo cuentas que seguís, en orden cronológico, y termina solo con
   "Ya viste todo". Sin tope.
 - Los videos de ese feed siguen la misma regla del punto 1.

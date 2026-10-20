@@ -11,16 +11,23 @@
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Instagram">
-        <SwitchPreferenceCompat
-            app:key="ig_block_feed"
-            app:defaultValue="false"
-            app:title="Bloquear feed de inicio"
-            app:summary="Instagram queda solo para mensajes y perfiles" />
+        <ListPreference
+            app:key="ig_feed"
+            app:defaultValue="normal"
+            app:title="Feed de inicio"
+            app:entries="@array/ig_feed_entries"
+            app:entryValues="@array/ig_feed_values"
+            app:useSimpleSummaryProvider="true" />
         <SwitchPreferenceCompat
             app:key="ig_block_explore"
             app:defaultValue="true"
             app:title="Bloquear Explorar"
             app:summary="La búsqueda de usuarios sigue funcionando" />
+        <SwitchPreferenceCompat
+            app:key="ig_tap_to_play"
+            app:defaultValue="false"
+            app:title="Videos solo al tocar"
+            app:summary="Ahorra datos: los videos no arrancan solos. Los reels que te mandan, sí" />
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Pausa del bloqueo">

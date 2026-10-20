@@ -20,6 +20,7 @@ class SettingsActivity : AppCompatActivity() {
 
     class SettingsFragment : PreferenceFragmentCompat() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+            Setup.migratePrefs(requireContext()) // antes de inflar, que guarda los valores por defecto
             setPreferencesFromResource(R.xml.preferences, rootKey)
 
             onClick("perm_notif") { Setup.openNotifications(requireContext()) }

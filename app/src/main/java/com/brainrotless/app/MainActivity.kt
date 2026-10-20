@@ -72,6 +72,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         web = WebView(this)
+        web.setBackgroundColor(if (dark) Color.BLACK else Color.WHITE) // sin flash blanco al cargar en modo oscuro
         refresh = SwipeRefreshLayout(this).apply {
             addView(web, ViewGroup.LayoutParams(MATCH, MATCH))
             // La página avisa (vía JS) si el gesto empezó arriba de todo
@@ -242,10 +243,12 @@ class MainActivity : ComponentActivity() {
 
     // ---------- Sin conexión ----------
 
-    private fun buildOfflineView(): View {
-        val dark = (resources.configuration.uiMode and
+    private val dark
+        get() = (resources.configuration.uiMode and
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+    private fun buildOfflineView(): View {
         val fg = if (dark) Color.WHITE else Color.parseColor("#202020")
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
