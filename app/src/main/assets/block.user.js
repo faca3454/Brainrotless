@@ -193,7 +193,9 @@
     }, true);
   }
   addEventListener('popstate', () => check(true));
-  setInterval(check, 400); // respaldo por si la SPA cambia la URL por otra vía
+  // Respaldo por si la SPA cambia la URL por otra vía. Lo normal lo atrapan los hooks y popstate,
+  // así que alcanza con mirar cada tanto (antes era cada 400 ms, también mientras scrolleás)
+  setInterval(check, 3000);
   check();
 
   // --- 4. Modo solo mensajes: sin videos (ni reels que te mandan); los audios sí ---
@@ -295,38 +297,54 @@
   // --- 6. Sacar los carteles de "Usá la app" (Instagram) ---
   // Por texto, porque las clases cambian seguido. En una ventana se toca "Ahora no";
   // en un banner fijo se oculta el botón (y el banner, si no tiene nada más).
+  // Se mira solo lo que se agregó, cuando el navegador está libre (no en medio del scroll). Una
+  // ventana se mira entera: el "Ahora no" puede aparecer después que el botón.
   if (IG) {
     const APP = /^(abrir|usar|usá|usa|descargar|obtener|ver|cambiar a|open|use|get|download|view|switch to)( en| in)?( la| the)? (app|aplicación|instagram)$/i;
     const LATER = /^(ahora no|no, gracias|cancelar|cerrar|(seguir|continuar) en (el navegador|la web)|not now|no thanks|cancel|close|continue (in|on) (the )?(browser|web))$/i;
     const text = (el) => (el.textContent || '').replace(/\s+/g, ' ').trim();
     const CLICKABLE = 'a,button,[role="button"]';
 
-    const sweep = () => {
-      for (const el of document.querySelectorAll(CLICKABLE)) {
-        if (!APP.test(text(el))) continue;
-        const dialog = el.closest('[role="dialog"]');
-        const later = dialog && [...dialog.querySelectorAll(CLICKABLE)].find((b) => LATER.test(text(b)));
-        if (later) { later.click(); continue; }
+    const fix = (el) => {
+      if (!APP.test(text(el))) return;
+      const dialog = el.closest('[role="dialog"]');
+      const later = dialog && [...dialog.querySelectorAll(CLICKABLE)].find((b) => LATER.test(text(b)));
+      if (later) { later.click(); return; }
 
-        el.style.setProperty('display', 'none', 'important');
-        for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
-          const pos = getComputedStyle(p).position;
-          if (pos !== 'fixed' && pos !== 'sticky') continue;
-          const others = [...p.querySelectorAll(CLICKABLE)].filter(
-            (b) => b !== el && !APP.test(text(b)) && !LATER.test(text(b)) &&
-              !/^(cerrar|close)$/i.test(b.getAttribute('aria-label') || '')
-          );
-          if (!others.length) p.style.setProperty('display', 'none', 'important');
-          break;
-        }
+      el.style.setProperty('display', 'none', 'important');
+      for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+        const pos = getComputedStyle(p).position;
+        if (pos !== 'fixed' && pos !== 'sticky') continue;
+        const others = [...p.querySelectorAll(CLICKABLE)].filter(
+          (b) => b !== el && !APP.test(text(b)) && !LATER.test(text(b)) &&
+            !/^(cerrar|close)$/i.test(b.getAttribute('aria-label') || '')
+        );
+        if (!others.length) p.style.setProperty('display', 'none', 'important');
+        break;
       }
     };
-    let pending = false;
-    new MutationObserver(() => {
-      if (pending) return;
-      pending = true;
-      setTimeout(() => { pending = false; sweep(); }, 300);
-    }).observe(document, { childList: true, subtree: true }); // document: el <html> puede no existir todavía
+    let added = [], scheduled = false;
+    const idle = window.requestIdleCallback ? (f) => requestIdleCallback(f, { timeout: 1000 }) : (f) => setTimeout(f, 300);
+    const sweep = () => {
+      scheduled = false;
+      const roots = new Set();
+      for (const n of added) {
+        const el = n.nodeType === 1 ? n : n.parentElement; // texto nuevo: su elemento
+        if (el && el.isConnected) roots.add(el.closest('[role="dialog"]') || el.closest(CLICKABLE) || el);
+      }
+      added = [];
+      for (const r of roots) {
+        if (r.matches(CLICKABLE)) fix(r);
+        for (const b of r.querySelectorAll(CLICKABLE)) fix(b);
+      }
+    };
+    new MutationObserver((records) => {
+      for (const r of records) {
+        if (r.type === 'characterData') added.push(r.target);
+        else for (const n of r.addedNodes) added.push(n);
+      }
+      if (!scheduled && added.length) { scheduled = true; idle(sweep); }
+    }).observe(document, { childList: true, subtree: true, characterData: true }); // document: el <html> puede no existir todavía
   }
 
   // --- 7. Transiciones suaves (opcional, apagadas por defecto) ---
