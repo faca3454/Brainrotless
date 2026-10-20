@@ -239,6 +239,7 @@
     <string name="pref_focus_youtube">Bloquear YouTube</string>
     <string name="pref_focus_youtube_summary">Apagalo si usás YouTube para estudiar o trabajar</string>
     <string name="pref_session">Aviso de sesión larga</string>
+    <string name="diag_copied">No encontré el botón Responder. Copié un diagnóstico (sin el texto de tus mensajes): pegalo en el chat.</string>
     <plurals name="days_n">
         <item quantity="one">%1$d día</item>
         <item quantity="other">%1$d días</item>

@@ -3,6 +3,8 @@ package com.brainrotless.app
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -59,7 +61,7 @@ class MainActivity : ComponentActivity() {
     private var lang = "" // idioma con el que se armó la pantalla
     private lateinit var guardScreen: View // accesibilidad apagada durante un compromiso
 
-    private val bridge = Bridge()
+    private val bridge = Bridge { text -> runOnUiThread { copyDiagnostic(text) } }
     private val scriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private var injectedScript = ""
     private var mainFrameError = false
@@ -176,7 +178,7 @@ class MainActivity : ComponentActivity() {
             allowFileAccess = false
             userAgentString = userAgentString.replace("; wv", "") // ayuda con algunos logins
         }
-        // Solo expone setAtTop(boolean): nada sensible si una página lo llama
+        // Solo expone setAtTop(boolean) y, en los APK de prueba, report(texto): nada sensible si una página lo llama
         addJavascriptInterface(bridge, "NoScrollBridge")
         webViewClient = client
         webChromeClient = chromeClient
@@ -469,11 +471,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Puente JS → app para el pull-to-refresh. */
-    class Bridge {
+    /** Puente JS → app: pull-to-refresh y, solo en los APK de prueba, diagnósticos del script. */
+    class Bridge(private val onReport: (String) -> Unit) {
         @Volatile private var top = false
         val atTop get() = top
         @JavascriptInterface fun setAtTop(value: Boolean) { top = value }
+        @JavascriptInterface fun report(text: String) { if (BuildConfig.DEBUG) onReport(text.take(10_000)) }
+    }
+
+    /** Diagnóstico del script (APK de prueba): al portapapeles, para pegarlo en el chat. */
+    private fun copyDiagnostic(text: String) {
+        getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Lúcido", text))
+        Toast.makeText(this, getString(R.string.diag_copied), Toast.LENGTH_LONG).show()
     }
 
     // ---------- Intents ----------

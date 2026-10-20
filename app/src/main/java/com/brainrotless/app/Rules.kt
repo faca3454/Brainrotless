@@ -52,6 +52,7 @@ object Rules {
             .put("ytShorts", reels)
             .put("smooth", p.getBoolean("smooth_transitions", true))
             .put("swipeReply", p.getBoolean("swipe_reply", true))
+            .put("debug", BuildConfig.DEBUG) // APK de prueba: el script puede mandar diagnósticos
         // Hora de dormir o límite diario: Instagram solo para mensajes
         Lock.ig(c)?.let { cfg.put("restricted", true).put("restrictedMsg", Lock.igMessage(c, it)) }
         return "window.__noscrollCfg=$cfg;\n" + current(c)

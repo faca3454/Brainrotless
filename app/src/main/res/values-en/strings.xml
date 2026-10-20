@@ -239,6 +239,7 @@
     <string name="pref_focus_youtube">Block YouTube</string>
     <string name="pref_focus_youtube_summary">Turn it off if you use YouTube for study or work</string>
     <string name="pref_session">Long session reminder</string>
+    <string name="diag_copied">Couldn\'t find the Reply button. Copied a diagnostic (without your messages\' text): paste it in the chat.</string>
     <plurals name="days_n">
         <item quantity="one">%1$d day</item>
         <item quantity="other">%1$d days</item>

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Lúcido
 // @description  Bloquea el feed de Reels/Shorts pero deja ver los que te mandan
-// @version      7
+// @version      8
 // @match        *://*.instagram.com/*
 // @match        *://instagram.com/*
 // @match        *://*.youtube.com/*
@@ -19,7 +19,7 @@
   const CFG = Object.assign(
     {
       igFeed: 'normal', igBlockExplore: true, igTapToPlay: false, igReels: false, ytShorts: false,
-      restricted: false, restrictedMsg: '', smooth: false, swipeReply: false,
+      restricted: false, restrictedMsg: '', smooth: false, swipeReply: false, debug: false,
     },
     window.__noscrollCfg || {}
   );
@@ -330,8 +330,17 @@
   // la persona a mano: mantenerlo presionado y tocar "Responder" en el menú. Depende del HTML de
   // Instagram: si deja de andar, se arregla acá.
   if (IG && CFG.swipeReply) {
-    const REPLY = /^(responder|reply)$/i;
-    const label = (el) => (el.getAttribute('aria-label') || el.textContent || '').replace(/\s+/g, ' ').trim();
+    // "Responder" puede venir como etiqueta ("Responder", "Responder al mensaje"), como título del
+    // dibujo (<title> del SVG) o como texto de un ítem de menú
+    const LABEL_RE = /(^|\s)(responder|reply)(\s|$)/i;
+    const TEXT_RE = /^(responder|reply)$/i;
+    const isReply = (el) => {
+      const title = el.querySelector ? el.querySelector(':scope > title') : null;
+      const lbl = el.getAttribute('aria-label') || el.getAttribute('title') || (title && title.textContent) || '';
+      if (LABEL_RE.test(lbl.trim())) return true;
+      return el.matches('[role="button"], [role="menuitem"], button') &&
+        TEXT_RE.test((el.textContent || '').replace(/\s+/g, ' ').trim());
+    };
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
     const scrollerOf = (el) => {
@@ -399,10 +408,8 @@
         return r.width > 0 && r.height > 0 && cy >= box.top - 4 && cy <= box.bottom + 4;
       };
       const findReply = (root) => {
-        for (const el of root.querySelectorAll('[aria-label], [role="button"], [role="menuitem"], button')) {
-          if (!REPLY.test(label(el))) continue;
-          const b = el.closest('[role="button"], [role="menuitem"], button') || el;
-          if (mine(b)) return b;
+        for (const el of root.querySelectorAll('[aria-label], [title], svg, [role="button"], [role="menuitem"], button')) {
+          if (isReply(el) && mine(el)) return el;
         }
         return null;
       };
@@ -419,11 +426,43 @@
           if (!btn) await sleep(100);
         }
       }
-      if (!btn) return;
+      if (!btn) { if (CFG.debug) report(bubble); return; }
+      // Se toca el elemento mismo, aunque sea un dibujo SVG (que no tiene click()): el evento sube
+      // hasta el botón que lo maneja, igual que con un dedo
       const r = btn.getBoundingClientRect();
-      fire(btn, 'pointerdown', r.left + r.width / 2, r.top + r.height / 2);
-      fire(btn, 'pointerup', r.left + r.width / 2, r.top + r.height / 2);
-      btn.click();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) fire(btn, type, cx, cy);
+    };
+
+    // Solo en los APK de prueba: si no apareció "Responder", mandar a la app la estructura del
+    // mensaje y las etiquetas que hay a su altura (sin el texto de los mensajes), para arreglarlo
+    const report = (bubble) => {
+      if (!window.NoScrollBridge || !NoScrollBridge.report) return;
+      const box = bubble.getBoundingClientRect();
+      let row = bubble;
+      for (let i = 0; i < 3 && row.parentElement && row.parentElement !== document.body; i++) row = row.parentElement;
+      const clone = row.cloneNode(true);
+      const KEEP = /^(role|aria-|tabindex|title|dir|data-)/;
+      const walk = (n) => {
+        if (n.nodeType === 3) {
+          const inButton = n.parentElement && n.parentElement.closest('[role="button"], [role="menuitem"], button');
+          if (n.textContent.trim() && !(inButton && n.textContent.trim().length <= 25)) n.textContent = '…';
+          return;
+        }
+        if (n.nodeType !== 1) return;
+        for (const a of [...n.attributes]) if (!KEEP.test(a.name)) n.removeAttribute(a.name);
+        [...n.childNodes].forEach(walk);
+      };
+      walk(clone);
+      const html = clone.outerHTML.replace(/<path[^>]*>(<\/path>)?/g, '').slice(0, 6000);
+      const near = [...document.querySelectorAll('[aria-label], [title]')].filter((e) => {
+        const r = e.getBoundingClientRect();
+        return r.width > 0 && r.bottom > box.top - 150 && r.top < box.bottom + 150;
+      }).map((e) => `${e.tagName.toLowerCase()}[role=${e.getAttribute('role')}] ${e.getAttribute('aria-label') || e.getAttribute('title')}`);
+      const menus = [...document.querySelectorAll('[role="dialog"], [role="menu"], [role="listbox"]')]
+        .map((m) => (m.innerText || '').slice(0, 300));
+      NoScrollBridge.report(`Lúcido swipe-reply\n${location.pathname.replace(/\d+/g, '#')}\n` +
+        `cerca: ${near.join(' | ').slice(0, 2000)}\nmenús: ${menus.join(' || ')}\n${html}`);
     };
 
     let bubble = null, target = null, arrow = null, sx = 0, sy = 0, dx = 0, decided = false;
