@@ -99,7 +99,8 @@ class MainActivity : ComponentActivity() {
         // La primera vez (sin idioma elegido) desde el ícono de IG Lite o YT Lite: arrancar por el
         // inicio de Lúcido, que es donde está la configuración. Los links compartidos abren igual.
         if (!Lang.hasChosen(this) && savedInstanceState == null && urlFromIntent(intent) == null) {
-            startActivity(Intent(this, HomeActivity::class.java))
+            // En su propia tarea: si no, el inicio quedaría debajo de IG Lite y el botón atrás volvería a él
+            startActivity(Intent(this, HomeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             finish()
             return
         }
@@ -324,6 +325,7 @@ class MainActivity : ComponentActivity() {
             .setPositiveButton(R.string.start_another) { _, _ ->
                 PanelActivity.open(this, PanelActivity.COMMIT)
             }
+            .setNeutralButton(R.string.summary_charts) { _, _ -> PanelActivity.open(this, PanelActivity.STATS) }
             .setNegativeButton(R.string.not_now, null)
             .show()
     }
