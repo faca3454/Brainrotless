@@ -255,6 +255,7 @@
         <item quantity="other">días restantes</item>
     </plurals>
     <string name="shield_blocked">🔒 Durante tu compromiso o el modo dormir no podés desinstalar ni detener Lúcido</string>
+    <string name="panel_pauses_explain">%1$d pausas de 15 minutos (una cada 2 días, máximo 2 por día), para cuando llegues al límite o de noche.</string>
     <string name="pref_cat_protection">Protección</string>
     <string name="pref_shield">Bloquear la desinstalación</string>
     <string name="pref_shield_summary">Con un compromiso o en el modo dormir, Lúcido no se puede desinstalar ni detener desde Ajustes. Siempre activo.</string>

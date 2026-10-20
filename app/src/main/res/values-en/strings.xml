@@ -255,6 +255,7 @@
         <item quantity="other">days left</item>
     </plurals>
     <string name="shield_blocked">🔒 During your commitment or sleep mode you can\'t uninstall or stop Lúcido</string>
+    <string name="panel_pauses_explain">%1$d breaks of 15 minutes (one every 2 days, max 2 per day), for when you hit your limit or at night.</string>
     <string name="pref_cat_protection">Protection</string>
     <string name="pref_shield">Block uninstalling</string>
     <string name="pref_shield_summary">During a commitment or sleep mode, Lúcido can\'t be uninstalled or stopped from Settings. Always on.</string>

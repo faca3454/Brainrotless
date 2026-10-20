@@ -204,6 +204,12 @@ class PanelActivity : ComponentActivity() {
         add(Brand.card(chips(limits.map { if (it == 0) getString(R.string.widget_no_limit) else formatDuration(it * 60_000L) },
             limits.indexOf(limit)) { i -> change { putString("daily_limit", limits[i].toString()) } }))
 
+        add(Brand.card(column(
+            Brand.text(this, getString(R.string.panel_pauses), 15.5f, bold = true),
+            space(4),
+            muted(getString(R.string.panel_pauses_explain, pauses))
+        )))
+
         val rules = commitmentRules()
         add(Brand.card(column(
             Brand.text(this, getString(R.string.panel_you_wont), 15.5f, bold = true),
