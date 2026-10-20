@@ -21,6 +21,10 @@ object Rules {
     private const val MAX_BYTES = 256 * 1024
     private const val CHECK_EVERY_MS = 6 * 60 * 60 * 1000L
 
+    // En memoria: MainActivity pide el script en cada tick y leerlo es ir al disco
+    @Volatile private var loaded: Pair<Boolean, String>? = null // reglas remotas activadas → reglas
+    private var built = Triple("", "", "") // configuración, reglas y el script armado con ellas
+
     fun version(js: String): Int =
         Regex("@version\\s+(\\d+)").find(js)?.groupValues?.get(1)?.toIntOrNull() ?: 0
 
@@ -29,8 +33,14 @@ object Rules {
 
     /** Script de reglas que corresponde usar ahora. */
     fun current(c: Context): String {
+        val remote = c.userPrefs().getBoolean("remote_rules", true)
+        loaded?.let { (r, js) -> if (r == remote) return js }
+        return read(c, remote).also { loaded = remote to it }
+    }
+
+    private fun read(c: Context, remoteOn: Boolean): String {
         val base = bundled(c)
-        if (!c.userPrefs().getBoolean("remote_rules", true)) return base
+        if (!remoteOn) return base
         val cached = File(c.filesDir, CACHE_FILE)
         if (cached.exists()) {
             val remote = runCatching { cached.readText() }.getOrNull()
@@ -39,7 +49,7 @@ object Rules {
         return base
     }
 
-    /** Script final que se inyecta: configuración de Ajustes + reglas. */
+    /** Script final que se inyecta: configuración de Ajustes + reglas. Se rearma solo si algo cambió. */
     fun build(c: Context): String {
         Setup.migratePrefs(c)
         val p = c.userPrefs()
@@ -55,7 +65,10 @@ object Rules {
             .put("debug", BuildConfig.DEBUG) // APK de prueba: el script puede mandar diagnósticos
         // Hora de dormir o límite diario: Instagram solo para mensajes
         Lock.ig(c)?.let { cfg.put("restricted", true).put("restrictedMsg", Lock.igMessage(c, it)) }
-        return "window.__noscrollCfg=$cfg;\n" + current(c)
+        val config = cfg.toString()
+        val rules = current(c)
+        if (config != built.first || rules != built.second) built = Triple(config, rules, "window.__noscrollCfg=$config;\n$rules")
+        return built.third
     }
 
     /** Busca reglas nuevas en segundo plano; llama a onUpdated (en otro hilo) si cambiaron. */
@@ -78,7 +91,10 @@ object Rules {
 
             val tmp = File(app.filesDir, "$CACHE_FILE.tmp")
             tmp.writeText(body)
-            if (tmp.renameTo(File(app.filesDir, CACHE_FILE))) onUpdated()
+            if (tmp.renameTo(File(app.filesDir, CACHE_FILE))) {
+                loaded = null
+                onUpdated()
+            }
         }
     }
 

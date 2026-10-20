@@ -6,6 +6,8 @@ import android.app.Application
 import android.content.Context
 import android.content.res.Configuration
 import android.content.res.Resources
+import android.os.Looper
+import android.webkit.WebSettings
 import java.util.Locale
 
 /**
@@ -63,6 +65,13 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         Lang.applyTo(this)
+        // Arrancar la WebView apenas el hilo principal queda libre, así abrir IG Lite no paga ese costo.
+        // Arrancarla devuelve los textos al idioma del sistema: volver al elegido.
+        Looper.myQueue().addIdleHandler {
+            runCatching { WebSettings.getDefaultUserAgent(this) }
+            Lang.applyTo(this)
+            false
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

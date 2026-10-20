@@ -33,6 +33,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.webkit.ScriptHandler
 import androidx.webkit.WebViewCompat
@@ -41,10 +42,21 @@ import androidx.webkit.WebViewFeature
 class MainActivity : ComponentActivity() {
     private lateinit var root: FrameLayout
     private lateinit var refresh: SwipeRefreshLayout
-    // Una WebView por plataforma: cambiar de Instagram a YouTube no recarga nada
+    // Una WebView por plataforma: cambiar de Instagram a YouTube no recarga nada.
+    // La de YouTube se crea la primera vez que se usa.
     private lateinit var igWeb: WebView
-    private lateinit var ytWeb: WebView
+    private var ytWebOrNull: WebView? = null
+    private val ytWeb: WebView
+        get() = ytWebOrNull ?: buildWebView().also {
+            it.visibility = View.GONE
+            webs.addView(it, 0, FrameLayout.LayoutParams(MATCH, MATCH))
+            ytWebOrNull = it
+            addScript(it)
+        }
+    private fun webViews() = listOfNotNull(igWeb, ytWebOrNull)
     private lateinit var web: WebView // la que está en pantalla
+    private lateinit var webs: FrameLayout
+    private var lostUrl: String? = null // página que el sistema cerró con la app en segundo plano
     private lateinit var content: LinearLayout
     private lateinit var offline: View
     private val handler = Handler(Looper.getMainLooper())
@@ -107,15 +119,9 @@ class MainActivity : ComponentActivity() {
         lang = Lang.current(this)
 
         igWeb = buildWebView()
-        ytWeb = buildWebView().apply { visibility = View.GONE }
         web = igWeb
-        // Crear una WebView puede devolver los textos al idioma del sistema: volver al elegido
-        Lang.applyTo(this, resources)
-        Lang.applyTo(this)
-        val webs = FrameLayout(this).apply {
-            addView(ytWeb, FrameLayout.LayoutParams(MATCH, MATCH))
-            addView(igWeb, FrameLayout.LayoutParams(MATCH, MATCH))
-        }
+        setFront(igWeb, true)
+        webs = FrameLayout(this).apply { addView(igWeb, FrameLayout.LayoutParams(MATCH, MATCH)) }
         refresh = SwipeRefreshLayout(this).apply {
             addView(webs, ViewGroup.LayoutParams(MATCH, MATCH))
             // La página avisa (vía JS) si el gesto empezó arriba de todo
@@ -176,7 +182,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
-    private fun buildWebView() = WebView(this).apply {
+    private fun buildWebView(): WebView = WebView(this).apply {
         setBackgroundColor(if (dark) Color.BLACK else Color.WHITE) // sin flash blanco al cargar en modo oscuro
         CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
         settings.apply {
@@ -190,6 +196,10 @@ class MainActivity : ComponentActivity() {
         addJavascriptInterface(bridge, "NoScrollBridge")
         webViewClient = client
         webChromeClient = chromeClient
+    }.also {
+        // Crear una WebView puede devolver los textos al idioma del sistema: volver al elegido
+        Lang.applyTo(this, resources)
+        Lang.applyTo(this)
     }
 
     private val client = object : WebViewClient() {
@@ -236,6 +246,27 @@ class MainActivity : ComponentActivity() {
             v.evaluateJavascript(injectedScript, null)
         }
 
+        // El sistema cerró la página (falta de memoria) o se cayó: WebView nueva en su lugar, en vez de
+        // cerrar la app. Las dos comparten el proceso de la página, así que llega una vez por cada una.
+        override fun onRenderProcessGone(v: WebView, detail: RenderProcessGoneDetail): Boolean {
+            val url = v.url?.takeIf { it != "about:blank" }
+            if (v === web && fullscreenView != null) exitFullscreen()
+            val fresh = buildWebView().apply { visibility = v.visibility }
+            webs.addView(fresh, webs.indexOfChild(v), FrameLayout.LayoutParams(MATCH, MATCH))
+            webs.removeView(v)
+            scriptHandlers.remove(v)
+            v.destroy()
+            if (v === igWeb) igWeb = fresh else ytWebOrNull = fresh
+            addScript(fresh)
+            setFront(fresh, v === web)
+            if (v === web) {
+                web = fresh
+                // En segundo plano se recarga al volver: si no, la página vuelve a ocupar la memoria que faltaba
+                if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) url?.let(fresh::loadUrl) else lostUrl = url
+            }
+            return true
+        }
+
         override fun onReceivedError(v: WebView, req: WebResourceRequest, err: WebResourceError) {
             if (!req.isForMainFrame || v !== web) return
             mainFrameError = true
@@ -274,7 +305,7 @@ class MainActivity : ComponentActivity() {
 
     // ---------- Instagram y YouTube, cada uno en su WebView ----------
 
-    private val onYouTube get() = web === ytWeb
+    private val onYouTube get() = web !== igWeb
     private fun hasPage(v: WebView) = v.url.let { it != null && it != "about:blank" }
 
     /** Muestra la WebView de esa plataforma con un fundido corto; la otra queda viva, en pausa. */
@@ -285,6 +316,7 @@ class MainActivity : ComponentActivity() {
         web = v
         offline.visibility = View.GONE
         v.onResume()
+        setFront(v, true)
         v.alpha = 0f
         v.visibility = View.VISIBLE
         v.bringToFront()
@@ -292,8 +324,15 @@ class MainActivity : ComponentActivity() {
         if (old !== v) {
             pauseMedia(old)
             old.onPause()
+            setFront(old, false)
         }
         refreshLockBar()
+    }
+
+    /** La de pantalla: su proceso con prioridad alta y dibujo por adelantado (menos huecos al scrollear). */
+    private fun setFront(v: WebView, front: Boolean) {
+        v.settings.offscreenPreRaster = front
+        v.setRendererPriorityPolicy(if (front) WebView.RENDERER_PRIORITY_IMPORTANT else WebView.RENDERER_PRIORITY_WAIVED, false)
     }
 
     private fun pauseMedia(v: WebView) =
@@ -312,6 +351,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         if (Lang.current(this) != lang) return recreate() // cambiaron el idioma en Ajustes
         usageMark = SystemClock.elapsedRealtime()
+        lostUrl?.let { lostUrl = null; web.loadUrl(it) }
         Session.resume(this)
         lockTicker.run()
         Commitment.onEnd(this)?.let(::showSummary)
@@ -350,19 +390,19 @@ class MainActivity : ComponentActivity() {
         Protection.updateGuardNotice(this, guardOn = !guardOff)
         if (guardOff != (guardScreen.visibility == View.VISIBLE)) {
             guardScreen.visibility = if (guardOff) View.VISIBLE else View.GONE
-            if (guardOff) listOf(igWeb, ytWeb).forEach { it.loadUrl("about:blank") } else goTo(onYouTube)
+            if (guardOff) webViews().forEach { it.loadUrl("about:blank") } else goTo(onYouTube)
         }
         val yt = Lock.yt(this)
         // Cambió el modo solo mensajes o algún ajuste: reinyectar y recargar para aplicarlo ya
         val scriptChanged = Rules.build(this) != injectedScript
         if (scriptChanged) installScript()
         // YouTube bloqueado: pantalla de bloqueo si está a la vista; si está de fondo, cortarlo igual
-        if (yt != null && hasPage(ytWeb)) {
+        if (yt != null && ytWebOrNull?.let(::hasPage) == true) {
             if (onYouTube) showLockScreen() else ytWeb.loadUrl("about:blank")
         }
         when {
             yt == null && lockScreen.visibility == View.VISIBLE -> open(YT_HOME) // se terminó el bloqueo
-            scriptChanged && lockScreen.visibility != View.VISIBLE -> listOf(igWeb, ytWeb).filter(::hasPage).forEach { it.reload() }
+            scriptChanged && lockScreen.visibility != View.VISIBLE -> webViews().filter(::hasPage).forEach { it.reload() }
         }
         if (lockScreen.visibility == View.VISIBLE) showLockScreen() // refrescar texto y pausa
         refreshLockBar()
@@ -381,7 +421,7 @@ class MainActivity : ComponentActivity() {
             .setTitle(getString(R.string.session_title, Session.minutes(this)))
             .setMessage(R.string.session_text)
             .setPositiveButton(R.string.session_exit) { _, _ ->
-                listOf(igWeb, ytWeb).forEach(::pauseMedia)
+                webViews().forEach(::pauseMedia)
                 startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
             .setNegativeButton(R.string.session_more, null)
@@ -400,7 +440,7 @@ class MainActivity : ComponentActivity() {
     private fun open(url: String) {
         val v = if (isYouTube(url)) ytWeb else igWeb
         switchTo(v)
-        if (v === ytWeb && Lock.yt(this) != null) { showLockScreen(); return }
+        if (v !== igWeb && Lock.yt(this) != null) { showLockScreen(); return }
         lockScreen.visibility = View.GONE
         v.loadUrl(url)
     }
@@ -422,7 +462,7 @@ class MainActivity : ComponentActivity() {
         countUsage()
         lockScreen.visibility = View.VISIBLE
         if (fullscreenView != null) exitFullscreen()
-        ytWeb.loadUrl("about:blank") // corta el video y el audio
+        ytWebOrNull?.loadUrl("about:blank") // corta el video y el audio
     }
 
     /** Barra arriba de la página: "solo mensajes" con el botón de pausa, o la pausa en curso. */
@@ -474,11 +514,13 @@ class MainActivity : ComponentActivity() {
 
     private fun installScript() {
         injectedScript = Rules.build(this)
+        webViews().forEach(::addScript)
+    }
+
+    private fun addScript(v: WebView) {
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
-        for (v in listOf(igWeb, ytWeb)) {
-            scriptHandlers[v]?.remove()
-            scriptHandlers[v] = WebViewCompat.addDocumentStartJavaScript(v, injectedScript, scriptOrigins)
-        }
+        scriptHandlers[v]?.remove()
+        scriptHandlers[v] = WebViewCompat.addDocumentStartJavaScript(v, injectedScript, scriptOrigins)
     }
 
     /** Puente JS → app: pull-to-refresh y, solo en los APK de prueba, diagnósticos del script. */
@@ -644,7 +686,7 @@ class MainActivity : ComponentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBundle("ig", Bundle().also { igWeb.saveState(it) })
-        outState.putBundle("yt", Bundle().also { ytWeb.saveState(it) })
+        ytWebOrNull?.let { v -> outState.putBundle("yt", Bundle().also { v.saveState(it) }) }
         outState.putBoolean("onYouTube", onYouTube)
     }
 
