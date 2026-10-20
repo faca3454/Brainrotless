@@ -67,6 +67,7 @@
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Pausa del bloqueo">
+        <Preference app:key="bypass_now" app:title="Pausar ahora" />
         <ListPreference
             app:key="bypass_minutes"
             app:defaultValue="10"
@@ -74,6 +75,11 @@
             app:summary="%s. No funciona en horario de dormir"
             app:entries="@array/bypass_entries"
             app:entryValues="@array/bypass_values" />
+        <Preference
+            app:key="bypass_tile"
+            app:title="Agregar botón a ajustes rápidos"
+            app:summary="Para pausar desde el panel que se abre deslizando desde arriba"
+            app:isPreferenceVisible="false" />
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Actualizaciones">

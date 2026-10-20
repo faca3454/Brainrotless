@@ -13,7 +13,7 @@ Podés ver los reels y shorts que te mandan tus amigos, pero no pasar al siguien
 - **Sin carteles de "Usá la app"** en Instagram.
 - **Modo dormir** (opcional): en tu horario (uno para todos los días o uno por noche), Instagram queda solo para mensajes y YouTube se bloquea, también desde las apps oficiales. Avisa unos minutos antes y la pausa del bloqueo no funciona.
 - **Links** (WhatsApp, Telegram, etc.) y **notificaciones** de Instagram/YouTube se abren en Brainrotless.
-- **Apps oficiales**: si las abrís a mano, te redirige. Hay un botón en los ajustes rápidos para pausarlo unos minutos.
+- **Apps oficiales**: si las abrís a mano, te redirige. Para pausarlo unos minutos: Ajustes → *Pausar ahora*, o el botón *Apps oficiales* de los ajustes rápidos (Ajustes → *Agregar botón a ajustes rápidos*).
 - **Ajustes**: mantené presionado el ícono de IG Lite o YT Lite → *Ajustes*.
 - **Actualizaciones**: las reglas de bloqueo se actualizan solas, y la app avisa cuando hay versión nueva.
 - **Comodidad**: deslizar hacia abajo para recargar, modo oscuro según el sistema, subir fotos, videos en pantalla completa.

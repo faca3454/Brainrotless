@@ -1,15 +1,22 @@
 package com.brainrotless.app
 
+import android.app.StatusBarManager
 import android.app.TimePickerDialog
+import android.content.ComponentName
 import android.content.SharedPreferences
+import android.graphics.drawable.Icon
+import android.os.Build
 import android.os.Bundle
+import android.service.quicksettings.TileService
 import android.text.format.DateFormat
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import java.time.DayOfWeek
 import java.time.LocalTime
+import java.util.Date
 
 class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,6 +39,8 @@ class SettingsActivity : AppCompatActivity() {
             onClick("perm_links") { Setup.openLinks(requireContext()) }
             onClick("perm_guard") { Setup.openAccessibility(requireContext()) }
             onClick("perm_restricted") { Setup.explainRestricted(requireActivity()) }
+            onClick("bypass_now") { toggleBypass() }
+            onClick("bypass_tile") { addTile() }
             onClick("sleep_all") { pickNight(null) }
             for (d in DayOfWeek.values()) onClick("sleep_day_${d.value}") { pickNight(d) }
             onClick("check_now") {
@@ -55,11 +64,61 @@ class SettingsActivity : AppCompatActivity() {
                 Setup.restrictedApplies() && !(listenerOn && guardOn)
             preferenceManager.sharedPreferences?.registerOnSharedPreferenceChangeListener(prefsListener)
             refreshSleep()
+            refreshBypass()
         }
 
         override fun onPause() {
             super.onPause()
             preferenceManager.sharedPreferences?.unregisterOnSharedPreferenceChangeListener(prefsListener)
+        }
+
+        // ---------- Pausa del bloqueo ----------
+
+        private fun toggleBypass() {
+            val c = requireContext()
+            if (Bypass.active(c)) Bypass.stop(c) else Bypass.start(c)
+            TileService.requestListeningState(c, ComponentName(c, BypassTile::class.java)) // que el botón se actualice
+            refreshBypass()
+        }
+
+        private fun refreshBypass() {
+            val c = requireContext()
+            val night = Sleep.current(c)
+            findPreference<Preference>("bypass_now")?.apply {
+                isEnabled = night == null
+                when {
+                    night != null -> {
+                        title = "Pausar ahora"
+                        summary = "No funciona en horario de dormir (hasta las ${Sleep.fmt(c, night.end.toLocalTime())})"
+                    }
+                    Bypass.active(c) -> {
+                        title = "Cortar la pausa"
+                        summary = "Apps oficiales sin redirigir hasta las ${DateFormat.getTimeFormat(c).format(Date(Bypass.until(c)))}"
+                    }
+                    else -> {
+                        title = "Pausar ahora"
+                        summary = "Abrí Instagram o YouTube oficiales sin que te traiga acá"
+                    }
+                }
+            }
+            findPreference<Preference>("bypass_tile")?.isVisible = Build.VERSION.SDK_INT >= 33
+        }
+
+        /** Android 13+: ventana del sistema para agregar el botón "Apps oficiales" con un toque. */
+        private fun addTile() {
+            if (Build.VERSION.SDK_INT < 33) return
+            val c = requireContext()
+            c.getSystemService(StatusBarManager::class.java)?.requestAddTileService(
+                ComponentName(c, BypassTile::class.java), getString(R.string.tile_label),
+                Icon.createWithResource(c, R.drawable.ic_tile), c.mainExecutor
+            ) { result ->
+                val msg = when (result) {
+                    StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED -> "Listo: el botón quedó en los ajustes rápidos"
+                    StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED -> "El botón ya está en los ajustes rápidos"
+                    else -> null
+                }
+                msg?.let { Toast.makeText(c, it, Toast.LENGTH_SHORT).show() }
+            }
         }
 
         // ---------- Modo dormir ----------

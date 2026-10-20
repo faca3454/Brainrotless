@@ -48,6 +48,7 @@ object Bypass {
     fun start(c: Context) =
         prefs(c).edit().putLong("until", System.currentTimeMillis() + minutes(c) * 60_000L).apply()
     fun stop(c: Context) = prefs(c).edit().putLong("until", 0).apply()
+    fun until(c: Context) = prefs(c).getLong("until", 0)
 }
 
 /** Botón en los ajustes rápidos: "Apps oficiales" on/off por unos minutos. */
