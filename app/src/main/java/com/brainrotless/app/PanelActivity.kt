@@ -5,9 +5,8 @@ import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.InsetDrawable
-import android.graphics.drawable.StateListDrawable
 import android.os.Bundle
 import android.text.TextUtils
 import android.text.format.DateFormat
@@ -17,9 +16,9 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.Switch
 import android.widget.Toast
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SwitchCompat
 import java.time.DayOfWeek
 import java.time.LocalTime
 import java.util.Date
@@ -29,7 +28,7 @@ import java.util.Date
  * Instagram y YouTube. Escriben en los mismos ajustes que la pantalla de Ajustes; cada cambio
  * vuelve a armar la pantalla (es chica y se arma al instante).
  */
-class PanelActivity : ComponentActivity() {
+class PanelActivity : AppCompatActivity() {
     companion object {
         private const val EXTRA = "panel"
         const val SLEEP = "sleep"
@@ -424,7 +423,7 @@ class PanelActivity : ComponentActivity() {
         list.addView(v, LinearLayout.LayoutParams(MATCH, WRAP).apply { topMargin = Brand.px(this@PanelActivity, top) })
 
     /** Flecha para volver, título y, opcional, el interruptor principal de la pantalla. */
-    private fun header(title: String, switch: Switch? = null) {
+    private fun header(title: String, switch: SwitchCompat? = null) {
         val bar = LinearLayout(this).apply {
             gravity = Gravity.CENTER_VERTICAL
             minimumHeight = Brand.px(context, 52)
@@ -461,23 +460,13 @@ class PanelActivity : ComponentActivity() {
         setPadding(p, Brand.px(context, 9), p, Brand.px(context, 9))
     }
 
-    /** Interruptor con los colores de la marca (dibujado acá: igual en todas las versiones de Android). */
-    private fun toggle(checked: Boolean, onChange: (Boolean) -> Unit) = Switch(this).apply {
-        fun pill(color: Int) = Brand.rounded(context, color, 999f).apply { setSize(Brand.px(context, 46), Brand.px(context, 28)) }
-        fun knob(color: Int) = InsetDrawable(GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(Brand.color(context, color))
-            setSize(Brand.px(context, 20), Brand.px(context, 20))
-        }, Brand.px(context, 4)) // margen alrededor de la perilla, dentro de la pastilla
-        trackDrawable = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_checked), pill(R.color.brand_primary))
-            addState(intArrayOf(), pill(R.color.brand_surface_alt))
-        }
-        thumbDrawable = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_checked), knob(R.color.brand_on_primary))
-            addState(intArrayOf(), knob(R.color.brand_text_muted))
-        }
-        showText = false
+    /** Interruptor estándar de Android con los colores de la marca (se dibuja igual en todos lados). */
+    private fun toggle(checked: Boolean, onChange: (Boolean) -> Unit) = SwitchCompat(this).apply {
+        val states = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
+        trackTintList = ColorStateList(states,
+            intArrayOf(Brand.color(context, R.color.brand_primary), Brand.color(context, R.color.brand_surface_alt)))
+        thumbTintList = ColorStateList(states,
+            intArrayOf(Brand.color(context, R.color.brand_on_primary), Brand.color(context, R.color.brand_text_muted)))
         isChecked = checked
         setOnCheckedChangeListener { _, on -> post { onChange(on) } } // después de la animación
     }
