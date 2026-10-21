@@ -146,6 +146,8 @@
     <string name="pref_explore_summary">Searching for people still works</string>
     <string name="pref_reels">Reels and Shorts within your daily limit</string>
     <string name="pref_reels_summary">With a commitment that has a limit, you can watch Reels and Shorts until you hit it. Not at night</string>
+    <string name="pref_official">Official apps within your limit</string>
+    <string name="pref_official_summary">With a commitment that has a limit, while you have time left, IG Lite and YT Lite open the official apps (that time counts toward your limit). When it runs out, at night or during focus, you\'re back on IG Lite and YT Lite. Needs \"Block official apps\".</string>
     <string name="pref_tap">Tap to play videos</string>
     <string name="pref_tap_summary">Saves data: videos don\'t autoplay. Reels people send you still do</string>
     <string name="pref_cat_comfort">Comfort</string>

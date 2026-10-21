@@ -76,10 +76,11 @@ class AppGuard : AccessibilityService() {
             return
         }
         val alias = redirects[pkg] ?: return
-        if (Bypass.active(this) || !debounce()) return
+        if (Bypass.active(this) || Official.allowed(this, pkg) || !debounce()) return
         startActivity(
             Intent(Intent.ACTION_MAIN)
                 .setComponent(ComponentName(this, alias))
+                .putExtra(MainActivity.EXTRA_FROM_GUARD, true) // que IG Lite no la devuelva a la oficial
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
     }
@@ -97,6 +98,9 @@ class AppGuard : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
     private var wasLocked = false
     private fun locked() = Lock.any(this) || Sleep.blocksBrowsers(this)
+    // Apps oficiales dentro del límite: al terminarse el tiempo (o empezar la noche o el foco) se sale
+    // de la oficial, aunque ya hubiera otro bloqueo antes (ej: un foco que no bloquea YouTube)
+    private var officialWasAllowed = false
 
     private val lockTicker = object : Runnable {
         override fun run() {
@@ -106,6 +110,10 @@ class AppGuard : AccessibilityService() {
             val locked = locked()
             if (locked && !wasLocked) foreground?.let(::enforce)
             wasLocked = locked
+            val official = foreground?.takeIf { it in redirects }
+            val allowed = official != null && Official.allowed(this@AppGuard, official)
+            if (official != null && officialWasAllowed && !allowed) enforce(official)
+            officialWasAllowed = allowed
             handler.removeCallbacks(this)
             handler.postDelayed(this, (Lock.msUntilChange(this@AppGuard) + 500).coerceIn(1_000, 60_000))
         }
@@ -129,6 +137,24 @@ class AppGuard : AccessibilityService() {
     }
 
     override fun onInterrupt() {}
+}
+
+/**
+ * Apps oficiales dentro del límite (opcional): con un compromiso con límite diario, mientras quede
+ * tiempo, IG Lite y YT Lite abren Instagram y YouTube oficiales y no se los redirige. Su uso suma al
+ * límite igual (AppGuard lo cuenta); al terminarse, de noche, en foco o durante una pausa, todo vuelve
+ * a IG Lite y YT Lite. Hace falta Accesibilidad: es la que saca de la oficial cuando se termina.
+ */
+object Official {
+    const val IG = "com.instagram.android"
+    const val YT = "com.google.android.youtube"
+
+    fun enabled(c: Context) = c.userPrefs().getBoolean("official_in_limit", false)
+
+    fun allowed(c: Context, pkg: String): Boolean {
+        if (!enabled(c) || (Usage.remainingMs(c) ?: 0) <= 0 || Commitment.pauseActive(c) || !Setup.guardOn(c)) return false
+        return (if (pkg == YT) Lock.yt(c) else Lock.ig(c)) == null
+    }
 }
 
 /** Pausa temporal del bloqueo (ej: subir una historia con filtros desde la app oficial). */

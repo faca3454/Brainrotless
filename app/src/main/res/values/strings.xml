@@ -146,6 +146,8 @@
     <string name="pref_explore_summary">La búsqueda de usuarios sigue funcionando</string>
     <string name="pref_reels">Reels y Shorts dentro del límite diario</string>
     <string name="pref_reels_summary">Con un compromiso con límite, podés ver Reels y Shorts hasta llegar al límite. De noche, no</string>
+    <string name="pref_official">Apps oficiales dentro del límite</string>
+    <string name="pref_official_summary">Con un compromiso con límite, mientras te quede tiempo, IG Lite y YT Lite abren las apps oficiales (su uso suma al límite). Al terminarse, de noche o en foco, volvés a IG Lite y YT Lite. Necesita \"Bloquear apps oficiales\".</string>
     <string name="pref_tap">Videos solo al tocar</string>
     <string name="pref_tap_summary">Ahorra datos: los videos no arrancan solos. Los reels que te mandan, sí</string>
     <string name="pref_cat_comfort">Comodidad</string>

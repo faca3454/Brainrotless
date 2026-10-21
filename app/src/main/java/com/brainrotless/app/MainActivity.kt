@@ -137,6 +137,11 @@ class MainActivity : ComponentActivity() {
             finish()
             return
         }
+        // Apps oficiales dentro del límite: se abre la oficial y acá no se arma nada
+        if (savedInstanceState == null && toOfficial(intent)) {
+            finish()
+            return
+        }
         lang = Lang.current(this)
 
         igWeb = buildWebView()
@@ -583,6 +588,10 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (toOfficial(intent)) {
+            moveTaskToBack(true)
+            return
+        }
         backToYouTube = null // llegaste desde afuera: atrás vuelve a esa app
         if (fullscreenView != null) exitFullscreen()
         handlePauseIntent(intent)
@@ -634,7 +643,8 @@ class MainActivity : ComponentActivity() {
 
     // ---------- Intents ----------
 
-    private fun urlFromIntent(i: Intent): String? {
+    /** Link de Instagram o YouTube que llegó de otra app (abrir o compartir). */
+    private fun linkFromIntent(i: Intent): Uri? {
         val uri = when (i.action) {
             Intent.ACTION_VIEW -> i.data
             Intent.ACTION_SEND -> i.getStringExtra(Intent.EXTRA_TEXT)
@@ -642,9 +652,28 @@ class MainActivity : ComponentActivity() {
                 ?.let(Uri::parse)
             else -> null
         } ?: return null
-        if (!hostIn(uri.host, linkHosts)) return null
+        return uri.takeIf { hostIn(it.host, linkHosts) }
+    }
+
+    private fun urlFromIntent(i: Intent): String? {
+        val uri = linkFromIntent(i) ?: return null
         // Shorts al reproductor clásico, salvo que se puedan ver dentro del límite
         return (if (Lock.reelsAllowed(this)) null else shortsToWatch(uri)) ?: uri.toString()
+    }
+
+    /**
+     * Apps oficiales dentro del límite: el ícono, el inicio, los widgets y los links abren la oficial.
+     * Nunca lo que manda AppGuard (te sacó de la oficial) ni la pausa de emergencia: así no hay idas y vueltas.
+     */
+    private fun toOfficial(i: Intent): Boolean {
+        if (i.getBooleanExtra(EXTRA_FROM_GUARD, false) || i.getBooleanExtra(EXTRA_PAUSE, false)) return false
+        val link = linkFromIntent(i)
+        if (link == null && i.action != Intent.ACTION_MAIN) return false
+        val pkg = if (link?.let { isYouTube(it.toString()) } ?: isYouTubeAlias(i)) Official.YT else Official.IG
+        if (!Official.allowed(this, pkg)) return false
+        val open = link?.let { Intent(Intent.ACTION_VIEW, it).setPackage(pkg) }
+            ?: packageManager.getLaunchIntentForPackage(pkg) ?: return false
+        return runCatching { startActivity(open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
     }
 
     private fun isYouTubeAlias(i: Intent) = i.component?.className?.endsWith("YouTube") == true
@@ -781,6 +810,7 @@ class MainActivity : ComponentActivity() {
         private const val YT_DARK = 0xFF0F0F0F.toInt() // fondo de YouTube en oscuro (su theme-color)
         const val EXTRA_PAUSE = "pause" // desde la notificación del límite: usar la pausa de emergencia
         const val EXTRA_CHAT = "chat" // desde la notificación de un mensaje: el nombre del chat, para abrirlo
+        const val EXTRA_FROM_GUARD = "from_guard" // AppGuard te sacó de la app oficial: quedarse acá
         private const val PERF_REPORT = "Lúcido rendimiento" // así empieza el resumen de mediciones del script
     }
 }

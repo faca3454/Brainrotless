@@ -326,7 +326,7 @@ object PanelScreen {
     /** Interruptores de esta pantalla y su valor si nunca se tocaron. */
     val APP_PREFS = mapOf(
         "ig_block_explore" to true, "ig_tap_to_play" to false, "ig_reels_in_limit" to true,
-        "smooth_transitions" to false, "swipe_reply" to true,
+        "smooth_transitions" to false, "swipe_reply" to true, "official_in_limit" to false,
     )
 
     fun apps(c: Context, s: AppsState, a: Actions) = screen(c) { add ->
@@ -358,6 +358,8 @@ object PanelScreen {
         // Cada uno con su permiso, que se pide recién acá (o desde la función que lo necesita)
         add(label(c, c.getString(R.string.panel_official)), 18)
         val box = column(c,
+            prefSwitch("official_in_limit", R.string.pref_official, R.string.pref_official_summary),
+            space(c, 14),
             permissionRow(c, c.getString(R.string.pref_guard), c.getString(R.string.guard_sub), s.guardOn, onClick = a.openAccessibility),
             space(c, 14),
             permissionRow(c, c.getString(R.string.messages_title), c.getString(R.string.messages_sub), s.listenerOn, onClick = a.enableMessages),
