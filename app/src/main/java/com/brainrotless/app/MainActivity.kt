@@ -15,13 +15,11 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.text.format.DateFormat
-import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.*
 import android.widget.Button
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -125,16 +123,17 @@ class MainActivity : ComponentActivity() {
             setProgressBackgroundColorSchemeColor(Brand.color(context, R.color.brand_surface))
             setOnRefreshListener { web.reload() }
         }
-        offline = buildNotice(getString(R.string.offline_title), getString(R.string.offline_text), getString(R.string.retry)) { web.reload() }
-        lockScreen = buildNotice("", "", getString(R.string.go_to_messages), "") { goTo(youtube = false) }
+        offline = Notices.screen(this, getString(R.string.offline_title), getString(R.string.offline_text), getString(R.string.retry)) { web.reload() }
+        lockScreen = Notices.screen(this, "", "", getString(R.string.go_to_messages), "") { goTo(youtube = false) }
         lockTitle = lockScreen.findViewWithTag("title")
         lockText = lockScreen.findViewWithTag("subtitle")
         lockPause = lockScreen.findViewWithTag("button2")
         lockPause.setOnClickListener { usePause() }
-        guardScreen = buildNotice(
+        guardScreen = Notices.screen(
+            this,
             getString(R.string.guard_off_title), getString(R.string.guard_off_text), getString(R.string.turn_on)
         ) { Setup.openAccessibility(this) }
-        lockBar = buildLockBar()
+        lockBar = Notices.lockBar(this) { usePause() }
         lockBarText = lockBar.findViewWithTag("text")
         lockBarPause = lockBar.findViewWithTag("pause")
         content = LinearLayout(this).apply {
@@ -355,14 +354,9 @@ class MainActivity : ComponentActivity() {
     /** Terminó el compromiso: resumen y la pregunta de si empezar otro (no se renueva solo). */
     private fun showSummary(text: String) {
         Commitment.markSummarySeen(this)
-        AlertDialog.Builder(this)
-            .setMessage(text)
-            .setPositiveButton(R.string.start_another) { _, _ ->
-                PanelActivity.open(this, PanelActivity.COMMIT)
-            }
-            .setNeutralButton(R.string.summary_charts) { _, _ -> PanelActivity.open(this, PanelActivity.STATS) }
-            .setNegativeButton(R.string.not_now, null)
-            .show()
+        Dialogs.summary(this, text, R.string.not_now,
+            onAnother = { PanelActivity.open(this, PanelActivity.COMMIT) },
+            onCharts = { PanelActivity.open(this, PanelActivity.STATS) }).show()
     }
 
     // ---------- Bloqueos: noche, límite diario y pausa de emergencia ----------
@@ -412,15 +406,10 @@ class MainActivity : ComponentActivity() {
         val blocked = lockScreen.visibility == View.VISIBLE || guardScreen.visibility == View.VISIBLE
         if (!Session.due(this) || blocked || sessionDialog?.isShowing == true) return
         Session.snooze(this) // si sale y vuelve enseguida, el próximo aviso es en 5 minutos
-        sessionDialog = AlertDialog.Builder(this)
-            .setTitle(getString(R.string.session_title, Session.minutes(this)))
-            .setMessage(R.string.session_text)
-            .setPositiveButton(R.string.session_exit) { _, _ ->
-                webViews().forEach(::pauseMedia)
-                startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }
-            .setNegativeButton(R.string.session_more, null)
-            .show()
+        sessionDialog = Dialogs.session(this, Session.minutes(this)) {
+            webViews().forEach(::pauseMedia)
+            startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }.show()
     }
 
     /** Todo el tiempo con Instagram o YouTube en pantalla suma al límite (salvo la pantalla de bloqueo). */
@@ -567,44 +556,6 @@ class MainActivity : ComponentActivity() {
         get() = (resources.configuration.uiMode and
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
-
-    /** Pantalla completa con el logo, título, texto y uno o dos botones (sin conexión, bloqueos). */
-    private fun buildNotice(
-        title: String, subtitle: String, button: String, button2: String? = null, onClick: () -> Unit
-    ) = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER
-        setBackgroundColor(Brand.color(context, R.color.brand_bg))
-        visibility = View.GONE
-        isClickable = true // que no pase el toque a la WebView de atrás
-        val pad = Brand.px(context, 32)
-        setPadding(pad, pad, pad, pad)
-        val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
-        addView(ImageView(context).apply { setImageResource(R.drawable.ic_logo) },
-            LinearLayout.LayoutParams(Brand.px(context, 56), Brand.px(context, 56)).apply { bottomMargin = Brand.px(context, 20) })
-        addView(Brand.text(context, title, 22f, bold = true).apply { tag = "title"; gravity = Gravity.CENTER })
-        addView(Brand.text(context, subtitle, 15f, R.color.brand_text_muted).apply {
-            tag = "subtitle"
-            gravity = Gravity.CENTER
-            setPadding(0, Brand.px(context, 8), 0, Brand.px(context, 24))
-        })
-        addView(Brand.primaryButton(context, button, onClick), LinearLayout.LayoutParams(wrap, wrap))
-        if (button2 != null) addView(Brand.secondaryButton(context, button2).apply {
-            tag = "button2"
-            visibility = View.GONE
-        }, LinearLayout.LayoutParams(wrap, wrap).apply { topMargin = Brand.px(context, 10) })
-    }
-
-    private fun buildLockBar() = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        setPadding(Brand.px(context, 16), Brand.px(context, 6), Brand.px(context, 10), Brand.px(context, 6))
-        setBackgroundColor(Brand.color(context, R.color.brand_surface_alt))
-        visibility = View.GONE
-        addView(Brand.text(context, "", 13f).apply { tag = "text" },
-            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        addView(Brand.accentChip(context, "Pausa") { usePause() }.apply { tag = "pause" })
-    }
 
     // ---------- Pantalla completa ----------
 

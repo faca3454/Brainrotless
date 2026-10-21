@@ -1,7 +1,6 @@
 package com.brainrotless.app
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.app.Application
 import android.content.Context
 import android.content.res.Configuration
@@ -52,11 +51,7 @@ object Lang {
     /** La primera vez: elegir idioma (se muestra en los dos, para que se entienda igual). */
     fun askIfNeeded(a: Activity) {
         if (chosen(a) != null) return
-        AlertDialog.Builder(a)
-            .setTitle("Idioma · Language")
-            .setItems(arrayOf("Español", "English")) { _, which -> set(a, if (which == 0) "es" else "en") }
-            .setCancelable(false)
-            .show()
+        Dialogs.language(a) { set(a, it) }.show()
     }
 }
 

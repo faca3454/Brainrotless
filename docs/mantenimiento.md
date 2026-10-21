@@ -7,10 +7,21 @@ Notas para quien mantiene Lúcido. Para usar la app, ver el [README](../README.m
 Android Studio → *Open* → la carpeta del repo → *Build APK*. Desde la terminal:
 
 ```sh
-./gradlew assembleDebug testDebugUnitTest lintDebug
+./gradlew assembleDebug testDebugUnitTest lintDebug verifyPaparazziDebug
 ```
 
 Las cuentas sin Android (horarios, compromiso, estadísticas) tienen pruebas en `app/src/test`.
+
+### Capturas de las pantallas (Paparazzi)
+
+Cada pantalla propia (inicio, panel, guía, avisos de IG Lite y YT Lite, diálogos y widgets) se dibuja como imagen con datos de prueba, sin instalar el APK: claro y oscuro, español e inglés, teléfono chico, letra al 130 % y datos extremos. Las pruebas están en `app/src/test/java/com/brainrotless/app/screens` y las imágenes de referencia en `app/src/test/snapshots/images`.
+
+```sh
+./gradlew recordPaparazziDebug   # vuelve a dibujar todas y pisa las de referencia
+./gradlew verifyPaparazziDebug   # compara contra las de referencia; falla si algo cambió
+```
+
+Después de tocar algo visual: `record`, mirar las imágenes que cambiaron (`git diff --stat app/src/test/snapshots`) y subirlas junto con el cambio. Para poder dibujarlas, cada pantalla separa el dibujo (`HomeScreen`, `PanelScreen`, `OnboardingScreen`, `Notices`, `Dialogs`, `Widgets.today/bar/mini`) de dónde salen los datos (la Activity).
 
 ## Cómo está armada
 

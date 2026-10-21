@@ -1,7 +1,6 @@
 package com.brainrotless.app
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -45,16 +44,9 @@ object Updater {
     }
 
     private fun showDialog(a: Activity, rel: Release) {
-        AlertDialog.Builder(a)
-            .setTitle(a.getString(R.string.update_title, rel.version))
-            .setMessage(
-                rel.notes.take(600).ifBlank { a.getString(R.string.update_new) } + a.getString(R.string.update_install)
-            )
-            .setPositiveButton(R.string.update_download) { _, _ ->
-                runCatching { a.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(rel.apkUrl))) }
-            }
-            .setNegativeButton(R.string.update_later, null)
-            .show()
+        Dialogs.update(a, rel.version, rel.notes) {
+            runCatching { a.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(rel.apkUrl))) }
+        }.show()
     }
 
     private fun fetchLatest(): Release? {

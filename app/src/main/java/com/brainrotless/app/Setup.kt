@@ -2,7 +2,6 @@ package com.brainrotless.app
 
 import android.Manifest
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -96,14 +95,9 @@ object Setup {
 
     /** Explica cómo destrabar un permiso gris y lleva a la info de la app, donde está la opción. */
     fun explainRestricted(a: Activity) {
-        AlertDialog.Builder(a)
-            .setTitle(R.string.gray_title)
-            .setMessage(R.string.gray_msg)
-            .setPositiveButton(R.string.open) { _, _ ->
-                open(a, Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${a.packageName}")))
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        Dialogs.restricted(a) {
+            open(a, Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${a.packageName}")))
+        }.show()
     }
 
     /** Si los links de Instagram/YouTube ya se abren en Lúcido. null en Android 11 o antes: no se puede saber. */

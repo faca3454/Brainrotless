@@ -44,14 +44,14 @@ object Widgets {
     private var shown: String? = null // lo último que se mostró: no repetir actualizaciones iguales
     private val MEDIUM: Typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
 
-    private class Data(
+    /** Lo que muestran los widgets, ya calculado. */
+    class Data(
         val used: String, val limit: String?, val progress: Float?, val over: Boolean,
         val status: String, val ringNumber: String, val ringUnit: String,
     )
 
     private fun data(c: Context): Data {
         val usedMs = Usage.todayMs(c)
-        val limitMs = Usage.limitMs(c)
         val reset = Sleep.fmt(c, Usage.nextReset(c).toLocalTime())
         val over = Usage.overLimit(c)
         val status = when {
@@ -62,6 +62,11 @@ object Widgets {
             over -> c.getString(R.string.home_over, reset)
             else -> c.getString(R.string.home_resets, reset)
         }
+        return data(c, usedMs, Usage.limitMs(c), over, status)
+    }
+
+    /** Los números y textos del widget a partir del uso de hoy, el límite y el estado. */
+    fun data(c: Context, usedMs: Long, limitMs: Long?, over: Boolean, status: String): Data {
         val m = usedMs / 60_000
         val (number, unit) = if (m < 60) "$m" to c.getString(R.string.widget_unit_min)
             else "%d:%02d".format(m / 60, m % 60) to c.getString(R.string.widget_unit_h)
@@ -89,26 +94,38 @@ object Widgets {
 
         val ring by lazy { ring(c, d) }
         runCatching {
-            if (mini.isNotEmpty()) mgr.updateAppWidget(mini, RemoteViews(c.packageName, R.layout.widget_mini).apply {
-                setImageViewBitmap(R.id.w_ring, ring)
-                setContentDescription(R.id.w_ring, "${d.used} · ${d.status}")
+            if (mini.isNotEmpty()) mgr.updateAppWidget(mini, mini(c, d, ring).apply {
                 setOnClickPendingIntent(R.id.w_root, home(c))
             })
-            if (bar.isNotEmpty()) mgr.updateAppWidget(bar, RemoteViews(c.packageName, R.layout.widget_bar).apply {
-                setTextViewText(R.id.w_amount, amountWithLimit(c, d))
-                setTextViewText(R.id.w_status, d.status)
-                setViewVisibility(R.id.w_progress, if (d.progress != null) View.VISIBLE else View.GONE)
-                setProgressBar(R.id.w_progress, 1000, ((d.progress ?: 0f) * 1000).toInt(), false)
-                shortcuts(c)
-            })
-            if (today.isNotEmpty()) mgr.updateAppWidget(today, RemoteViews(c.packageName, R.layout.widget_today).apply {
-                setImageViewBitmap(R.id.w_ring, ring)
-                setTextViewText(R.id.w_title, c.getString(R.string.widget_title))
-                setTextViewText(R.id.w_limit, d.limit?.let { c.getString(R.string.widget_of_limit, it) } ?: c.getString(R.string.widget_no_limit))
-                setTextViewText(R.id.w_status, d.status)
-                shortcuts(c)
-            })
+            if (bar.isNotEmpty()) mgr.updateAppWidget(bar, bar(c, d).apply { shortcuts(c) })
+            if (today.isNotEmpty()) mgr.updateAppWidget(today, today(c, d, ring).apply { shortcuts(c) })
         }
+    }
+
+    /** Mini (1×1): el anillo. */
+    fun mini(c: Context, d: Data, ring: Bitmap = ring(c, d)) = RemoteViews(c.packageName, R.layout.widget_mini).apply {
+        setImageViewBitmap(R.id.w_ring, ring)
+        setContentDescription(R.id.w_ring, "${d.used} · ${d.status}")
+    }
+
+    /** Barra (4×1): uso, barrita y estado. */
+    fun bar(c: Context, d: Data) = RemoteViews(c.packageName, R.layout.widget_bar).apply {
+        setTextViewText(R.id.w_amount, amountWithLimit(c, d))
+        setTextViewText(R.id.w_status, d.status)
+        setViewVisibility(R.id.w_progress, if (d.progress != null) View.VISIBLE else View.GONE)
+        setProgressBar(R.id.w_progress, 1000, ((d.progress ?: 0f) * 1000).toInt(), false)
+        setContentDescription(R.id.w_ig, c.getString(R.string.label_ig))
+        setContentDescription(R.id.w_yt, c.getString(R.string.label_yt))
+    }
+
+    /** Hoy (2×2): anillo, límite y estado. */
+    fun today(c: Context, d: Data, ring: Bitmap = ring(c, d)) = RemoteViews(c.packageName, R.layout.widget_today).apply {
+        setImageViewBitmap(R.id.w_ring, ring)
+        setTextViewText(R.id.w_title, c.getString(R.string.widget_title))
+        setTextViewText(R.id.w_limit, d.limit?.let { c.getString(R.string.widget_of_limit, it) } ?: c.getString(R.string.widget_no_limit))
+        setTextViewText(R.id.w_status, d.status)
+        setContentDescription(R.id.w_ig, c.getString(R.string.label_ig))
+        setContentDescription(R.id.w_yt, c.getString(R.string.label_yt))
     }
 
     /** "23 min de 1 h", con el límite más chico y apagado. */
@@ -122,8 +139,6 @@ object Widgets {
     }
 
     private fun RemoteViews.shortcuts(c: Context) {
-        setContentDescription(R.id.w_ig, c.getString(R.string.label_ig))
-        setContentDescription(R.id.w_yt, c.getString(R.string.label_yt))
         setOnClickPendingIntent(R.id.w_root, home(c))
         setOnClickPendingIntent(R.id.w_ig, open(c, alias(c, "Instagram"), 11))
         setOnClickPendingIntent(R.id.w_yt, open(c, alias(c, "YouTube"), 12))
