@@ -34,7 +34,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/widget_title"
                 android:textColor="@color/brand_text_muted"
-                android:textSize="11.5sp" />
+                android:textSize="12sp" />
 
             <TextView
                 android:id="@+id/w_limit"
@@ -45,7 +45,7 @@
                 android:maxLines="1"
                 android:text="@string/widget_preview_limit"
                 android:textColor="@color/brand_text"
-                android:textSize="15sp" />
+                android:textSize="16sp" />
         </LinearLayout>
     </LinearLayout>
 

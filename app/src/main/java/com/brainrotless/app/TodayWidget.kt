@@ -161,6 +161,13 @@ object Widgets {
             line.color = Brand.color(c, if (d.over) R.color.brand_warning else R.color.brand_primary)
             line.strokeCap = Paint.Cap.ROUND
             canvas.drawArc(box, -90f, 360f * it, false, line)
+            // El sol del logo en la punta, como el del dial (si no se pasó del límite)
+            if (!d.over) {
+                val a = Math.toRadians(-90.0 + 360.0 * it)
+                val r = box.width() / 2
+                val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Brand.color(c, R.color.brand_accent) }
+                canvas.drawCircle(box.centerX() + (r * Math.cos(a)).toFloat(), box.centerY() + (r * Math.sin(a)).toFloat(), stroke * 0.75f, dot)
+            }
         }
         val number = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Brand.color(c, R.color.brand_text)

@@ -54,7 +54,7 @@
             android:maxLines="1"
             android:text="@string/widget_preview_status"
             android:textColor="@color/brand_text_muted"
-            android:textSize="11.5sp" />
+            android:textSize="12sp" />
     </LinearLayout>
 
     <ImageView
