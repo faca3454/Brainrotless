@@ -230,6 +230,8 @@
     <string name="panel_extras">Extras</string>
     <string name="panel_apps">Instagram and YouTube</string>
     <string name="panel_apps_summary">Feed, videos, comfort and official apps</string>
+    <string name="panel_days_minus">One day fewer</string>
+    <string name="panel_days_plus">One day more</string>
     <string name="panel_back">Back</string>
     <plurals name="days_word">
         <item quantity="one">day</item>
