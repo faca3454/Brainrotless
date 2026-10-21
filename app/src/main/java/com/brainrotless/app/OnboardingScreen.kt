@@ -4,9 +4,11 @@ import android.content.Context
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Space
+import androidx.core.view.ViewCompat
 import java.time.DayOfWeek
 import java.time.LocalTime
 
@@ -51,7 +53,9 @@ object OnboardingScreen {
         into.removeAllViews()
         for (i in 0 until STEPS) into.addView(View(c).apply {
             background = Brand.rounded(c, if (i <= step) R.color.brand_primary else R.color.brand_surface_alt, 999f)
-        }, LinearLayout.LayoutParams(0, Brand.px(c, 4), 1f).apply { if (i > 0) marginStart = Brand.px(c, 6) })
+        }, LinearLayout.LayoutParams(0, Brand.px(c, 6), 1f).apply { if (i > 0) marginStart = Brand.px(c, 6) })
+        // TalkBack: "Paso 2 de 3" se dice con los números, sin texto nuevo
+        into.contentDescription = "${step + 1} / $STEPS"
     }
 
     /** El contenido del paso. */
@@ -61,7 +65,7 @@ object OnboardingScreen {
         fun add(v: View, top: Int) = addLp(v, LinearLayout.LayoutParams(MATCH, WRAP), top)
         when (s.step) {
             0 -> language(c, s, a, ::addLp)
-            1 -> welcome(c, ::add)
+            1 -> welcome(c, s, ::add)
             else -> plan(c, s, a, ::add)
         }
     }
@@ -114,23 +118,35 @@ object OnboardingScreen {
             LinearLayout.LayoutParams(Brand.px(c, 72), Brand.px(c, 72)).apply { gravity = Gravity.CENTER_HORIZONTAL }, 40)
         add(title(c, c.getString(R.string.app_name)).apply { gravity = Gravity.CENTER }, full(), 16)
         add(muted(c, "Elegí tu idioma · Choose your language").apply { gravity = Gravity.CENTER }, full(), 6)
-        for ((code, name) in listOf("es" to "Español", "en" to "English")) {
-            val chosen = s.chosenLang == code
-            add(Brand.card(LinearLayout(c).apply {
-                gravity = Gravity.CENTER_VERTICAL
-                addView(Brand.text(c, name, 18f, bold = true), LinearLayout.LayoutParams(0, WRAP, 1f))
-                if (chosen) addView(Brand.text(c, "✓", 20f, R.color.brand_primary, bold = true))
-            }) { a.chooseLang(code) }, full(), if (code == "es") 28 else 12)
-        }
+        add(Brand.group(c, listOf("es" to "Español", "en" to "English").map { (code, name) ->
+            val check = if (s.chosenLang == code) ImageView(c).apply {
+                setImageResource(R.drawable.ic_check)
+                setColorFilter(Brand.color(c, R.color.brand_primary))
+            } else null
+            Brand.row(c, null, name, null, trailing = check) { a.chooseLang(code) }.apply { isSelected = check != null }
+        }, insetDp = 16), full(), 28)
     }
 
-    private fun welcome(c: Context, add: (View, Int) -> Unit) {
+    private fun welcome(c: Context, s: State, add: (View, Int) -> Unit) {
         add(title(c, c.getString(R.string.onb_welcome_title)), 28)
         add(muted(c, c.getString(R.string.tagline)), 6)
-        add(feature(c, R.mipmap.ic_ig, tint = false, R.string.onb_f1_title, R.string.onb_f1_sub), 24)
-        add(feature(c, R.drawable.ic_moon, tint = true, R.string.home_sleep, R.string.onb_f2_sub), 16)
-        add(feature(c, R.drawable.ic_focus, tint = true, R.string.home_focus, R.string.onb_f3_sub), 16)
-        add(feature(c, R.drawable.ic_flag, tint = true, R.string.onb_f4_title, R.string.onb_f4_sub), 16)
+        // Lo que hace Lúcido, en el dial del día: la noche y las horas de foco
+        fun hours(t: LocalTime) = t.hour + t.minute / 60f
+        val size = Brand.px(c, 200)
+        add(FrameLayout(c).apply {
+            addView(DayDial(c).apply {
+                night = hours(s.sleep) to hours(s.wake)
+                focus = hours(s.focusStart) to hours(s.focusEnd)
+                handles = true
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO // ilustración: lo dicen los textos de abajo
+            }, FrameLayout.LayoutParams(size, size, Gravity.CENTER))
+        }, 16)
+        add(feature(c, ImageView(c).apply { setImageResource(R.mipmap.ic_ig) }.also {
+            it.layoutParams = LinearLayout.LayoutParams(Brand.px(c, 40), Brand.px(c, 40))
+        }, R.string.onb_f1_title, R.string.onb_f1_sub), 16)
+        add(feature(c, Brand.badge(c, R.drawable.ic_moon, R.color.brand_night, R.color.brand_bg), R.string.home_sleep, R.string.onb_f2_sub), 16)
+        add(feature(c, Brand.badge(c, R.drawable.ic_focus, R.color.brand_primary, R.color.brand_bg), R.string.home_focus, R.string.onb_f3_sub), 16)
+        add(feature(c, Brand.badge(c, R.drawable.ic_flag, R.color.brand_accent, R.color.brand_on_accent), R.string.onb_f4_title, R.string.onb_f4_sub), 16)
     }
 
     private fun plan(c: Context, s: State, a: Actions, add: (View, Int) -> Unit) {
@@ -178,8 +194,10 @@ object OnboardingScreen {
 
     // ---------- Piezas ----------
 
-    private fun title(c: Context, s: String) = Brand.text(c, s, 26f, bold = true)
-    private fun muted(c: Context, s: String) = Brand.text(c, s, 15f, R.color.brand_text_muted)
+    private fun title(c: Context, s: String) = Brand.text(c, s, Brand.Type.HEADLINE + 4, bold = true).apply {
+        ViewCompat.setAccessibilityHeading(this, true)
+    }
+    private fun muted(c: Context, s: String) = Brand.text(c, s, Brand.Type.BODY + 1, R.color.brand_text_muted)
     private fun space(c: Context, dp: Int) = Space(c).apply { minimumHeight = Brand.px(c, dp) }
 
     private fun column(c: Context, vararg views: View) = LinearLayout(c).apply {
@@ -187,24 +205,12 @@ object OnboardingScreen {
         views.forEach { addView(it, LinearLayout.LayoutParams(MATCH, WRAP)) }
     }
 
-    /** Ícono en un círculo suave (o el de la app tal cual), título y explicación. */
-    private fun feature(c: Context, icon: Int, tint: Boolean, title: Int, sub: Int): View {
-        val size = Brand.px(c, 44)
-        val badge = ImageView(c).apply {
-            setImageResource(icon)
-            if (tint) {
-                setColorFilter(Brand.color(c, R.color.brand_primary))
-                background = Brand.rounded(c, R.color.brand_tonal, 999f)
-                val p = Brand.px(c, 11)
-                setPadding(p, p, p, p)
-            }
-        }
-        return LinearLayout(c).apply {
-            gravity = Gravity.CENTER_VERTICAL
-            addView(badge, LinearLayout.LayoutParams(size, size))
-            addView(column(c, Brand.text(c, c.getString(title), 16f, bold = true), Brand.text(c, c.getString(sub), 14f, R.color.brand_text_muted)),
-                LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = Brand.px(c, 14) })
-        }
+    /** Ícono (con el color de su modo, o el de la app), título y explicación. */
+    private fun feature(c: Context, badge: View, title: Int, sub: Int) = LinearLayout(c).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        addView(badge)
+        addView(column(c, Brand.text(c, c.getString(title), Brand.Type.TITLE, bold = true), Brand.text(c, c.getString(sub), Brand.Type.BODY, R.color.brand_text_muted)),
+            LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = Brand.px(c, 16) })
     }
 
     private fun switchRow(c: Context, title: String, sub: String, checked: Boolean, onChange: (Boolean) -> Unit): View {
@@ -214,19 +220,21 @@ object OnboardingScreen {
         }
         return LinearLayout(c).apply {
             gravity = Gravity.CENTER_VERTICAL
-            addView(column(c, Brand.text(c, title, 16f, bold = true), Brand.text(c, sub, 14f, R.color.brand_text_muted)),
+            minimumHeight = Brand.px(c, 56)
+            addView(column(c, Brand.text(c, title, Brand.Type.TITLE, bold = true), Brand.text(c, sub, Brand.Type.BODY, R.color.brand_text_muted)),
                 LinearLayout.LayoutParams(0, WRAP, 1f))
             addView(sw, LinearLayout.LayoutParams(WRAP, WRAP).apply { marginStart = Brand.px(c, 12) })
             setOnClickListener { sw.performClick() }
+            sw.describe(this)
         }
     }
 
     private fun linkRow(c: Context, title: String, sub: String, onClick: () -> Unit) = LinearLayout(c).apply {
         gravity = Gravity.CENTER_VERTICAL
-        minimumHeight = Brand.px(c, 44)
-        addView(column(c, Brand.text(c, title, 15f, bold = true), Brand.text(c, sub, 14f, R.color.brand_text_muted)),
+        minimumHeight = Brand.px(c, 56)
+        addView(column(c, Brand.text(c, title, Brand.Type.TITLE, bold = true), Brand.text(c, sub, Brand.Type.BODY, R.color.brand_text_muted)),
             LinearLayout.LayoutParams(0, WRAP, 1f))
-        addView(Brand.text(c, "›", 22f, R.color.brand_text_muted))
+        addView(Brand.chevron(c))
         background = Brand.pressable(c, android.graphics.drawable.ColorDrawable(0), 12f)
         setOnClickListener { onClick() }
     }
