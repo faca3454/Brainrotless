@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- IG Lite / YT Lite: recargar solos cuando vuelve la conexión -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Modo dormir: aviso a la hora justa y reprogramar al reiniciar -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />

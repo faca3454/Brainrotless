@@ -47,7 +47,10 @@ object Notices {
             maxWidth = Brand.px(c, 360)
             setPadding(0, Brand.px(c, 10), 0, Brand.px(c, 32))
         })
-        addView(Brand.primaryButton(c, button, onClick).apply { minWidth = wide }, LinearLayout.LayoutParams(wrap, wrap))
+        addView(Brand.primaryButton(c, button, onClick).apply {
+            tag = "button"
+            minWidth = wide
+        }, LinearLayout.LayoutParams(wrap, wrap))
         if (button2 != null) addView(Brand.secondaryButton(c, button2).apply {
             tag = "button2"
             minWidth = wide

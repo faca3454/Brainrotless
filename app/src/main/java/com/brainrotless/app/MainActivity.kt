@@ -8,6 +8,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Color
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -15,6 +18,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.text.format.DateFormat
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.*
@@ -56,6 +60,8 @@ class MainActivity : ComponentActivity() {
     private var backToYouTube: Boolean? = null // llegaste por un link desde la otra plataforma: atrás vuelve ahí
     private lateinit var content: LinearLayout
     private lateinit var offline: View
+    private lateinit var retryButton: View
+    private lateinit var progress: View // línea fina arriba de la página mientras carga entera
     private val handler = Handler(Looper.getMainLooper())
 
     // Bloqueo de YouTube (noche o límite) y barra de "solo mensajes" arriba de Instagram
@@ -116,6 +122,13 @@ class MainActivity : ComponentActivity() {
         web = igWeb
         setFront(igWeb, true)
         webs = FrameLayout(this).apply { addView(igWeb, FrameLayout.LayoutParams(MATCH, MATCH)) }
+        progress = View(this).apply {
+            setBackgroundColor(Brand.color(context, R.color.brand_primary))
+            pivotX = 0f
+            alpha = 0f
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        webs.addView(progress, FrameLayout.LayoutParams(MATCH, Brand.px(this, 3), Gravity.TOP))
         refresh = SwipeRefreshLayout(this).apply {
             addView(webs, ViewGroup.LayoutParams(MATCH, MATCH))
             // La página avisa (vía JS) si el gesto empezó arriba de todo
@@ -124,7 +137,8 @@ class MainActivity : ComponentActivity() {
             setProgressBackgroundColorSchemeColor(Brand.color(context, R.color.brand_surface))
             setOnRefreshListener { web.reload() }
         }
-        offline = Notices.screen(this, getString(R.string.offline_title), getString(R.string.offline_text), getString(R.string.retry)) { web.reload() }
+        offline = Notices.screen(this, getString(R.string.offline_title), getString(R.string.offline_text), getString(R.string.retry)) { retry() }
+        retryButton = offline.findViewWithTag("button")
         lockScreen = Notices.screen(this, "", "", getString(R.string.go_to_messages), "") { goTo(youtube = false) }
         lockTitle = lockScreen.findViewWithTag("title")
         lockText = lockScreen.findViewWithTag("subtitle")
@@ -245,6 +259,7 @@ class MainActivity : ComponentActivity() {
             if (v === web) {
                 refresh.isRefreshing = false
                 if (!mainFrameError) offline.visibility = View.GONE
+                setRetrying(false)
             }
             // Respaldo para WebViews viejas; el script tiene guardia contra doble inyección
             v.evaluateJavascript(injectedScript, null)
@@ -276,10 +291,15 @@ class MainActivity : ComponentActivity() {
             mainFrameError = true
             refresh.isRefreshing = false
             offline.visibility = View.VISIBLE
+            setRetrying(false)
         }
     }
 
     private val chromeClient = object : WebChromeClient() {
+        override fun onProgressChanged(view: WebView, newProgress: Int) {
+            if (view === web) showProgress(newProgress)
+        }
+
         override fun onShowFileChooser(
             view: WebView, callback: ValueCallback<Array<Uri>>, params: FileChooserParams
         ): Boolean {
@@ -324,6 +344,9 @@ class MainActivity : ComponentActivity() {
         v.alpha = 0f
         v.visibility = View.VISIBLE
         v.bringToFront()
+        progress.bringToFront()
+        progress.animate().cancel()
+        progress.alpha = 0f // la que se va puede haber estado cargando
         v.animate().alpha(1f).setDuration(180).setInterpolator(Brand.EASE_OUT).withEndAction { if (web !== old) old.visibility = View.GONE }.start()
         if (old !== v) {
             pauseMedia(old)
@@ -353,6 +376,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        getSystemService(ConnectivityManager::class.java)?.let { cm ->
+            network.online = cm.activeNetwork?.let(cm::getNetworkCapabilities)
+                ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
+            runCatching { cm.registerDefaultNetworkCallback(network) }
+        }
         if (Lang.current(this) != lang) return recreate() // cambiaron el idioma en Ajustes
         usageMark = SystemClock.elapsedRealtime()
         lostUrl?.let { lostUrl = null; web.loadUrl(it) }
@@ -577,6 +605,40 @@ class MainActivity : ComponentActivity() {
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
 
+    // ---------- Carga y conexión ----------
+
+    /** Línea de carga: avanza con la página y se desvanece al terminar. Con el gesto de recargar ya se ve el círculo. */
+    private fun showProgress(p: Int) {
+        val loading = p < 100 && !refresh.isRefreshing
+        if (loading && progress.alpha == 0f) progress.scaleX = 0f
+        progress.animate().scaleX(p / 100f).alpha(if (loading) 1f else 0f)
+            .setDuration(200).setInterpolator(Brand.EASE_OUT).start()
+    }
+
+    /** "Reintentar": mientras vuelve a cargar, el botón queda apagado, así se ve que algo pasa. */
+    private fun retry() {
+        if (!retryButton.isEnabled) return
+        setRetrying(true)
+        web.reload()
+    }
+
+    private fun setRetrying(on: Boolean) {
+        retryButton.isEnabled = !on
+        retryButton.alpha = if (on) 0.5f else 1f
+    }
+
+    // Sin conexión: cuando vuelve una red que anda, se recarga sola, sin tocar "Reintentar". Solo al
+    // pasar de no tener a tener: si Instagram no responde con la red andando, no recarga en bucle.
+    private val network = object : ConnectivityManager.NetworkCallback() {
+        @Volatile var online = true
+        override fun onCapabilitiesChanged(n: Network, caps: NetworkCapabilities) {
+            val ok = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+            if (ok && !online) runOnUiThread { if (offline.visibility == View.VISIBLE) retry() }
+            online = ok
+        }
+        override fun onLost(n: Network) { online = false }
+    }
+
     // ---------- Barras del sistema ----------
 
     private var barsColor = 0
@@ -626,6 +688,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
+        runCatching { getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(network) }
         countUsage()
         usageMark = 0
         Session.pause(this)
