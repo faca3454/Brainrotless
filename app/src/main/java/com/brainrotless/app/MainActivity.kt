@@ -9,7 +9,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Rect
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -21,13 +23,16 @@ import android.os.Looper
 import android.os.SystemClock
 import android.text.format.DateFormat
 import android.view.Gravity
+import android.view.PixelCopy
 import android.view.HapticFeedbackConstants
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.webkit.*
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -68,6 +73,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var offline: View
     private lateinit var retryButton: View
     private lateinit var progress: View // línea fina arriba de la página mientras carga entera
+    private lateinit var still: ImageView // foto de la página como estaba, mientras recarga
     private val handler = Handler(Looper.getMainLooper())
 
     // Bloqueo de YouTube (noche o límite) y barra de "solo mensajes" arriba de Instagram
@@ -88,6 +94,8 @@ class MainActivity : ComponentActivity() {
         onHaptic = { runOnUiThread { web.performHapticFeedback(
             if (Build.VERSION.SDK_INT >= 34) HapticFeedbackConstants.GESTURE_THRESHOLD_ACTIVATE else HapticFeedbackConstants.CONTEXT_CLICK) } },
         onPlaying = { on -> runOnUiThread { keepScreenOn(on) } },
+        // La página que se ve ya cargó: sacar la foto de la de antes
+        onReady = { host -> runOnUiThread { if (isYouTube("https://$host") == onYouTube) hideStill() } },
     )
     private val scriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private var injectedScript = ""
@@ -154,6 +162,15 @@ class MainActivity : ComponentActivity() {
             alpha = 0f
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
+        still = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.FIT_XY
+            visibility = View.GONE
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            // Tocarla la saca, y el toque no le llega a la página que carga abajo (no se ve qué tocarías)
+            setOnClickListener { hideStill() }
+            setOnTouchListener { v, e -> if (e.action == MotionEvent.ACTION_DOWN) v.performClick(); true }
+        }
+        webs.addView(still, FrameLayout.LayoutParams(MATCH, MATCH))
         webs.addView(progress, FrameLayout.LayoutParams(MATCH, Brand.px(this, 3), Gravity.TOP))
         refresh = SwipeRefreshLayout(this).apply {
             addView(webs, ViewGroup.LayoutParams(MATCH, MATCH))
@@ -161,7 +178,7 @@ class MainActivity : ComponentActivity() {
             setOnChildScrollUpCallback { _, _ -> fullscreenView != null || !bridge.atTop }
             setColorSchemeColors(Brand.color(context, R.color.brand_primary))
             setProgressBackgroundColorSchemeColor(Brand.color(context, R.color.brand_surface))
-            setOnRefreshListener { web.reload() }
+            setOnRefreshListener { reloadSmooth(web) }
         }
         offline = Notices.screen(this, getString(R.string.offline_title), getString(R.string.offline_text), getString(R.string.retry)) { retry() }
         retryButton = offline.findViewWithTag("button")
@@ -301,7 +318,7 @@ class MainActivity : ComponentActivity() {
         override fun onRenderProcessGone(v: WebView, detail: RenderProcessGoneDetail): Boolean {
             val url = v.url?.takeIf { it != "about:blank" }
             if (v === web && fullscreenView != null) exitFullscreen()
-            if (v === web) keepScreenOn(false)
+            if (v === web) { keepScreenOn(false); hideStill() }
             val fresh = buildWebView().apply { visibility = v.visibility }
             webs.addView(fresh, webs.indexOfChild(v), FrameLayout.LayoutParams(MATCH, MATCH))
             webs.removeView(v)
@@ -323,6 +340,7 @@ class MainActivity : ComponentActivity() {
             mainFrameError = true
             refresh.isRefreshing = false
             offline.visibility = View.VISIBLE
+            hideStill()
             setRetrying(false)
         }
     }
@@ -392,6 +410,7 @@ class MainActivity : ComponentActivity() {
         v.alpha = 0f
         v.visibility = View.VISIBLE
         v.bringToFront()
+        hideStill() // la foto era de la otra
         progress.bringToFront()
         progress.animate().cancel()
         progress.alpha = 0f // la que se va puede haber estado cargando
@@ -477,7 +496,7 @@ class MainActivity : ComponentActivity() {
         }
         when {
             yt == null && lockScreen.visibility == View.VISIBLE -> open(YT_HOME) // se terminó el bloqueo
-            scriptChanged && lockScreen.visibility != View.VISIBLE -> webViews().filter(::hasPage).forEach { it.reload() }
+            scriptChanged && lockScreen.visibility != View.VISIBLE -> webViews().filter(::hasPage).forEach(::reloadSmooth)
         }
         if (lockScreen.visibility == View.VISIBLE) showLockScreen() // refrescar texto y pausa
         refreshLockBar()
@@ -618,12 +637,16 @@ class MainActivity : ComponentActivity() {
      * Puente JS → app: pull-to-refresh, la vibración de deslizar para responder, si hay un video
      * reproduciéndose (pantalla prendida) y, solo en los APK de prueba, diagnósticos del script.
      */
-    class Bridge(private val onReport: (String) -> Unit, private val onHaptic: () -> Unit, private val onPlaying: (Boolean) -> Unit) {
+    class Bridge(
+        private val onReport: (String) -> Unit, private val onHaptic: () -> Unit,
+        private val onPlaying: (Boolean) -> Unit, private val onReady: (String) -> Unit,
+    ) {
         @Volatile private var top = false
         val atTop get() = top
         @Volatile private var lastHaptic = 0L
         @JavascriptInterface fun setAtTop(value: Boolean) { top = value }
         @JavascriptInterface fun setPlaying(value: Boolean) = onPlaying(value)
+        @JavascriptInterface fun ready(host: String) = onReady(host)
         // Una vibración corta, como mucho una cada 300 ms (si una página la llamara de más, solo vibra)
         @JavascriptInterface fun haptic() {
             val now = SystemClock.uptimeMillis()
@@ -697,6 +720,43 @@ class MainActivity : ComponentActivity() {
             android.content.res.Configuration.UI_MODE_NIGHT_YES
 
     // ---------- Carga y conexión ----------
+
+    /**
+     * Recarga dejando a la vista una foto de la página como estaba, hasta que la nueva ya tiene contenido
+     * (avisa el script) o pasan 6 s: sin la pantalla de carga de Instagram en el medio. La de fondo, o si
+     * no se puede sacar la foto, recarga como siempre.
+     */
+    private fun reloadSmooth(v: WebView) {
+        if (v !== web || v.width == 0 || v.height == 0 || offline.visibility == View.VISIBLE) return v.reload()
+        val shot = Bitmap.createBitmap(v.width, v.height, Bitmap.Config.ARGB_8888)
+        val at = IntArray(2).also(v::getLocationInWindow)
+        runCatching {
+            PixelCopy.request(window, Rect(at[0], at[1], at[0] + v.width, at[1] + v.height), shot, { result ->
+                if (result == PixelCopy.SUCCESS && v === web) {
+                    still.animate().cancel()
+                    still.setImageBitmap(shot)
+                    still.alpha = 1f
+                    still.visibility = View.VISIBLE
+                    still.bringToFront()
+                    progress.bringToFront()
+                    handler.removeCallbacks(stillTimeout)
+                    handler.postDelayed(stillTimeout, 6_000)
+                }
+                v.reload()
+            }, handler)
+        }.onFailure { v.reload() }
+    }
+
+    private val stillTimeout = Runnable { hideStill() }
+
+    private fun hideStill() {
+        handler.removeCallbacks(stillTimeout)
+        if (still.visibility != View.VISIBLE) return
+        still.animate().alpha(0f).setDuration(150).setInterpolator(Brand.EASE_OUT).withEndAction {
+            still.visibility = View.GONE
+            still.setImageDrawable(null)
+        }.start()
+    }
 
     /** Línea de carga: avanza con la página y se desvanece al terminar. Con el gesto de recargar ya se ve el círculo. */
     private fun showProgress(p: Int) {

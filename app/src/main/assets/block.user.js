@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Lúcido
 // @description  Bloquea el feed de Reels/Shorts pero deja ver los que te mandan
-// @version      12
+// @version      13
 // @match        *://*.instagram.com/*
 // @match        *://instagram.com/*
 // @match        *://*.youtube.com/*
@@ -124,6 +124,35 @@
     }, true);
   }
 
+  // Navegar dentro del sitio (como el botón atrás), sin recargar ni pasar por la pantalla de carga de
+  // Instagram. El sitio se movió si cambió el título, si sacó varios elementos o si ya no está lo que había
+  // en el centro; si en 1 s no hay ninguna de esas señales, recién ahí se carga la URL (como antes).
+  const navigate = (to, replace, beforeReload) => {
+    const title = document.title;
+    const before = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
+    let removed = 0;
+    const obs = new MutationObserver((records) => {
+      for (const r of records) for (const n of r.removedNodes) if (n.nodeType === 1) removed += 1 + n.getElementsByTagName('*').length;
+    });
+    obs.observe(document.documentElement, { childList: true, subtree: true });
+    history[replace ? 'replaceState' : 'pushState'](null, '', to);
+    dispatchEvent(new PopStateEvent('popstate', { state: null }));
+    setTimeout(() => {
+      obs.disconnect();
+      const moved = document.title !== title || removed > 10 || !before || !before.isConnected || !before.getClientRects().length;
+      if (location.pathname !== to || moved) return;
+      if (beforeReload) beforeReload();
+      location.replace(to);
+    }, 1000);
+  };
+
+  // Al inbox: con la página ya andando, dentro del sitio (después de que termine su propia navegación);
+  // si recién empieza a cargar, cargándolo directo
+  const toInbox = () => {
+    if (document.readyState === 'loading') location.replace('/direct/inbox/');
+    else setTimeout(() => { if (location.pathname !== '/direct/inbox/') navigate('/direct/inbox/', true); }, 0);
+  };
+
   // --- 3. Guardia de URL (respaldo; no depende del DOM) ---
   let allowedReel = null;
   let prevFollowing = false; // veníamos del feed de seguidos
@@ -143,7 +172,7 @@
     // Modo solo mensajes (hora de dormir): fuera de los chats, todo vuelve al inbox
     if (CFG.restricted && !/^\/(direct|accounts|challenge)\//.test(p)) {
       try { sessionStorage.setItem('brl_toast', CFG.restrictedMsg); } catch (e) {}
-      location.replace('/direct/inbox/');
+      toInbox();
       return;
     }
     const blocked =
@@ -151,7 +180,7 @@
       (CFG.igBlockExplore && /^\/explore\/?$/.test(p)) ||
       (CFG.igFeed === 'blocked' && p === '/');
     if (blocked) {
-      location.replace('/direct/inbox/');
+      toInbox();
       return;
     }
 
@@ -865,18 +894,11 @@
         if (to) {
           if (!/^\/direct\//.test(to)) return false;
           if (name && inChat(name)) return true;
-          if (location.pathname !== to) {
-            const before = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
-            history.pushState(null, '', to);
-            dispatchEvent(new PopStateEvent('popstate', { state: null }));
-            // Si en 1 s lo que estaba en pantalla sigue ahí, el sitio no se movió: cargarla (y el chat después)
-            setTimeout(() => {
-              if (location.pathname !== to || !before || !before.isConnected || !before.getClientRects().length) return;
-              stopLooking();
-              try { if (name) sessionStorage.setItem('brl_chat', name); } catch (e) {}
-              location.assign(to);
-            }, 1000);
-          }
+          // Si el sitio no se mueve y hay que cargarla, el chat se abre en la página nueva
+          if (location.pathname !== to) navigate(to, false, () => {
+            stopLooking();
+            try { if (name) sessionStorage.setItem('brl_chat', name); } catch (e) {}
+          });
         }
         if (name) openChat(name);
         return true;
@@ -901,5 +923,27 @@
     };
     for (const type of ['playing', 'pause', 'ended', 'emptied']) addEventListener(type, tell, true);
     addEventListener('pagehide', () => { if (was) { was = false; NoScrollBridge.setPlaying(false); } });
+  }
+
+  // --- 14. La página nueva ya se ve (Instagram y YouTube) ---
+  // Al recargar, la app deja a la vista una foto de la página de antes hasta este aviso, en vez de la
+  // pantalla de carga. Cuenta cuando hay contenido de verdad (no solo el logo de carga: cientos de
+  // elementos) y pasaron 300 ms sin cambios; a los 5 s, igual.
+  if (window.NoScrollBridge && typeof NoScrollBridge.ready === 'function') {
+    let quiet = 0, done = false;
+    const filled = () => document.body && document.body.getElementsByTagName('*').length > 300;
+    const fin = () => {
+      if (done) return;
+      done = true;
+      obs.disconnect();
+      clearTimeout(quiet);
+      NoScrollBridge.ready(location.hostname);
+    };
+    const obs = new MutationObserver(() => {
+      clearTimeout(quiet);
+      quiet = setTimeout(() => { if (filled()) fin(); }, 300);
+    });
+    obs.observe(document, { childList: true, subtree: true });
+    setTimeout(fin, 5000);
   }
 })();
