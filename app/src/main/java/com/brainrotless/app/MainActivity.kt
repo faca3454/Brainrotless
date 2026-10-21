@@ -24,6 +24,7 @@ import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.webkit.*
 import android.widget.Button
 import android.widget.FrameLayout
@@ -86,6 +87,7 @@ class MainActivity : ComponentActivity() {
         // Deslizar para responder pasó el punto: la vibración del sistema (respeta "respuesta táctil")
         onHaptic = { runOnUiThread { web.performHapticFeedback(
             if (Build.VERSION.SDK_INT >= 34) HapticFeedbackConstants.GESTURE_THRESHOLD_ACTIVATE else HapticFeedbackConstants.CONTEXT_CLICK) } },
+        onPlaying = { on -> runOnUiThread { keepScreenOn(on) } },
     )
     private val scriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private var injectedScript = ""
@@ -226,7 +228,8 @@ class MainActivity : ComponentActivity() {
             allowFileAccess = false
             userAgentString = userAgentString.replace("; wv", "") // ayuda con algunos logins
         }
-        // Solo expone setAtTop(boolean), haptic() y, en los APK de prueba, report(texto): nada sensible si una página lo llama
+        // Solo expone setAtTop(boolean), haptic(), setPlaying(boolean) y, en los APK de prueba, report(texto):
+        // nada sensible si una página lo llama
         addJavascriptInterface(bridge, "NoScrollBridge")
         webViewClient = client
         webChromeClient = chromeClient
@@ -293,6 +296,7 @@ class MainActivity : ComponentActivity() {
         override fun onRenderProcessGone(v: WebView, detail: RenderProcessGoneDetail): Boolean {
             val url = v.url?.takeIf { it != "about:blank" }
             if (v === web && fullscreenView != null) exitFullscreen()
+            if (v === web) keepScreenOn(false)
             val fresh = buildWebView().apply { visibility = v.visibility }
             webs.addView(fresh, webs.indexOfChild(v), FrameLayout.LayoutParams(MATCH, MATCH))
             webs.removeView(v)
@@ -601,12 +605,16 @@ class MainActivity : ComponentActivity() {
         scriptHandlers[v] = WebViewCompat.addDocumentStartJavaScript(v, injectedScript, scriptOrigins)
     }
 
-    /** Puente JS → app: pull-to-refresh, la vibración de deslizar para responder y, solo en los APK de prueba, diagnósticos del script. */
-    class Bridge(private val onReport: (String) -> Unit, private val onHaptic: () -> Unit) {
+    /**
+     * Puente JS → app: pull-to-refresh, la vibración de deslizar para responder, si hay un video
+     * reproduciéndose (pantalla prendida) y, solo en los APK de prueba, diagnósticos del script.
+     */
+    class Bridge(private val onReport: (String) -> Unit, private val onHaptic: () -> Unit, private val onPlaying: (Boolean) -> Unit) {
         @Volatile private var top = false
         val atTop get() = top
         @Volatile private var lastHaptic = 0L
         @JavascriptInterface fun setAtTop(value: Boolean) { top = value }
+        @JavascriptInterface fun setPlaying(value: Boolean) = onPlaying(value)
         // Una vibración corta, como mucho una cada 300 ms (si una página la llamara de más, solo vibra)
         @JavascriptInterface fun haptic() {
             val now = SystemClock.uptimeMillis()
@@ -718,6 +726,15 @@ class MainActivity : ComponentActivity() {
     }
 
     // ---------- Pantalla completa ----------
+
+    /**
+     * Mientras se ve un video, la pantalla no se apaga sola (en pantalla completa se apagaba). En pausa
+     * o al terminar, vuelve a apagarse con el tiempo del sistema. Solo cuenta con la app a la vista.
+     */
+    private fun keepScreenOn(on: Boolean) {
+        if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
 
     private fun exitFullscreen() {
         val v = fullscreenView ?: return

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Lúcido
 // @description  Bloquea el feed de Reels/Shorts pero deja ver los que te mandan
-// @version      11
+// @version      12
 // @match        *://*.instagram.com/*
 // @match        *://instagram.com/*
 // @match        *://*.youtube.com/*
@@ -888,5 +888,18 @@
     let left = null; // chat que quedó por abrir de la página anterior
     try { left = sessionStorage.getItem('brl_chat'); sessionStorage.removeItem('brl_chat'); } catch (e) {}
     if (left) document.body ? openChat(left) : addEventListener('DOMContentLoaded', () => openChat(left));
+  }
+
+  // --- 13. Pantalla prendida mientras se ve un video (Instagram y YouTube) ---
+  // Le avisa a la app si hay un video reproduciéndose: así el teléfono no apaga la pantalla en medio de
+  // un video (en pantalla completa se apagaba). En pausa o al terminar, vuelve a apagarse sola.
+  if (window.NoScrollBridge && typeof NoScrollBridge.setPlaying === 'function') {
+    let was = false;
+    const tell = () => {
+      const now = [...document.getElementsByTagName('video')].some((v) => !v.paused && !v.ended && v.readyState > 2);
+      if (now !== was) { was = now; NoScrollBridge.setPlaying(now); }
+    };
+    for (const type of ['playing', 'pause', 'ended', 'emptied']) addEventListener(type, tell, true);
+    addEventListener('pagehide', () => { if (was) { was = false; NoScrollBridge.setPlaying(false); } });
   }
 })();
