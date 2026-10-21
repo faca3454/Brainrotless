@@ -53,6 +53,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var web: WebView // la que está en pantalla
     private lateinit var webs: FrameLayout
     private var lostUrl: String? = null // página que el sistema cerró con la app en segundo plano
+    private var backToYouTube: Boolean? = null // llegaste por un link desde la otra plataforma: atrás vuelve ahí
     private lateinit var content: LinearLayout
     private lateinit var offline: View
     private val handler = Handler(Looper.getMainLooper())
@@ -152,11 +153,15 @@ class MainActivity : ComponentActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
+                val blocked = lockScreen.visibility == View.VISIBLE || guardScreen.visibility == View.VISIBLE
+                val origin = backToYouTube
                 when {
                     fullscreenView != null -> exitFullscreen()
-                    lockScreen.visibility == View.VISIBLE || guardScreen.visibility == View.VISIBLE -> finish()
-                    web.canGoBack() -> web.goBack()
-                    else -> finish()
+                    !blocked && web.canGoBack() -> web.goBack()
+                    origin != null && guardScreen.visibility != View.VISIBLE -> { backToYouTube = null; goTo(origin) }
+                    // En la primera página la app pasa al fondo, como cualquier app: al volver sigue donde
+                    // estaba, sin cargar todo de nuevo (finish() cerraba las dos páginas)
+                    else -> moveTaskToBack(true)
                 }
             }
         })
@@ -200,7 +205,10 @@ class MainActivity : ComponentActivity() {
         override fun shouldOverrideUrlLoading(v: WebView, r: WebResourceRequest): Boolean {
             val u = r.url
             val url = u.toString()
-            if (isYouTube(url) && Lock.yt(this@MainActivity) != null) { switchTo(ytWeb); showLockScreen(); return true }
+            if (isYouTube(url) && Lock.yt(this@MainActivity) != null) {
+                if (v === igWeb) backToYouTube = false
+                switchTo(ytWeb); showLockScreen(); return true
+            }
             if (!Lock.reelsAllowed(this@MainActivity)) shortsToWatch(u)?.let { open(it); return true }
             // intent:// o instagram:// que intentan abrir la app oficial
             if (u.scheme != "https" && u.scheme != "http") return true
@@ -210,7 +218,7 @@ class MainActivity : ComponentActivity() {
                 hostIn(u.host, listOf("instagram.com")) -> igWeb
                 else -> null
             }
-            if (target != null && target !== v) { open(url); return true }
+            if (target != null && target !== v) { backToYouTube = v !== igWeb; open(url); return true }
             if (hostIn(u.host, inAppHosts)) return false
             // De noche los navegadores están bloqueados: avisar en vez de abrir uno
             Sleep.current(this@MainActivity)?.takeIf { Sleep.blocksBrowsers(this@MainActivity) }?.let {
@@ -486,6 +494,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        backToYouTube = null // llegaste desde afuera: atrás vuelve a esa app
         if (fullscreenView != null) exitFullscreen()
         handlePauseIntent(intent)
         val url = urlFromIntent(intent)
