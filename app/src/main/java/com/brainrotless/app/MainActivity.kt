@@ -1,5 +1,6 @@
 package com.brainrotless.app
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.ClipData
@@ -7,6 +8,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.ConnectivityManager
 import android.net.Network
@@ -106,6 +108,15 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
             fileCallback?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(res.resultCode, res.data))
             fileCallback = null
+        }
+
+    // --- Micrófono, para grabar audios en los chats (Instagram lo pide al mantener el botón) ---
+    private var micRequest: PermissionRequest? = null
+    private val micPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+            val r = micRequest ?: return@registerForActivityResult
+            micRequest = null
+            if (ok) r.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) else r.deny()
         }
 
     // --- Pantalla completa de video ---
@@ -324,6 +335,22 @@ class MainActivity : ComponentActivity() {
             return runCatching { filePicker.launch(intent); true }.getOrElse {
                 fileCallback = null; false
             }
+        }
+
+        // Solo el micrófono y solo para Instagram y YouTube; lo demás (cámara, etc.), no. El permiso de
+        // Android se pide la primera vez que hace falta, no antes
+        override fun onPermissionRequest(request: PermissionRequest) {
+            val mic = PermissionRequest.RESOURCE_AUDIO_CAPTURE
+            if (mic !in request.resources || !hostIn(request.origin.host, linkHosts)) return request.deny()
+            if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
+                return request.grant(arrayOf(mic))
+            micRequest?.deny()
+            micRequest = request
+            micPermission.launch(Manifest.permission.RECORD_AUDIO)
+        }
+
+        override fun onPermissionRequestCanceled(request: PermissionRequest) {
+            if (micRequest === request) micRequest = null
         }
 
         override fun onShowCustomView(view: View, callback: CustomViewCallback) {

@@ -5,6 +5,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- IG Lite / YT Lite: recargar solos cuando vuelve la conexión -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Audios en los chats de Instagram: el micrófono se pide la primera vez que grabás.
+         La WebView necesita los dos para grabar -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Modo dormir: aviso a la hora justa y reprogramar al reiniciar -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
