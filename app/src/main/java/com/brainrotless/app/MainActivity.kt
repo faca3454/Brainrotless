@@ -149,6 +149,8 @@ class MainActivity : ComponentActivity() {
             addView(guardScreen, FrameLayout.LayoutParams(MATCH, MATCH))
         }
         setContentView(root)
+        // Cada vez que aparece o se va un aviso, o se cambia de plataforma, hay un layout: repintar las barras
+        root.viewTreeObserver.addOnGlobalLayoutListener { paintBars() }
         installScript()
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -322,7 +324,7 @@ class MainActivity : ComponentActivity() {
         v.alpha = 0f
         v.visibility = View.VISIBLE
         v.bringToFront()
-        v.animate().alpha(1f).setDuration(180).withEndAction { if (web !== old) old.visibility = View.GONE }.start()
+        v.animate().alpha(1f).setDuration(180).setInterpolator(Brand.EASE_OUT).withEndAction { if (web !== old) old.visibility = View.GONE }.start()
         if (old !== v) {
             pauseMedia(old)
             old.onPause()
@@ -566,6 +568,30 @@ class MainActivity : ComponentActivity() {
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
 
+    // ---------- Barras del sistema ----------
+
+    private var barsColor = 0
+
+    /** Barras de estado y de navegación del color de lo que se ve: la página, o el aviso que la tapa. */
+    private fun paintBars() {
+        val notice = listOf(offline, lockScreen, guardScreen).any { it.visibility == View.VISIBLE }
+        val color = when {
+            notice -> Brand.color(this, R.color.brand_bg)
+            !dark -> Color.WHITE
+            onYouTube -> YT_DARK
+            else -> Color.BLACK
+        }
+        if (color == barsColor) return
+        barsColor = color
+        window.statusBarColor = color
+        // Android 8.0 no tiene íconos oscuros para la barra de navegación: en claro queda negra
+        if (dark || Build.VERSION.SDK_INT >= 27) window.navigationBarColor = color
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !dark
+            isAppearanceLightNavigationBars = !dark
+        }
+    }
+
     // ---------- Pantalla completa ----------
 
     private fun exitFullscreen() {
@@ -609,6 +635,7 @@ class MainActivity : ComponentActivity() {
         private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
         private const val IG_INBOX = "https://www.instagram.com/direct/inbox/"
         private const val YT_HOME = "https://m.youtube.com"
+        private const val YT_DARK = 0xFF0F0F0F.toInt() // fondo de YouTube en oscuro (su theme-color)
         const val EXTRA_PAUSE = "pause" // desde la notificación del límite: usar la pausa de emergencia
         private const val PERF_REPORT = "Lúcido rendimiento" // así empieza el resumen de mediciones del script
     }
