@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Sin políticas: solo sirve para que no se pueda desinstalar sin quitarlo primero -->
-<device-admin>
-    <uses-policies />
-</device-admin>

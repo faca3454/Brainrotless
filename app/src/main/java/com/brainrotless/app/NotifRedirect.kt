@@ -65,6 +65,8 @@ class NotifRedirect : NotificationListenerService() {
 
         // No tocar reproducción en segundo plano ni subidas en curso
         if (f and (Notification.FLAG_ONGOING_EVENT or Notification.FLAG_FOREGROUND_SERVICE) != 0) return
+        // Sin permiso para mostrar la copia, borrar la original perdería el mensaje: queda como está
+        if (!Setup.canPost(this)) return
 
         cancelNotification(sbn.key)
         if (f and Notification.FLAG_GROUP_SUMMARY != 0) return // el resumen de grupo no aporta nada

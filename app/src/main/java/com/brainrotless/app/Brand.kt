@@ -15,6 +15,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.ColorRes
 import androidx.core.content.ContextCompat
@@ -89,6 +90,38 @@ object Brand {
             minHeight = px(c, 36)
             minimumHeight = px(c, 36)
             setPadding(px(c, 14), 0, px(c, 14), 0)
+        }
+
+    /** Botón sin fondo, al lado de uno que sí lo tiene (ej: "Ahora no"). */
+    fun textButton(c: Context, label: String, onClick: () -> Unit = {}) =
+        button(c, label, pressable(c, GradientDrawable(), 999f), R.color.brand_text_muted, onClick).apply {
+            setPadding(px(c, 16), 0, px(c, 16), 0)
+        }
+
+    /**
+     * Aviso suave dentro de una pantalla: qué falta y el botón para hacerlo. Opcional, un link de
+     * ayuda al lado (ej: "¿Un permiso aparece gris?").
+     */
+    fun notice(c: Context, message: String, action: String, onAction: () -> Unit, help: String? = null, onHelp: () -> Unit = {}) =
+        LinearLayout(c).apply {
+            orientation = LinearLayout.VERTICAL
+            background = rounded(c, R.color.brand_tonal, 16f)
+            setPadding(px(c, 14), px(c, 12), px(c, 14), px(c, 12))
+            addView(text(c, message, 14f))
+            addView(LinearLayout(c).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                addView(secondaryButton(c, action, onAction))
+                help?.let {
+                    addView(text(c, it, 13.5f, R.color.brand_primary, bold = true).apply {
+                        gravity = Gravity.CENTER_VERTICAL
+                        minHeight = px(c, 48)
+                        setPadding(px(c, 14), 0, px(c, 4), 0)
+                        background = pressable(c, GradientDrawable(), 12f)
+                        setOnClickListener { onHelp() }
+                    }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                }
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                .apply { topMargin = px(c, 10) })
         }
 
     /** Etiqueta chica ámbar dentro de un texto (ej: "5 días"). */

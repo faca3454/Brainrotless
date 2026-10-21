@@ -169,12 +169,11 @@ object Commitment {
         endMillis(c) > 0 && !active(c) && !prefs(c).getBoolean("summary_seen", false)
 
     /**
-     * Al terminar: quita la protección contra desinstalación y guarda el resumen.
+     * Al terminar: saca el aviso de accesibilidad apagada y guarda el resumen.
      * Devuelve el resumen si falta mostrarlo; se puede llamar varias veces.
      */
     fun onEnd(c: Context): String? {
         if (!finished(c)) return null
-        Protection.removeAdmin(c)
         Protection.updateGuardNotice(c)
         val text = "${title(c)}\n\n${summary(c)}"
         c.getSharedPreferences("commitment_history", Context.MODE_PRIVATE).edit().putString("last", text).apply()

@@ -19,6 +19,7 @@ Las cuentas sin Android (horarios, compromiso, estadísticas) tienen pruebas en 
 - `AppGuard`: servicio de accesibilidad. Redirige las apps oficiales, bloquea navegadores de noche, cuenta el uso de las apps oficiales y protege contra desinstalar durante un compromiso o el modo dormir.
 - `NotifRedirect` y `NotifActions`: copian las notificaciones de las apps oficiales (con foto, conversación, responder y marcar como leído) y las abren en Lúcido.
 - `HomeActivity` (inicio), `PanelActivity` (modo dormir, foco, compromiso, Instagram y YouTube, estadísticas), `OnboardingActivity` (guía del primer uso) y `SettingsActivity` (lo técnico).
+- `Setup`: el estado de cada permiso y cómo pedirlo. La guía no pide ninguno: cada función pide el suyo cuando se activa (Accesibilidad el modo dormir, el foco y el compromiso; acceso a notificaciones los mensajes; datos de uso las estadísticas), y en el inicio solo se avisa lo que falta para algo que ya prendiste.
 - `Sleep`, `Focus`, `Commitment`, `Usage`, `Lock`, `Stats`, `Weekly`: horarios, límites, uso por día y resúmenes.
 
 El plan de diseño original de las funciones está en [`plan.md`](plan.md).

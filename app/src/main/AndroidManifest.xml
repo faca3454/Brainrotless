@@ -169,21 +169,6 @@
             </intent-filter>
         </receiver>
 
-        <!-- Compromiso: protección contra desinstalación, con espera para quitarla -->
-        <receiver
-            android:name=".Admin"
-            android:exported="true"
-            android:label="@string/admin_label"
-            android:description="@string/admin_desc"
-            android:permission="android.permission.BIND_DEVICE_ADMIN">
-            <meta-data
-                android:name="android.app.device_admin"
-                android:resource="@xml/device_admin" />
-            <intent-filter>
-                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
-            </intent-filter>
-        </receiver>
-
         <!-- Guía del primer uso -->
         <activity
             android:name=".OnboardingActivity"
@@ -195,13 +180,6 @@
             android:name=".PanelActivity"
             android:exported="false"
             android:theme="@style/PanelTheme" />
-
-        <activity
-            android:name=".WaitActivity"
-            android:theme="@style/HomeTheme"
-            android:exported="false"
-            android:excludeFromRecents="true"
-            android:launchMode="singleTask" />
 
         <!-- Widgets: Mini (1×1), Barra (4×1) y Hoy (2×2) -->
         <receiver

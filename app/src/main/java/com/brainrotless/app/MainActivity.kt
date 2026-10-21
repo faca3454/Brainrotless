@@ -1,6 +1,5 @@
 package com.brainrotless.app
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.ClipData
@@ -8,7 +7,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
-import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
@@ -97,9 +95,6 @@ class MainActivity : ComponentActivity() {
             fileCallback = null
         }
 
-    private val notifPermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
-
     // --- Pantalla completa de video ---
     private var fullscreenView: View? = null
     private var fullscreenCallback: WebChromeClient.CustomViewCallback? = null
@@ -109,7 +104,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // La primera vez desde el ícono de IG Lite o YT Lite: arrancar por la guía (idioma,
-        // permisos, plan). Los links compartidos abren igual.
+        // qué hace, plan). Los links compartidos abren igual.
         if (OnboardingActivity.needed(this) && savedInstanceState == null && urlFromIntent(intent) == null) {
             // En su propia tarea: si no, quedaría debajo de IG Lite y el botón atrás volvería a ella
             startActivity(OnboardingActivity.intent(this).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -175,7 +170,7 @@ class MainActivity : ComponentActivity() {
         }
         handlePauseIntent(intent)
 
-        maybeAskSetup()
+        Lang.askIfNeeded(this) // sin guía (se abrió con un link compartido): el idioma, nada más
         Rules.refreshAsync(this) { runOnUiThread { installScript() } } // se aplica en la próxima carga
         Updater.maybeCheck(this)
         Sleep.reschedule(this)
@@ -609,47 +604,6 @@ class MainActivity : ComponentActivity() {
         addView(Brand.text(context, "", 13f).apply { tag = "text" },
             LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         addView(Brand.accentChip(context, "Pausa") { usePause() }.apply { tag = "pause" })
-    }
-
-    // ---------- Configuración inicial ----------
-
-    private fun maybeAskSetup() {
-        // Primero el idioma: al elegirlo la pantalla se vuelve a crear y recién ahí sigue esto
-        if (!Lang.hasChosen(this)) { Lang.askIfNeeded(this); return }
-        if (Build.VERSION.SDK_INT >= 33 &&
-            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-
-        val prefs = getSharedPreferences("setup", MODE_PRIVATE)
-        val listenerOn = Setup.listenerOn(this)
-        val guardOn = Setup.guardOn(this)
-        if (prefs.getBoolean("done", false) && listenerOn && guardOn) return
-
-        fun mark(on: Boolean) = if (on) "✓" else "○"
-        val steps = listOfNotNull(
-            getString(R.string.setup_step_notif, mark(listenerOn)),
-            getString(R.string.setup_step_links),
-            getString(R.string.setup_step_guard, mark(guardOn)),
-            if (Setup.restrictedApplies()) getString(R.string.setup_step_gray) else null
-        ).toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle(R.string.setup_title)
-            .setItems(steps) { _, which ->
-                when (which) {
-                    0 -> Setup.openNotifications(this)
-                    1 -> Setup.openLinks(this)
-                    2 -> Setup.openAccessibility(this)
-                    3 -> Setup.explainRestricted(this)
-                }
-            }
-            .setNeutralButton(R.string.help) { _, _ ->
-                AlertDialog.Builder(this)
-                    .setMessage(R.string.setup_help)
-                    .setPositiveButton(R.string.ok, null)
-                    .show()
-            }
-            .setNegativeButton(R.string.done) { _, _ -> prefs.edit().putBoolean("done", true).apply() }
-            .show()
     }
 
     // ---------- Pantalla completa ----------

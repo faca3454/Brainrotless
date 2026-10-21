@@ -52,12 +52,12 @@ Lúcido es una app para Android que abre Instagram y YouTube sin el scroll infin
 
 1. Bajá `Lucido-X.Y.Z.apk` de la [última versión](https://github.com/faca3454/Brainrotless/releases/latest) (en *Assets*).
 2. Abrilo y permití instalar apps de esa fuente. Si Play Protect avisa, tocá *Instalar igual*: pasa con cualquier app que no venga de Play Store.
-3. Abrí **Lúcido**. Una guía te lleva por el idioma, los permisos y con qué querés arrancar.
+3. Abrí **Lúcido**. Una guía corta te lleva por el idioma y con qué querés arrancar. No pide permisos de entrada: cada función pide el suyo cuando la activás.
 
 Después de instalar vas a ver tres íconos: **Lúcido** (el inicio y la configuración), **IG Lite** (Instagram) e **YT Lite** (YouTube).
 
 - **Las apps oficiales de Instagram y YouTube tienen que seguir instaladas**: son las que reciben las notificaciones. Si las abrís, Lúcido te trae de vuelta.
-- **¿Un permiso aparece gris?** Android lo hace con las apps que no vienen de Play Store. La guía tiene un botón *¿Un permiso aparece gris?* que explica cómo destrabarlo.
+- **¿Un permiso aparece gris?** Android lo hace con las apps que no vienen de Play Store. Al lado de cada permiso que pide Lúcido hay un botón *¿Un permiso aparece gris?* que explica cómo destrabarlo.
 - **En Xiaomi o Samsung**: Ajustes → Batería → Lúcido → *Sin restricciones*, para que el sistema no la apague.
 - **Actualizaciones**: la app te avisa cuando hay una versión nueva, y se instala encima sin perder nada.
 
@@ -69,11 +69,11 @@ No. Lúcido no tiene relación con Instagram, Meta, YouTube ni Google. Abre las 
 **¿Es seguro iniciar sesión?**
 Iniciás sesión en las páginas de Instagram y YouTube, igual que en un navegador, y la sesión queda guardada en tu teléfono. Lúcido no tiene servidores ni cuentas propias, y el código está acá para que cualquiera pueda revisarlo.
 
-**¿Por qué pide tantos permisos?**
-Cada uno tiene una función concreta, explicada en [Privacidad](#privacidad). Los únicos opcionales son abrir links y comparar con tu uso de antes.
+**¿Por qué pide permisos?**
+Para sacar los Reels y los Shorts no hace falta ninguno. Cada función pide el suyo recién cuando la activás (el modo dormir, el foco y el compromiso piden Accesibilidad; los mensajes, acceso a notificaciones) y para qué es cada uno está en [Privacidad](#privacidad).
 
 **¿Puedo desinstalarla?**
-Sí. Durante un compromiso o el modo dormir cuesta más a propósito: Lúcido bloquea las pantallas de desinstalar y detener la app, y si activaste la protección hay que esperar 2 minutos. Siempre se puede arrancar el teléfono en modo seguro y desinstalarla desde ahí.
+Sí. Durante un compromiso o el modo dormir cuesta más a propósito: Lúcido bloquea las pantallas de desinstalar y detener la app. Siempre se puede arrancar el teléfono en modo seguro y desinstalarla desde ahí.
 
 **¿Hay versión para iPhone?**
 No hay app. Se puede usar el bloqueo de Reels y Shorts en Safari con la app gratuita *Userscripts*, cargando [`block.user.js`](app/src/main/assets/block.user.js).
@@ -82,12 +82,11 @@ No hay app. Se puede usar el bloqueo de Reels y Shorts en Safari con la app grat
 
 Todo corre en tu teléfono. No hay servidor, cuentas, anuncios ni analíticas, y Lúcido no manda tus datos a ningún lado. Solo se conecta a Instagram y YouTube (para mostrarlos) y a este repositorio (para actualizar las reglas de bloqueo y avisar de versiones nuevas).
 
-Para qué es cada permiso:
+Para qué es cada permiso (ninguno se pide hasta que activás la función que lo usa):
 
-- **Acceso a notificaciones**: para copiar las notificaciones de Instagram y YouTube y que se abran en Lúcido. Las de otras apps no se tocan.
-- **Accesibilidad**: para saber qué app se abrió, redirigir Instagram y YouTube oficiales, contar ese tiempo en tu límite y bloquear los navegadores de noche (si lo elegiste). Durante un compromiso o el modo dormir, también mira las pantallas de Ajustes y del instalador para que no puedas desinstalar o detener Lúcido en un impulso. No lee lo que escribís ni el contenido de Instagram o YouTube.
-- **Acceso a datos de uso** (opcional): para leer cuánto usabas Instagram y YouTube oficiales antes de instalar Lúcido, para el "antes vs ahora".
-- **Protección contra desinstalación** (opcional, solo durante un compromiso): un administrador de dispositivo sin ningún poder sobre el teléfono. No puede bloquearlo, borrarlo ni controlarlo; solo hace que haya que quitarlo antes de desinstalar.
-- **Notificaciones**: para avisarte antes del modo dormir, cuando llegás al límite y el resumen semanal.
+- **Acceso a notificaciones** (*Mensajes en Lúcido*): para copiar las notificaciones de Instagram y YouTube y que se abran en Lúcido. Las de otras apps no se tocan.
+- **Accesibilidad** (*modo dormir, foco, compromiso o bloquear las apps oficiales*): para saber qué app se abrió, redirigir Instagram y YouTube oficiales, contar ese tiempo en tu límite y bloquear los navegadores de noche (si lo elegiste). Durante un compromiso o el modo dormir, también mira las pantallas de Ajustes y del instalador para que no puedas desinstalar o detener Lúcido en un impulso. No lee lo que escribís ni el contenido de Instagram o YouTube.
+- **Acceso a datos de uso** (*Estadísticas*): para leer cuánto usabas Instagram y YouTube oficiales antes de instalar Lúcido, para el "antes vs ahora".
+- **Notificaciones** (*modo dormir, compromiso, mensajes y resumen semanal*): para avisarte antes del modo dormir, cuando llegás al límite y el resumen de los domingos.
 
 Las reglas de bloqueo se descargan de este repositorio por HTTPS para seguir funcionando cuando Instagram o YouTube cambian algo. Si preferís que no, apagá *Actualizar reglas de bloqueo* en Ajustes.

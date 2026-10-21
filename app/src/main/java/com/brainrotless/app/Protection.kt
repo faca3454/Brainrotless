@@ -1,30 +1,19 @@
 package com.brainrotless.app
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.app.AppOpsManager
 import android.app.PendingIntent
-import android.app.admin.DeviceAdminReceiver
-import android.app.admin.DevicePolicyManager
 import android.app.usage.UsageStatsManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.os.Bundle
-import android.os.CountDownTimer
 import android.os.Process
 import android.content.pm.PackageManager
 import android.provider.Settings
 import android.service.notification.StatusBarNotification
-import android.view.Gravity
 import android.view.accessibility.AccessibilityNodeInfo
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.activity.ComponentActivity
-import androidx.activity.OnBackPressedCallback
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -74,31 +63,12 @@ object UsageAccess {
 }
 
 /**
- * Difícil de sacar durante un compromiso: protección contra desinstalación (administrador de
- * dispositivo, con espera para quitarlo) y aviso fijo si se apaga la accesibilidad.
+ * Difícil de sacar durante un compromiso o el modo dormir: el escudo de la accesibilidad contra
+ * desinstalar o detener Lúcido, y aviso fijo si se apaga la accesibilidad.
  */
 object Protection {
     private const val CHANNEL = "guard"
     private const val NOTIF_ID = 2003
-
-    private fun dpm(c: Context) = c.getSystemService(DevicePolicyManager::class.java)
-    private fun admin(c: Context) = ComponentName(c, Admin::class.java)
-
-    fun adminActive(c: Context) = dpm(c)?.isAdminActive(admin(c)) == true
-
-    fun requestAdmin(a: Activity) {
-        val i = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
-            .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, admin(a))
-            .putExtra(
-                DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                a.getString(R.string.admin_explanation)
-            )
-        runCatching { a.startActivity(i) }
-    }
-
-    fun removeAdmin(c: Context) {
-        if (adminActive(c)) runCatching { dpm(c)?.removeActiveAdmin(admin(c)) }
-    }
 
     /** Accesibilidad apagada durante un compromiso: notificación fija hasta que se vuelva a activar. */
     @SuppressLint("MissingPermission") // sin permiso, notify() falla en silencio
@@ -181,67 +151,4 @@ object Protection {
         if (pm.getComponentEnabledSetting(comp) != want)
             runCatching { pm.setComponentEnabledSetting(comp, want, PackageManager.DONT_KILL_APP) }
     }
-}
-
-/** Administrador de dispositivo: sin él activo no se puede desinstalar la app. No usa ninguna política. */
-class Admin : DeviceAdminReceiver() {
-    override fun onDisableRequested(c: Context, i: Intent): CharSequence {
-        if (!Commitment.active(c)) return c.getString(R.string.admin_disable_free)
-        runCatching { c.startActivity(Intent(c, WaitActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-        return c.getString(R.string.admin_disable_warning, Commitment.daysLeft(c).toInt().let { c.resources.getQuantityString(R.plurals.days_left_n, it, it) })
-    }
-}
-
-/** Espera de 2 minutos antes de poder quitar la protección del compromiso, para cortar el impulso. */
-class WaitActivity : ComponentActivity() {
-    private var timer: CountDownTimer? = null
-
-    override fun attachBaseContext(base: Context) = super.attachBaseContext(Lang.wrap(base))
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        fun centered(v: TextView) = v.apply { gravity = Gravity.CENTER; setPadding(0, Brand.px(context, 8), 0, Brand.px(context, 8)) }
-        val countdown = centered(Brand.text(this, "", 44f, R.color.brand_primary, bold = true))
-        // Vuelve a la ventana del sistema para confirmar
-        val proceed = Brand.secondaryButton(this, getString(R.string.wait_continue)) { finish() }.apply { isEnabled = false; alpha = 0.4f }
-        val wrap = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-        setContentView(LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            val pad = Brand.px(context, 32)
-            setPadding(pad, pad, pad, pad)
-            addView(ImageView(context).apply { setImageResource(R.drawable.ic_logo) },
-                LinearLayout.LayoutParams(Brand.px(context, 56), Brand.px(context, 56)).apply { bottomMargin = Brand.px(context, 20) })
-            addView(centered(Brand.text(context, getString(R.string.wait_title), 24f, bold = true)))
-            addView(centered(Brand.text(context, getString(R.string.wait_text, Commitment.daysLeft(this@WaitActivity).toInt().let { resources.getQuantityString(R.plurals.days_left_n, it, it) }), 16f, R.color.brand_text_muted)))
-            addView(countdown)
-            addView(Brand.primaryButton(context, getString(R.string.wait_keep)) {
-                startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                finish()
-            }, wrap)
-            addView(proceed, LinearLayout.LayoutParams(wrap).apply { topMargin = Brand.px(context, 10) })
-        })
-
-        val back = object : OnBackPressedCallback(true) { override fun handleOnBackPressed() {} }
-        onBackPressedDispatcher.addCallback(this, back) // durante la espera, atrás no hace nada
-        timer = object : CountDownTimer(WAIT_MS, 1000) {
-            override fun onTick(left: Long) {
-                val s = (left + 999) / 1000
-                countdown.text = "%d:%02d".format(s / 60, s % 60)
-            }
-            override fun onFinish() {
-                countdown.text = "0:00"
-                proceed.isEnabled = true
-                proceed.alpha = 1f
-                back.isEnabled = false
-            }
-        }.start()
-    }
-
-    override fun onDestroy() {
-        timer?.cancel()
-        super.onDestroy()
-    }
-
-    private companion object { const val WAIT_MS = 2 * 60 * 1000L }
 }

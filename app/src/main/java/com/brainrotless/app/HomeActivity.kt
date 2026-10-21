@@ -19,9 +19,11 @@ import java.util.Locale
 
 /**
  * Pantalla principal de Lúcido (el ícono de la app): abrir Instagram o YouTube, cómo va el día,
- * modo dormir, compromiso y lo que falte configurar. Se vuelve a armar al volver a la pantalla.
+ * modo dormir, compromiso y, si falta, el permiso que necesita cada uno. Se vuelve a armar al
+ * volver a la pantalla.
  */
 class HomeActivity : ComponentActivity() {
+    private val notifAsk = NotifAsk(this)
     private lateinit var list: LinearLayout
     private var firstShow = true
     private var lang = "" // idioma con el que se armó la pantalla
@@ -30,7 +32,7 @@ class HomeActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Primera vez: la guía (idioma, permisos, plan); al terminar vuelve acá
+        // Primera vez: la guía (idioma, qué hace, plan); al terminar vuelve acá
         if (OnboardingActivity.needed(this)) {
             startActivity(OnboardingActivity.intent(this))
             finish()
@@ -66,8 +68,8 @@ class HomeActivity : ComponentActivity() {
     private fun render() {
         list.removeAllViews()
         add(header(), top = 0)
-        setupCard()?.let { add(it) }
         add(appsRow())
+        messagesCard()?.let { add(it) }
         add(todayCard())
         add(sleepCard())
         add(focusCard())
@@ -111,24 +113,36 @@ class HomeActivity : ComponentActivity() {
         })
     }
 
-    /** Lo que falta para que todo funcione; desaparece cuando está listo. */
-    private fun setupCard(): View? {
-        val notif = Setup.listenerOn(this)
-        val guard = Setup.guardOn(this)
-        if (notif && guard) return null
-        val box = column(Brand.text(this, getString(R.string.home_setup_title), 16f, bold = true))
-        box.background = Brand.rounded(this, R.color.brand_tonal, 20f)
-        val pad = Brand.px(this, 16)
-        box.setPadding(pad, pad, pad, Brand.px(this, 8))
-        fun step(done: Boolean, label: String, action: () -> Unit) = box.addView(row(
-            Brand.text(this, if (done) "✓" else "○", 16f, if (done) R.color.brand_primary else R.color.brand_text_muted, bold = true),
-            Brand.text(this, label, 15f),
-            onClick = if (done) null else action
-        ))
-        step(notif, getString(R.string.home_step_notif)) { Setup.openNotifications(this) }
-        step(guard, getString(R.string.home_step_guard)) { Setup.openAccessibility(this) }
-        if (Setup.restrictedApplies()) step(false, getString(R.string.gray_title)) { Setup.explainRestricted(this) }
-        return box
+    /** Sugerencia de que los mensajes abran acá; desaparece al activarlo o con "Ahora no". */
+    private fun messagesCard(): View? {
+        val prefs = userPrefs()
+        if (Setup.listenerOn(this) || prefs.getBoolean("hide_messages_card", false)) return null
+        val badge = ImageView(this).apply {
+            setImageResource(R.drawable.ic_message)
+            setColorFilter(Brand.color(context, R.color.brand_primary))
+            background = Brand.rounded(context, R.color.brand_tonal, 999f)
+            val p = Brand.px(context, 10)
+            setPadding(p, p, p, p)
+        }
+        val actions = LinearLayout(this).apply {
+            gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            addView(Brand.textButton(context, getString(R.string.not_now)) {
+                prefs.edit().putBoolean("hide_messages_card", true).apply()
+                render()
+            })
+            addView(Brand.secondaryButton(context, getString(R.string.turn_on)) { Setup.enableMessages(this@HomeActivity, notifAsk) },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { marginStart = Brand.px(context, 8) })
+        }
+        return Brand.card(LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(row(badge, column(
+                Brand.text(context, getString(R.string.messages_title), 16f, bold = true),
+                Brand.text(context, getString(R.string.messages_sub), 13f, R.color.brand_text_muted)
+            )), LinearLayout.LayoutParams(MATCH, ViewGroup.LayoutParams.WRAP_CONTENT))
+            addView(actions, LinearLayout.LayoutParams(MATCH, ViewGroup.LayoutParams.WRAP_CONTENT)
+                .apply { topMargin = Brand.px(context, 8) })
+        })
     }
 
     private fun appsRow() = LinearLayout(this).apply {
@@ -218,26 +232,34 @@ class HomeActivity : ComponentActivity() {
     }
 
     private fun sleepCard(): View {
+        val needsGuard = Sleep.enabled(this) && !Setup.guardOn(this)
         val sub = when {
             !Sleep.enabled(this) -> getString(R.string.home_sleep_off)
+            needsGuard -> getString(R.string.home_needs_guard)
             Sleep.current(this) != null -> getString(R.string.home_sleep_now, Sleep.fmt(this, Sleep.current(this)!!.end.toLocalTime()))
             else -> Sleep.nextNight(this)?.let { n ->
                 getString(R.string.home_sleep_next, Sleep.fmt(this, n.start.toLocalTime()), Sleep.fmt(this, n.end.toLocalTime()))
             } ?: getString(R.string.home_sleep_none)
         }
-        return linkCard(R.drawable.ic_moon, getString(R.string.home_sleep), sub, pill = null) { PanelActivity.open(this, PanelActivity.SLEEP) }
+        return linkCard(R.drawable.ic_moon, getString(R.string.home_sleep), sub, pill = null, warn = needsGuard) {
+            PanelActivity.open(this, PanelActivity.SLEEP)
+        }
     }
 
     private fun focusCard(): View {
+        val needsGuard = Focus.enabled(this) && !Setup.guardOn(this)
         val sub = when {
             !Focus.enabled(this) -> getString(R.string.home_focus_off)
+            needsGuard -> getString(R.string.home_needs_guard)
             Focus.current(this) != null -> getString(R.string.home_sleep_now, Sleep.fmt(this, Focus.current(this)!!.end.toLocalTime()))
             else -> Focus.next(this)?.let { b ->
                 val day = b.start.dayOfWeek.getDisplayName(TextStyle.FULL, Locale(Lang.current(this)))
                 getString(R.string.home_focus_next, day, Sleep.fmt(this, b.start.toLocalTime()), Sleep.fmt(this, b.end.toLocalTime()))
             } ?: getString(R.string.focus_no_days)
         }
-        return linkCard(R.drawable.ic_focus, getString(R.string.home_focus), sub, pill = null) { PanelActivity.open(this, PanelActivity.FOCUS) }
+        return linkCard(R.drawable.ic_focus, getString(R.string.home_focus), sub, pill = null, warn = needsGuard) {
+            PanelActivity.open(this, PanelActivity.FOCUS)
+        }
     }
 
     private fun commitmentCard(): View {
@@ -247,16 +269,17 @@ class HomeActivity : ComponentActivity() {
             }
         val left = Commitment.daysLeft(this)
         val pauses = Commitment.pausesLeft(this)
+        val needsGuard = !Setup.guardOn(this)
         return linkCard(
             R.drawable.ic_flag, getString(R.string.home_commit),
-            resources.getQuantityString(R.plurals.pauses_n, pauses, pauses) + " · " +
-                getString(if (Protection.adminActive(this)) R.string.home_protected else R.string.home_unprotected),
-            pill = resources.getQuantityString(R.plurals.days_n, left.toInt(), left.toInt())
+            if (needsGuard) getString(R.string.home_needs_guard) else resources.getQuantityString(R.plurals.pauses_n, pauses, pauses),
+            pill = resources.getQuantityString(R.plurals.days_n, left.toInt(), left.toInt()),
+            warn = needsGuard
         ) { PanelActivity.open(this, PanelActivity.COMMIT) }
     }
 
-    /** Tarjeta con ícono redondo, título, detalle y flecha, que lleva a Ajustes. */
-    private fun linkCard(icon: Int, title: String, sub: String, pill: String?, onClick: () -> Unit): View {
+    /** Tarjeta con ícono redondo, título, detalle (en color de alerta con [warn]) y flecha, que lleva a Ajustes. */
+    private fun linkCard(icon: Int, title: String, sub: String, pill: String?, warn: Boolean = false, onClick: () -> Unit): View {
         val badge = ImageView(this).apply {
             setImageResource(icon)
             setColorFilter(Brand.color(context, R.color.brand_primary))
@@ -272,7 +295,8 @@ class HomeActivity : ComponentActivity() {
                     .apply { marginStart = Brand.px(context, 8) })
             }
         }
-        return Brand.card(row(badge, column(titleRow, Brand.text(this, sub, 13f, R.color.brand_text_muted)), chevron = true), onClick)
+        val detail = Brand.text(this, sub, 13f, if (warn) R.color.brand_warning else R.color.brand_text_muted)
+        return Brand.card(row(badge, column(titleRow, detail), chevron = true), onClick)
     }
 
     // ---------- Ayudas de armado ----------

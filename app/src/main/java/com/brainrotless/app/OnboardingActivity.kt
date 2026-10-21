@@ -1,11 +1,8 @@
 package com.brainrotless.app
 
-import android.Manifest
 import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.text.format.DateFormat
 import android.view.Gravity
@@ -18,19 +15,18 @@ import android.widget.ScrollView
 import android.widget.Space
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
-import androidx.activity.result.contract.ActivityResultContracts
 import java.time.LocalTime
 
 /**
- * Guía del primer uso: idioma, qué hace Lúcido, permisos (cada uno con su explicación y una
- * tilde cuando está listo) y con qué arrancar (modo dormir y modo foco). Quien ya usaba Lúcido
- * no la ve sola; se puede volver a ver desde Ajustes.
+ * Guía del primer uso: idioma, qué hace Lúcido y con qué arrancar (modo dormir y modo foco).
+ * No pide permisos de entrada: cada función pide el suyo cuando la activás. Quien ya usaba
+ * Lúcido no la ve sola; se puede volver a ver desde Ajustes.
  */
 class OnboardingActivity : ComponentActivity() {
     companion object {
         private const val KEY = "onboarding_done"
         private const val EXTRA_AGAIN = "again"
-        private const val STEPS = 4
+        private const val STEPS = 3
 
         /** Primera vez. Quien ya había elegido idioma (usaba Lúcido antes de que hubiera guía) no la ve. */
         fun needed(c: Context): Boolean {
@@ -51,7 +47,7 @@ class OnboardingActivity : ComponentActivity() {
     private lateinit var scroll: ScrollView
     private lateinit var back: Button
     private lateinit var next: Button
-    private val notifPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { render() }
+    private val notifAsk = NotifAsk(this)
 
     override fun attachBaseContext(base: Context) = super.attachBaseContext(Lang.wrap(base))
 
@@ -121,7 +117,6 @@ class OnboardingActivity : ComponentActivity() {
         when (step) {
             0 -> language()
             1 -> welcome()
-            2 -> permissions()
             else -> plan()
         }
     }
@@ -155,30 +150,16 @@ class OnboardingActivity : ComponentActivity() {
         feature(R.drawable.ic_flag, tint = true, R.string.onb_f4_title, R.string.onb_f4_sub)
     }
 
-    private fun permissions() {
-        add(title(getString(R.string.onb_perm_title)), top = 28)
-        add(muted(getString(R.string.onb_perm_sub)), top = 6)
-        if (Build.VERSION.SDK_INT >= 33) permission(R.string.onb_p_notif_title, R.string.onb_p_notif_sub, R.string.stats_allow,
-            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED, top = 20
-        ) { notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS) }
-        permission(R.string.onb_p_listener_title, R.string.onb_p_listener_sub, R.string.turn_on, Setup.listenerOn(this),
-            top = if (Build.VERSION.SDK_INT >= 33) 12 else 20) { Setup.openNotifications(this) }
-        val guard = Setup.guardOn(this)
-        permission(R.string.onb_p_guard_title, R.string.onb_p_guard_sub, R.string.turn_on, guard,
-            gray = !guard && Setup.restrictedApplies()) { Setup.openAccessibility(this) }
-        permission(R.string.onb_p_links_title, R.string.onb_p_links_sub, R.string.onb_set_up, Setup.linksOn(this), optional = true) {
-            Setup.openLinks(this)
-        }
-        permission(R.string.onb_p_usage_title, R.string.onb_p_usage_sub, R.string.stats_allow, UsageAccess.granted(this), optional = true) {
-            UsageAccess.open(this)
-        }
-        if (!Setup.listenerOn(this) || !guard) add(muted(getString(R.string.onb_later)), top = 14)
-    }
-
     private fun plan() {
         add(title(getString(R.string.onb_plan_title)), top = 28)
         add(muted(getString(R.string.onb_plan_sub)), top = 6)
         val locked = Commitment.active(this) // con compromiso, esto se cambia en su pantalla (que no deja aflojar)
+        // Con modo dormir o foco, la Accesibilidad para que también frenen las apps oficiales
+        val guard = Setup.guardNotice(this, R.string.need_guard_plan)
+        fun showGuard() {
+            val wanted = (Sleep.enabled(this) || Focus.enabled(this)) && !Setup.guardOn(this)
+            guard.visibility = if (wanted) View.VISIBLE else View.GONE
+        }
 
         val (sleep, wake) = Sleep.get(this, null)
         val sleepHours = getString(R.string.night_range, Sleep.fmt(this, sleep), Sleep.fmt(this, wake))
@@ -187,6 +168,8 @@ class OnboardingActivity : ComponentActivity() {
                 switchRow(getString(R.string.home_sleep), getString(R.string.onb_f2_sub), Sleep.enabled(this)) { on ->
                     userPrefs().edit().putBoolean("sleep_on", on).apply()
                     Sleep.reschedule(this)
+                    showGuard()
+                    if (on) notifAsk.run() // para el aviso de antes de dormir
                 },
                 space(6),
                 linkRow(getString(R.string.onb_schedule), sleepHours) {
@@ -205,6 +188,7 @@ class OnboardingActivity : ComponentActivity() {
                 switchRow(getString(R.string.home_focus), getString(R.string.onb_f3_sub), Focus.enabled(this)) { on ->
                     userPrefs().edit().putBoolean("focus_on", on).apply()
                     Sleep.reschedule(this)
+                    showGuard()
                 },
                 space(6),
                 linkRow(getString(R.string.onb_schedule), focusHours) {
@@ -213,6 +197,8 @@ class OnboardingActivity : ComponentActivity() {
                     }
                 }
             )))
+        showGuard()
+        add(guard)
         add(muted(getString(R.string.onb_commit_hint)), top = 16)
     }
 
@@ -248,34 +234,6 @@ class OnboardingActivity : ComponentActivity() {
             addView(column(Brand.text(context, getString(title), 16f, bold = true), Brand.text(context, getString(sub), 14f, R.color.brand_text_muted)),
                 LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = Brand.px(context, 14) })
         }, top = top)
-    }
-
-    /**
-     * Un permiso: qué es y para qué sirve, y a la derecha una tilde si ya está o el botón para
-     * activarlo. [done] null: Android no deja saberlo (se muestra solo el botón).
-     */
-    private fun permission(title: Int, sub: Int, action: Int, done: Boolean?, optional: Boolean = false, gray: Boolean = false,
-                           top: Int = 12, onClick: () -> Unit) {
-        val name = LinearLayout(this).apply {
-            gravity = Gravity.CENTER_VERTICAL
-            addView(Brand.text(context, getString(title), 16f, bold = true))
-            if (optional) addView(Brand.text(context, getString(R.string.onb_optional), 11.5f, R.color.brand_text_muted, bold = true).apply {
-                background = Brand.rounded(context, R.color.brand_surface_alt, 999f)
-                setPadding(Brand.px(context, 8), Brand.px(context, 1), Brand.px(context, 8), Brand.px(context, 2))
-            }, LinearLayout.LayoutParams(WRAP, WRAP).apply { marginStart = Brand.px(context, 8) })
-        }
-        val text = column(name, Brand.text(this, getString(sub), 14f, R.color.brand_text_muted))
-        if (gray) text.addView(Brand.text(this, getString(R.string.gray_title), 14f, R.color.brand_primary, bold = true).apply {
-            setPadding(0, Brand.px(context, 8), 0, 0)
-            setOnClickListener { Setup.explainRestricted(this@OnboardingActivity) }
-        })
-        val status: View = if (done == true) Brand.text(this, "✓", 22f, R.color.brand_primary, bold = true)
-            else Brand.secondaryButton(this, getString(action)) { onClick() }
-        add(Brand.card(LinearLayout(this).apply {
-            gravity = Gravity.CENTER_VERTICAL
-            addView(text, LinearLayout.LayoutParams(0, WRAP, 1f))
-            addView(status, LinearLayout.LayoutParams(WRAP, WRAP).apply { marginStart = Brand.px(context, 12) })
-        }), top = top)
     }
 
     private fun switchRow(title: String, sub: String, checked: Boolean, onChange: (Boolean) -> Unit): View {

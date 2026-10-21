@@ -177,6 +177,8 @@ está por apagarla sin leer el contenido de la pantalla (y eso no lo hacemos); e
 fijo vuelve a aparecer si lo cerrás y IG Lite / YT Lite no abren. En Android 14+, el sistema deja
 deslizar los avisos fijos: por eso se vuelven a publicar.
 La app va a ser pública, así que no usamos el modo "propietario del dispositivo".
+> Después se sacó el administrador de dispositivo (y su espera de 2 minutos): Play Protect lo
+> toma como señal de app peligrosa. Queda el escudo de la accesibilidad contra desinstalar.
 - **Administrador de dispositivo:** para desinstalar hay que quitarle ese permiso primero; al
   intentarlo, aviso de "vas a romper tu compromiso de X días".
 - **Accesibilidad apagada:** notificación fija que no se puede cerrar. Mientras siga apagada,

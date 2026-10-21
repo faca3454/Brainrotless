@@ -45,6 +45,7 @@ class PanelActivity : AppCompatActivity() {
         fun open(c: Context, panel: String) = c.startActivity(intent(c, panel))
     }
 
+    private val notifAsk = NotifAsk(this)
     private lateinit var list: LinearLayout
     private val panel get() = intent.getStringExtra(EXTRA) ?: SLEEP
     private var draftDays = Commitment.MIN_DAYS // días elegidos antes de empezar un compromiso
@@ -83,9 +84,11 @@ class PanelActivity : AppCompatActivity() {
     private fun sleepPanel() {
         header(getString(R.string.home_sleep), toggle(Sleep.enabled(this)) { on ->
             change({ it.copy(sleepOn = on) }) { putBoolean("sleep_on", on) }
+            if (on) notifAsk.run() // para el aviso de antes de dormir
         })
         if (Commitment.active(this)) add(banner(getString(R.string.panel_locked)))
         add(muted(getString(R.string.pref_sleep_on_summary)), top = 4)
+        if (Sleep.enabled(this) && !Setup.guardOn(this)) add(Setup.guardNotice(this, R.string.need_guard_sleep))
 
         val perDay = Sleep.perDay(this)
         add(Brand.card(column(
@@ -152,6 +155,7 @@ class PanelActivity : AppCompatActivity() {
     private fun focusPanel() {
         header(getString(R.string.home_focus), toggle(Focus.enabled(this)) { on -> change { putBoolean("focus_on", on) } })
         add(muted(getString(R.string.pref_focus_on_summary)), top = 4)
+        if (Focus.enabled(this) && !Setup.guardOn(this)) add(Setup.guardNotice(this, R.string.need_guard_focus))
 
         val (start, end) = Focus.times(this)
         val days = Focus.days(this)
@@ -220,9 +224,13 @@ class PanelActivity : AppCompatActivity() {
             if (rules.isEmpty()) muted(getString(R.string.commit_needs))
             else muted(rules.joinToString("\n"))
         )))
+        // Sin Accesibilidad, abrir las apps oficiales se saltearía el límite: no se puede empezar
+        val guard = Setup.guardOn(this)
+        if (!guard) add(Setup.guardNotice(this, R.string.need_guard_commit))
+        val ready = rules.isNotEmpty() && guard
         add(Brand.primaryButton(this, getString(R.string.commit_start)) { confirmCommitment(draftDays) }.apply {
-            isEnabled = rules.isNotEmpty()
-            alpha = if (rules.isNotEmpty()) 1f else 0.4f
+            isEnabled = ready
+            alpha = if (ready) 1f else 0.4f
         }, top = 20)
 
         Commitment.lastSummary(this)?.let { last ->
@@ -232,6 +240,7 @@ class PanelActivity : AppCompatActivity() {
 
     private fun commitmentActive() {
         header(getString(R.string.home_commit))
+        if (!Setup.guardOn(this)) add(Setup.guardNotice(this, R.string.need_guard_commit), top = 4)
         val left = Commitment.daysLeft(this).toInt()
         val end = Date(Commitment.endMillis(this))
         val total = userPrefsCommitDays().coerceAtLeast(1)
@@ -248,12 +257,11 @@ class PanelActivity : AppCompatActivity() {
             addView(ring, FrameLayout.LayoutParams(size, size, Gravity.CENTER))
             addView(center, FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
         }
-        val protectedText = getString(if (Protection.adminActive(this)) R.string.home_protected else R.string.home_unprotected)
         add(Brand.card(column(
             ringBox,
             space(8),
-            muted(getString(R.string.panel_until, DateFormat.getDateFormat(this).format(end), DateFormat.getTimeFormat(this).format(end)) +
-                " · " + protectedText).apply { gravity = Gravity.CENTER }
+            muted(getString(R.string.panel_until, DateFormat.getDateFormat(this).format(end), DateFormat.getTimeFormat(this).format(end)))
+                .apply { gravity = Gravity.CENTER }
         )))
 
         // Hoy y pausas
@@ -285,14 +293,11 @@ class PanelActivity : AppCompatActivity() {
         }))
 
         add(label(getString(R.string.panel_extras)), top = 18)
-        add(Brand.card(column(
-            if (Protection.adminActive(this)) infoRow(getString(R.string.pref_protect), getString(R.string.protect_on))
-            else linkRow(getString(R.string.pref_protect), getString(R.string.protect_off)) { Protection.requestAdmin(this) },
-            space(8),
+        add(Brand.card(
             if (UsageAccess.granted(this)) infoRow(getString(R.string.pref_compare), getString(R.string.usage_access_on))
                 .also { UsageAccess.baseline(this) } // calcularlo ya, antes de que Android borre los datos viejos
             else linkRow(getString(R.string.pref_compare), getString(R.string.usage_access_off)) { UsageAccess.open(this) }
-        )))
+        ))
 
         if (BuildConfig.DEBUG) add(Brand.secondaryButton(this, getString(R.string.pref_debug_end)) {
             Commitment.cancelForTesting(this)
@@ -325,7 +330,7 @@ class PanelActivity : AppCompatActivity() {
                 Widgets.update(this)
                 toast(getString(R.string.commit_started, days))
                 render()
-                offerProtection()
+                notifAsk.run { offerCompare() } // avisos del límite y del final; después, comparar con antes
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
@@ -338,16 +343,13 @@ class PanelActivity : AppCompatActivity() {
         }, (5 - left) * 1000L)
     }
 
-    /** Recién empezado el compromiso: ofrecer la protección y el permiso para la estadística final. */
-    private fun offerProtection() {
-        val protect = !Protection.adminActive(this)
-        if (!protect && UsageAccess.granted(this)) return
+    /** Recién empezado el compromiso: ofrecer el permiso para la estadística final. */
+    private fun offerCompare() {
+        if (UsageAccess.granted(this) || isFinishing) return
         AlertDialog.Builder(this)
             .setTitle(R.string.offer_title)
             .setMessage(R.string.offer_msg)
-            .setPositiveButton(if (protect) R.string.offer_protect else R.string.offer_compare) { _, _ ->
-                if (protect) Protection.requestAdmin(this) else UsageAccess.open(this)
-            }
+            .setPositiveButton(R.string.offer_compare) { _, _ -> UsageAccess.open(this) }
             .setNegativeButton(R.string.not_now, null)
             .show()
     }
@@ -385,6 +387,39 @@ class PanelActivity : AppCompatActivity() {
             space(12),
             prefSwitch("swipe_reply", true, R.string.pref_swipe, R.string.pref_swipe_summary)
         )))
+
+        // Cada uno con su permiso, que se pide recién acá (o desde la función que lo necesita)
+        add(label(getString(R.string.panel_official)), top = 18)
+        val guard = Setup.guardOn(this)
+        val listener = Setup.listenerOn(this)
+        val box = column(
+            permissionRow(getString(R.string.pref_guard), getString(R.string.guard_sub), guard) { Setup.openAccessibility(this) },
+            space(14),
+            permissionRow(getString(R.string.messages_title), getString(R.string.messages_sub), listener) {
+                Setup.enableMessages(this, notifAsk)
+            },
+            space(14),
+            permissionRow(getString(R.string.links_title), getString(R.string.links_sub), Setup.linksOn(this),
+                action = getString(R.string.set_up)) { Setup.openLinks(this) }
+        )
+        if (Setup.restrictedApplies() && !(guard && listener)) box.addView(Brand.text(this, getString(R.string.gray_title), 13.5f,
+            R.color.brand_primary, bold = true).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            minHeight = Brand.px(context, 48)
+            setOnClickListener { Setup.explainRestricted(this@PanelActivity) }
+        }, LinearLayout.LayoutParams(WRAP, WRAP).apply { topMargin = Brand.px(this@PanelActivity, 6) })
+        add(Brand.card(box))
+    }
+
+    /** Qué hace un permiso y, a la derecha, una tilde si ya está o el botón para activarlo. [done] null: no se puede saber. */
+    private fun permissionRow(title: String, sub: String, done: Boolean?, action: String = getString(R.string.turn_on),
+                              onClick: () -> Unit) = LinearLayout(this).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        addView(column(Brand.text(context, title, 15.5f, bold = true), muted(sub)), LinearLayout.LayoutParams(0, WRAP, 1f))
+        val status = if (done == true) Brand.text(context, "✓", 22f, R.color.brand_primary, bold = true)
+            .apply { contentDescription = getString(R.string.turned_on) }
+            else Brand.secondaryButton(context, action, onClick)
+        addView(status, LinearLayout.LayoutParams(WRAP, WRAP).apply { marginStart = Brand.px(context, 12) })
     }
 
     private fun prefSwitch(key: String, default: Boolean, title: Int, sub: Int) =
@@ -418,7 +453,11 @@ class PanelActivity : AppCompatActivity() {
         add(Brand.card(dayChart(window, today, before)))
         add(statTiles(window, today, avg))
         splitCard(history, today, window)?.let { add(it) }
-        add(Brand.card(prefSwitch("weekly_summary", true, R.string.weekly_pref, R.string.weekly_pref_sub)))
+        add(Brand.card(switchRow(getString(R.string.weekly_pref), getString(R.string.weekly_pref_sub),
+            userPrefs().getBoolean("weekly_summary", true)) { on ->
+            change { putBoolean("weekly_summary", on) }
+            if (on) notifAsk.run()
+        }))
 
         Commitment.lastSummary(this)?.let { last ->
             add(Brand.card(linkRow(getString(R.string.pref_last), last.lines().first()) { showSummary(last, markSeen = false) }), top = 16)
