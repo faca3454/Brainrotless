@@ -27,27 +27,29 @@ class WidgetShots : Shots() {
             addView(v, FrameLayout.LayoutParams(Brand.px(c, w), Brand.px(c, h), Gravity.START))
         }
         addView(LinearLayout(c).apply {
-            addView(cell(80, 80, Widgets.mini(c, d)))
-            addView(cell(170, 170, Widgets.today(c, d)), LinearLayout.LayoutParams(-2, -2).apply { marginStart = p })
+            addView(cell(76, 76, Widgets.mini(c, d)))
+            addView(cell(164, 164, Widgets.today(c, d)), LinearLayout.LayoutParams(-2, -2).apply { marginStart = p })
         })
-        addView(cell(340, 80, Widgets.bar(c, d)), LinearLayout.LayoutParams(-2, -2).apply { topMargin = p })
+        addView(cell(344, 76, Widgets.bar(c, d)), LinearLayout.LayoutParams(-2, -2).apply { topMargin = p })
     }
     private val min = 60_000L
+    private val night = 23.5f to 7f
+    private val focus = 9f to 13f
 
     @Test fun conLimite() = shot("con_limite", listOf(BASE, DARK, EN, BIG_FONT)) { c ->
-        widgets(c, Widgets.data(c, 38 * min, 60 * min, false, c.getString(R.string.home_resets, "4:00")))
+        widgets(c, Widgets.data(c, 38 * min, 60 * min, false, c.getString(R.string.home_resets, "4:00"), night, focus, 10f + 20 / 60f))
     }
     @Test fun sinLimite() = shot("sin_limite", listOf(BASE, DARK)) { c ->
-        widgets(c, Widgets.data(c, 47 * min, null, false, c.getString(R.string.home_resets, "4:00")))
+        widgets(c, Widgets.data(c, 47 * min, null, false, c.getString(R.string.home_resets, "4:00"), night, null, 17f + 5 / 60f))
     }
     @Test fun limite() = shot("limite", listOf(BASE, DARK)) { c ->
-        widgets(c, Widgets.data(c, 75 * min, 60 * min, true, c.getString(R.string.home_over, "4:00")))
+        widgets(c, Widgets.data(c, 75 * min, 60 * min, true, c.getString(R.string.home_over, "4:00"), night, null, 20.5f))
     }
     @Test fun noche() = shot("noche", listOf(BASE, DARK)) { c ->
-        widgets(c, Widgets.data(c, 41 * min, 60 * min, false, c.getString(R.string.widget_night, "7:00")))
+        widgets(c, Widgets.data(c, 41 * min, 60 * min, false, c.getString(R.string.widget_night, "7:00"), night, null, 23f + 50 / 60f))
     }
     @Test fun extremos() = shot("extremos", listOf(BASE, WORST)) { c ->
-        widgets(c, Widgets.data(c, 1439 * min, 30 * min, true, c.getString(R.string.home_over, "4:00")))
+        widgets(c, Widgets.data(c, 1439 * min, 30 * min, true, c.getString(R.string.home_over, "4:00"), night, focus, 23f + 59 / 60f))
     }
 }
 

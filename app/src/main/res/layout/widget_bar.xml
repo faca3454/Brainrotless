@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Widget Barra (4×1): los textos los pone Widgets (estos son solo para la vista previa) -->
+<!--
+  Widget Barra (4×1): el dial chico, lo usado contra el límite y el estado, y los accesos a IG Lite
+  y YT Lite. Los textos y el dial los pone Widgets (estos son solo para la vista previa).
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/w_root"
     android:layout_width="match_parent"
@@ -7,14 +10,15 @@
     android:background="@drawable/widget_bg"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingStart="12dp"
-    android:paddingEnd="10dp">
+    android:paddingStart="10dp"
+    android:paddingEnd="12dp">
 
     <ImageView
-        android:layout_width="20dp"
-        android:layout_height="20dp"
+        android:id="@+id/w_ring"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:importantForAccessibility="no"
-        android:src="@drawable/ic_logo" />
+        android:src="@drawable/widget_ring_preview" />
 
     <LinearLayout
         android:layout_width="0dp"
@@ -30,26 +34,17 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:fontFamily="sans-serif-medium"
+            android:fontFeatureSettings="tnum"
             android:maxLines="1"
             android:text="@string/widget_preview_amount"
             android:textColor="@color/brand_text"
             android:textSize="16sp" />
 
-        <ProgressBar
-            android:id="@+id/w_progress"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="4dp"
-            android:layout_marginTop="3dp"
-            android:layout_marginBottom="3dp"
-            android:max="1000"
-            android:progress="380"
-            android:progressDrawable="@drawable/widget_progress" />
-
         <TextView
             android:id="@+id/w_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
             android:ellipsize="end"
             android:maxLines="1"
             android:text="@string/widget_preview_status"
@@ -59,16 +54,16 @@
 
     <ImageView
         android:id="@+id/w_ig"
-        android:layout_width="34dp"
-        android:layout_height="34dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
         android:contentDescription="@string/label_ig"
         android:src="@mipmap/ic_ig" />
 
     <ImageView
         android:id="@+id/w_yt"
-        android:layout_width="34dp"
-        android:layout_height="34dp"
-        android:layout_marginStart="6dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="8dp"
         android:contentDescription="@string/label_yt"
         android:src="@mipmap/ic_yt" />
 </LinearLayout>

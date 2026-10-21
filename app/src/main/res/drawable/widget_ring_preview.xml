@@ -1,9 +1,13 @@
-<!-- Anillo de muestra para la vista previa de los widgets (en el widget real se dibuja con los datos) -->
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Vista previa del dial de los widgets (en el widget real se dibuja con los datos): noche, foco, uso y la hora -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="48dp" android:height="48dp"
-    android:viewportWidth="48" android:viewportHeight="48">
-    <path android:pathData="M4,24 a20,20 0 1,0 40,0 a20,20 0 1,0 -40,0" android:strokeColor="@color/brand_surface_alt"
-        android:strokeWidth="5" android:fillColor="#00000000" />
-    <path android:pathData="M24,4 A20,20 0 0,1 37.69,38.58" android:strokeColor="@color/brand_primary"
-        android:strokeWidth="5" android:strokeLineCap="round" android:fillColor="#00000000" />
+    android:width="100dp" android:height="100dp"
+    android:viewportWidth="100" android:viewportHeight="100">
+    <path android:pathData="M6.75,50 a43.25,43.25 0 1,0 86.5,0 a43.25,43.25 0 1,0 -86.5,0" android:strokeColor="@color/brand_surface_alt" android:strokeWidth="7.5" android:fillColor="#00000000" />
+    <path android:pathData="M44.35,7.12 A43.25,43.25 0 0,1 91.78,61.19" android:strokeColor="@color/brand_night" android:strokeWidth="7.5" android:fillColor="#00000000" />
+    <path android:pathData="M80.58,80.58 A43.25,43.25 0 0,1 38.81,91.78" android:strokeColor="@color/brand_primary" android:strokeWidth="7.5" android:fillColor="#00000000" />
+    <path android:pathData="M16.5,50 a33.5,33.5 0 1,0 67.0,0 a33.5,33.5 0 1,0 -67.0,0" android:strokeColor="@color/brand_surface_alt" android:strokeWidth="5.5" android:fillColor="#00000000" />
+    <path android:pathData="M50.00,16.50 A33.5,33.5 0 1,1 25.10,72.42" android:strokeColor="@color/brand_text" android:strokeWidth="5.5" android:strokeLineCap="round" android:fillColor="#00000000" />
+    <path android:pathData="M-0.96,53.77 a7.88,7.88 0 1,0 15.75,0 a7.88,7.88 0 1,0 -15.75,0" android:fillColor="@color/brand_surface" />
+    <path android:pathData="M1.29,53.77 a5.62,5.62 0 1,0 11.25,0 a5.62,5.62 0 1,0 -11.25,0" android:fillColor="@color/brand_accent" />
 </vector>

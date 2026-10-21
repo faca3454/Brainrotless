@@ -250,6 +250,8 @@ class DayDial(c: Context) : View(c) {
     var usage: Float? = null
     var over = false
     var handles = false
+    /** Versión chica (widgets): sin marcas ni números de horas, con grosores proporcionales al tamaño. */
+    var compact = false
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val label = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -265,7 +267,8 @@ class DayDial(c: Context) : View(c) {
     private val sun = Brand.color(c, R.color.brand_accent)
     private val text = Brand.color(c, R.color.brand_text)
     private val warning = Brand.color(c, R.color.brand_warning)
-    private val ground = Brand.color(c, R.color.brand_bg)
+    /** Color de lo que hay detrás (el aro que separa las perillas del arco). */
+    var ground = Brand.color(c, R.color.brand_bg)
     private var grow = 1f
 
     /** El anillo de adentro se llena desde cero. */
@@ -283,8 +286,9 @@ class DayDial(c: Context) : View(c) {
     override fun onDraw(canvas: Canvas) {
         val cx = width / 2f
         val cy = height / 2f
-        val band = Brand.dp(context, 14f)
-        val r = minOf(cx, cy) - Brand.dp(context, 18f)
+        val size = minOf(width, height).toFloat()
+        val band = if (compact) size * 0.075f else Brand.dp(context, 14f)
+        val r = minOf(cx, cy) - if (compact) band / 2 + size * 0.03f else Brand.dp(context, 18f)
         box.set(cx - r, cy - r, cx + r, cy + r)
         paint.style = Paint.Style.STROKE
         paint.strokeCap = Paint.Cap.BUTT
@@ -294,7 +298,39 @@ class DayDial(c: Context) : View(c) {
         night?.let { (a, b) -> paint.color = nightColor; canvas.drawArc(box, angle(a), sweep(a, b), false, paint) }
         focus?.let { (a, b) -> paint.color = focusColor; canvas.drawArc(box, angle(a), sweep(a, b), false, paint) }
 
-        // Marcas de cada hora afuera; 0 · 6 · 12 · 18 adentro
+        if (!compact) hourMarks(canvas, cx, cy, r, band)
+
+        usage?.let { u ->
+            val ri = if (compact) r - band * 1.3f else r - band / 2 - label.textSize * 2.2f
+            box.set(cx - ri, cy - ri, cx + ri, cy + ri)
+            paint.strokeWidth = if (compact) size * 0.055f else Brand.dp(context, 6f)
+            paint.strokeCap = Paint.Cap.ROUND
+            paint.color = track
+            canvas.drawOval(box, paint)
+            paint.color = if (over) warning else text
+            if (u > 0f) canvas.drawArc(box, -90f, 360f * u.coerceAtMost(1f) * grow, false, paint)
+        }
+
+        fun dot(h: Float, color: Int, radius: Float) {
+            val a = Math.toRadians(angle(h).toDouble())
+            val x = cx + (r * cos(a)).toFloat()
+            val y = cy + (r * sin(a)).toFloat()
+            paint.style = Paint.Style.FILL
+            paint.color = ground // un aro del color del fondo lo separa del arco
+            canvas.drawCircle(x, y, radius + if (compact) band * 0.3f else Brand.dp(context, 3f), paint)
+            paint.color = color
+            canvas.drawCircle(x, y, radius, paint)
+            paint.style = Paint.Style.STROKE
+        }
+        val n = night
+        if (handles && n != null) {
+            dot(n.first, nightColor, Brand.dp(context, 12f))
+            dot(n.second, sun, Brand.dp(context, 12f))
+        } else dot(now, sun, if (compact) band * 0.75f else Brand.dp(context, 8f))
+    }
+
+    /** Marcas de cada hora afuera; 0 · 6 · 12 · 18 adentro. */
+    private fun hourMarks(canvas: Canvas, cx: Float, cy: Float, r: Float, band: Float) {
         paint.strokeWidth = Brand.dp(context, 1.5f)
         paint.color = label.color
         for (h in 0 until 24) {
@@ -309,33 +345,5 @@ class DayDial(c: Context) : View(c) {
             val rl = r - band / 2 - label.textSize
             canvas.drawText("$h", cx + (rl * cos(a)).toFloat(), cy + (rl * sin(a)).toFloat() + label.textSize / 3, label)
         }
-
-        usage?.let { u ->
-            val ri = r - band / 2 - label.textSize * 2.2f
-            box.set(cx - ri, cy - ri, cx + ri, cy + ri)
-            paint.strokeWidth = Brand.dp(context, 6f)
-            paint.strokeCap = Paint.Cap.ROUND
-            paint.color = track
-            canvas.drawOval(box, paint)
-            paint.color = if (over) warning else text
-            if (u > 0f) canvas.drawArc(box, -90f, 360f * u.coerceAtMost(1f) * grow, false, paint)
-        }
-
-        fun dot(h: Float, color: Int, radius: Float) {
-            val a = Math.toRadians(angle(h).toDouble())
-            val x = cx + (r * cos(a)).toFloat()
-            val y = cy + (r * sin(a)).toFloat()
-            paint.style = Paint.Style.FILL
-            paint.color = ground // un aro del color del fondo lo separa del arco
-            canvas.drawCircle(x, y, radius + Brand.dp(context, 3f), paint)
-            paint.color = color
-            canvas.drawCircle(x, y, radius, paint)
-            paint.style = Paint.Style.STROKE
-        }
-        val n = night
-        if (handles && n != null) {
-            dot(n.first, nightColor, Brand.dp(context, 12f))
-            dot(n.second, sun, Brand.dp(context, 12f))
-        } else dot(now, sun, Brand.dp(context, 8f))
     }
 }

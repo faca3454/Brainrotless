@@ -1,17 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Widget Mini (1×1): el anillo lo dibuja Widgets -->
+<!-- Widget Mini (1×1): el dial del día (lo dibuja Widgets) con los minutos de hoy adentro -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/w_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_bg"
-    android:padding="7dp">
+    android:padding="6dp">
 
     <ImageView
         android:id="@+id/w_ring"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:contentDescription="@string/widget_title"
+        android:importantForAccessibility="no"
         android:scaleType="fitCenter"
         android:src="@drawable/widget_ring_preview" />
+
+    <LinearLayout
+        android:layout_width="34dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <!-- Se achica si no entra (letra grande, "12:30") -->
+        <TextView
+            android:id="@+id/w_number"
+            android:layout_width="match_parent"
+            android:layout_height="24dp"
+            android:autoSizeMaxTextSize="20sp"
+            android:autoSizeMinTextSize="8sp"
+            android:autoSizeTextType="uniform"
+            android:fontFamily="sans-serif-medium"
+            android:fontFeatureSettings="tnum"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="@string/widget_preview_number"
+            android:textColor="@color/brand_text" />
+
+        <TextView
+            android:id="@+id/w_unit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="@string/widget_unit_min"
+            android:textColor="@color/brand_text_muted"
+            android:textSize="10sp" />
+    </LinearLayout>
 </FrameLayout>

@@ -194,6 +194,8 @@
     <string name="widget_label">Lúcido · Hoy</string>
     <string name="widget_desc">Tu uso de hoy y accesos a Instagram y YouTube</string>
     <string name="widget_title">Hoy</string>
+    <string name="widget_preview_number" translatable="false">23</string>
+    <string name="widget_preview_minutes" translatable="false">23 min</string>
     <string name="widget_preview_amount">23 min de 1 h</string>
     <string name="widget_preview_status">Se reinicia a las 06:30</string>
     <string name="widget_night">🌙 Modo dormir hasta las %1$s</string>

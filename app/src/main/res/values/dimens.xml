@@ -1,0 +1,4 @@
+<resources>
+    <!-- Esquinas de los widgets; en Android 12+ las del sistema (values-v31) -->
+    <dimen name="widget_radius">24dp</dimen>
+</resources>

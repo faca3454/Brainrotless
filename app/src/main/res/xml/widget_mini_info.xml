@@ -4,7 +4,7 @@
     android:initialLayout="@layout/widget_mini"
     android:minWidth="40dp"
     android:minHeight="40dp"
-    android:previewImage="@drawable/ic_logo"
+    android:previewImage="@drawable/widget_ring_preview"
     android:previewLayout="@layout/widget_mini"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="1"

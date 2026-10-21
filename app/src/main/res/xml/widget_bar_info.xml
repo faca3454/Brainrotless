@@ -6,7 +6,7 @@
     android:minHeight="40dp"
     android:minResizeWidth="180dp"
     android:minResizeHeight="40dp"
-    android:previewImage="@drawable/ic_logo"
+    android:previewImage="@drawable/widget_ring_preview"
     android:previewLayout="@layout/widget_bar"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="4"
