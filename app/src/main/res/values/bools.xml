@@ -1,0 +1,4 @@
+<resources>
+    <!-- Barras del sistema con íconos oscuros (fondo claro de la marca) -->
+    <bool name="light_bars">true</bool>
+</resources>
