@@ -254,6 +254,7 @@ object PanelScreen {
         val canPause: Boolean = false,
         val usageAccess: Boolean = false,
         val debug: Boolean = false,
+        val animate: Boolean = false, // la barra se llena desde cero (al abrir)
     )
 
     fun activeCommitment(c: Context, s: ActiveCommitState, a: Actions) = screen(c) { add ->
@@ -271,7 +272,7 @@ object PanelScreen {
                     .apply { setPadding(Brand.px(c, 10), 0, 0, Brand.px(c, 8)) })
             },
             space(c, 12),
-            FillBar(c, strong = true).apply { setFraction(1f - s.daysLeft.toFloat() / total) },
+            FillBar(c, strong = true).apply { setFraction(1f - s.daysLeft.toFloat() / total, s.animate) },
             space(c, 12),
             muted(c, c.getString(R.string.panel_until, DateFormat.getDateFormat(c).format(end), DateFormat.getTimeFormat(c).format(end)))
         ).apply {
@@ -401,6 +402,7 @@ object PanelScreen {
         val weeklyOn: Boolean = true,
         val lastSummary: String? = null,
         val resetAt: LocalTime = LocalTime.of(4, 0),
+        val animate: Boolean = false, // los gráficos crecen desde cero (al abrir o cambiar el rango)
     )
 
     fun stats(c: Context, s: StatsState, a: Actions) = screen(c) { add ->
@@ -462,10 +464,10 @@ object PanelScreen {
                 })), LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = Brand.px(c, 12) })
             },
             space(c, 14),
-            compareRow(c, c.getString(R.string.stats_before), null, before, maxOf(before, avg), strong = false),
+            compareRow(c, c.getString(R.string.stats_before), null, before, maxOf(before, avg), strong = false, animate = s.animate),
             space(c, 14),
             compareRow(c, c.getString(R.string.stats_now), c.resources.getQuantityString(R.plurals.stats_avg_days, days, days),
-                avg, maxOf(before, avg), strong = true)
+                avg, maxOf(before, avg), strong = true, animate = s.animate)
         )
         val extras = listOfNotNull(
             (before - avg).takeIf { it > 0 }?.let { c.getString(R.string.stats_week_less, rough(it * 7)) },
@@ -504,14 +506,14 @@ object PanelScreen {
         ))
     }
 
-    private fun compareRow(c: Context, name: String, sub: String?, value: Long, max: Long, strong: Boolean) = column(c,
+    private fun compareRow(c: Context, name: String, sub: String?, value: Long, max: Long, strong: Boolean, animate: Boolean) = column(c,
         LinearLayout(c).apply {
             gravity = Gravity.BOTTOM
             addView(Brand.text(c, if (sub != null) "$name · $sub" else name, Brand.Type.BODY, R.color.brand_text_muted), LinearLayout.LayoutParams(0, WRAP, 1f))
             addView(Brand.text(c, c.getString(R.string.stats_per_day, formatDuration(value)), Brand.Type.BODY, bold = true))
         },
         space(c, 6),
-        FillBar(c, strong).apply { setFraction(value.toFloat() / max) }
+        FillBar(c, strong).apply { setFraction(value.toFloat() / max, animate) }
     )
 
     /** Columnas por día; tocar una (o deslizar) muestra ese día arriba del gráfico. */
@@ -542,7 +544,7 @@ object PanelScreen {
             selected = n - 1
             onSelect = { show(it) }
             contentDescription = c.getString(R.string.stats_by_day)
-            animateIn()
+            if (s.animate) animateIn()
         }
         show(n - 1)
         return column(c, callout, muted(c, c.getString(R.string.stats_hint)), space(c, 14), chart)
@@ -597,7 +599,7 @@ object PanelScreen {
                     addView(Brand.text(c, "${formatDuration(ms)} · $pct%", Brand.Type.BODY, R.color.brand_text_muted))
                 },
                 space(c, 6),
-                FillBar(c, strong = true).apply { setFraction(ms / max) }
+                FillBar(c, strong = true).apply { setFraction(ms / max, s.animate) }
             ), LinearLayout.LayoutParams(0, WRAP, 1f).apply { marginStart = Brand.px(c, 12) })
         }
         box.addView(space(c, 12))

@@ -11,7 +11,6 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.view.MotionEvent
 import android.view.View
-import android.view.animation.DecelerateInterpolator
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -53,8 +52,8 @@ class DayBars(c: Context, private val mini: Boolean = false) : View(c) {
     /** Las columnas crecen desde abajo. */
     fun animateIn() {
         ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 650
-            interpolator = DecelerateInterpolator()
+            duration = 500
+            interpolator = Brand.EASE_OUT
             addUpdateListener { grow = it.animatedValue as Float; invalidate() }
         }.start()
     }
@@ -213,10 +212,12 @@ class FillBar(c: Context, private val strong: Boolean) : View(c) {
     private val box = RectF()
     private var shown = 0f
 
-    fun setFraction(f: Float) {
+    /** Con [animate], se llena desde cero (al abrir la pantalla); si no, queda directo. */
+    fun setFraction(f: Float, animate: Boolean = true) {
+        if (!animate) { shown = f.coerceIn(0f, 1f); invalidate(); return }
         ValueAnimator.ofFloat(0f, f.coerceIn(0f, 1f)).apply {
-            duration = 700
-            interpolator = DecelerateInterpolator()
+            duration = 500
+            interpolator = Brand.EASE_OUT
             addUpdateListener { shown = it.animatedValue as Float; invalidate() }
         }.start()
     }
@@ -270,8 +271,8 @@ class DayDial(c: Context) : View(c) {
     /** El anillo de adentro se llena desde cero. */
     fun animateIn() {
         ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 700
-            interpolator = DecelerateInterpolator(2f)
+            duration = 500
+            interpolator = Brand.EASE_OUT
             addUpdateListener { grow = it.animatedValue as Float; invalidate() }
         }.start()
     }

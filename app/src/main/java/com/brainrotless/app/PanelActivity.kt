@@ -39,6 +39,7 @@ class PanelActivity : AppCompatActivity() {
     private val panel get() = intent.getStringExtra(EXTRA) ?: SLEEP
     private var draftDays = Commitment.MIN_DAYS // días elegidos antes de empezar un compromiso
     private var statsRange = 7 // días que muestran las estadísticas
+    private var animateNext = true // los gráficos crecen al abrir la pantalla, no en cada cambio
 
     override fun attachBaseContext(base: Context) = super.attachBaseContext(Lang.wrap(base))
 
@@ -55,12 +56,13 @@ class PanelActivity : AppCompatActivity() {
 
     private fun render() {
         val a = actions()
+        val animate = animateNext.also { animateNext = false }
         val screen = when (panel) {
             FOCUS -> PanelScreen.focus(this, focusState(), a)
-            COMMIT -> if (Commitment.active(this)) PanelScreen.activeCommitment(this, activeState(), a)
+            COMMIT -> if (Commitment.active(this)) PanelScreen.activeCommitment(this, activeState(animate), a)
                 else PanelScreen.newCommitment(this, newState(), a)
             APPS -> PanelScreen.apps(this, appsState(), a)
-            STATS -> PanelScreen.stats(this, statsState(), a)
+            STATS -> PanelScreen.stats(this, statsState(animate), a)
             else -> PanelScreen.sleep(this, sleepState(), a)
         }
         // Las piezas pasan a la misma lista de siempre: así no se pierde lo que estaba desplazado
@@ -112,7 +114,7 @@ class PanelActivity : AppCompatActivity() {
         lastSummary = Commitment.lastSummary(this),
     )
 
-    private fun activeState(): PanelScreen.ActiveCommitState {
+    private fun activeState(animate: Boolean): PanelScreen.ActiveCommitState {
         val usageAccess = UsageAccess.granted(this)
         if (usageAccess) UsageAccess.baseline(this) // calcularlo ya, antes de que Android borre los datos viejos
         return PanelScreen.ActiveCommitState(
@@ -129,6 +131,7 @@ class PanelActivity : AppCompatActivity() {
             canPause = Commitment.canPause(this),
             usageAccess = usageAccess,
             debug = BuildConfig.DEBUG,
+            animate = animate,
         )
     }
 
@@ -141,7 +144,7 @@ class PanelActivity : AppCompatActivity() {
         restricted = Setup.restrictedApplies(),
     )
 
-    private fun statsState() = PanelScreen.StatsState(
+    private fun statsState(animate: Boolean) = PanelScreen.StatsState(
         history = Usage.history(this),
         today = Usage.today(this),
         range = statsRange,
@@ -153,6 +156,7 @@ class PanelActivity : AppCompatActivity() {
         weeklyOn = userPrefs().getBoolean("weekly_summary", true),
         lastSummary = Commitment.lastSummary(this),
         resetAt = Usage.nextReset(this).toLocalTime(),
+        animate = animate,
     )
 
     // ---------- Qué hace cada toque ----------
@@ -207,7 +211,7 @@ class PanelActivity : AppCompatActivity() {
         openAccessibility = { Setup.openAccessibility(this) },
         enableMessages = { Setup.enableMessages(this, notifAsk) },
         openLinks = { Setup.openLinks(this) },
-        statsRange = { n -> statsRange = n; render() },
+        statsRange = { n -> statsRange = n; animateNext = true; render() },
         weekly = { on ->
             change { putBoolean("weekly_summary", on) }
             if (on) notifAsk.run()

@@ -57,7 +57,7 @@ class HomeActivity : ComponentActivity() {
 
     private fun render() {
         list.removeAllViews()
-        val screen = HomeScreen.build(this, state(), actions())
+        val screen = HomeScreen.build(this, state(), actions(), animate = firstShow)
         // Las tarjetas pasan a la lista de la pantalla, con sus márgenes
         while (screen.childCount > 0) screen.getChildAt(0).let { v ->
             val lp = v.layoutParams
@@ -70,8 +70,8 @@ class HomeActivity : ComponentActivity() {
             firstShow = false
             for (i in 0 until list.childCount) list.getChildAt(i).apply {
                 alpha = 0f
-                translationY = Brand.dp(context, 12f)
-                animate().alpha(1f).translationY(0f).setStartDelay(i * 35L).setDuration(260).start()
+                translationY = Brand.dp(context, 8f)
+                animate().alpha(1f).translationY(0f).setStartDelay(i * 40L).setDuration(240).setInterpolator(Brand.EASE_OUT).start()
             }
         }
     }

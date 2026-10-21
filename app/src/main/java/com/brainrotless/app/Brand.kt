@@ -1,5 +1,6 @@
 package com.brainrotless.app
 
+import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.ColorStateList
@@ -16,7 +17,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import android.view.animation.DecelerateInterpolator
+import android.view.animation.PathInterpolator
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -45,6 +46,13 @@ object Brand {
         const val BODY = 14f // estados y explicaciones
         const val LABEL = 12f // nombres chicos (días del gráfico, leyendas)
     }
+
+    /**
+     * La curva de toda la app: desaceleración fuerte (cubic-bezier 0.23, 1, 0.32, 1). Arranca
+     * rápido, así responde al toque, y llega suave. Con "quitar animaciones" del sistema, los
+     * animadores de Android saltan solos al final.
+     */
+    val EASE_OUT = PathInterpolator(0.23f, 1f, 0.32f, 1f)
 
     fun color(c: Context, @ColorRes id: Int) = ContextCompat.getColor(c, id)
     fun dp(c: Context, v: Float) = v * c.resources.displayMetrics.density
@@ -237,36 +245,6 @@ object Brand {
     }
 }
 
-/** Anillo de progreso (uso del día contra el límite). Se dibuja solo, sin imágenes. */
-class RingView(c: Context) : View(c) {
-    private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = Brand.dp(c, 7f)
-        color = Brand.color(c, R.color.brand_surface_alt)
-    }
-    private val arc = Paint(track).apply { strokeCap = Paint.Cap.ROUND }
-    private val box = RectF()
-    private var shown = 0f
-
-    /** Progreso de 0 a 1 (null: sin límite, solo el aro). Anima desde el valor anterior. */
-    fun setProgress(p: Float?, warning: Boolean) {
-        arc.color = Brand.color(context, if (warning) R.color.brand_warning else R.color.brand_primary)
-        val target = (p ?: 0f).coerceIn(0f, 1f)
-        ValueAnimator.ofFloat(shown, target).apply {
-            duration = 700
-            interpolator = DecelerateInterpolator()
-            addUpdateListener { shown = it.animatedValue as Float; invalidate() }
-        }.start()
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        val inset = track.strokeWidth / 2
-        box.set(inset, inset, width - inset, height - inset)
-        canvas.drawOval(box, track)
-        if (shown > 0f) canvas.drawArc(box, -90f, 360f * shown, false, arc)
-    }
-}
-
 /**
  * Interruptor dibujado con Canvas, al estilo de Material 3 (no depende de los drawables del tema,
  * así se ve igual en cualquier teléfono): 52×32 dp dentro de 48 dp de alto. Tocarlo lo cambia y
@@ -283,11 +261,23 @@ class ToggleView(c: Context) : View(c) {
 
     var onChange: (Boolean) -> Unit = {}
 
+    private var shown = 0f // 0 apagado, 1 prendido; en el medio mientras se mueve la perilla
+    private var anim: ValueAnimator? = null
+
     var checked = false
         set(value) {
             if (field == value) return
             field = value
-            invalidate()
+            val target = if (value) 1f else 0f
+            anim?.cancel()
+            // Al armar la pantalla, sin animar; al tocarlo, la perilla se desliza (150 ms)
+            if (!isAttachedToWindow) { shown = target; invalidate(); return }
+            anim = ValueAnimator.ofFloat(shown, target).apply {
+                duration = 150
+                interpolator = Brand.EASE_OUT
+                addUpdateListener { shown = it.animatedValue as Float; invalidate() }
+                start()
+            }
         }
 
     init {
@@ -329,20 +319,24 @@ class ToggleView(c: Context) : View(c) {
         val top = height / 2f - r
         box.set(0f, top, width.toFloat(), top + 2 * r)
         paint.style = Paint.Style.FILL
-        paint.color = if (checked) onTrack else offTrack
+        paint.color = blend(offTrack, onTrack, shown)
         canvas.drawRoundRect(box, r, r, paint)
-        if (!checked) {
+        if (shown < 1f) {
             // Apagado: borde y perilla chica en el color del contorno (se distingue sin color)
             val sw = Brand.dp(context, 2f)
             paint.style = Paint.Style.STROKE
             paint.strokeWidth = sw
             paint.color = outline
+            paint.alpha = ((1f - shown) * 255).toInt()
             box.inset(sw / 2, sw / 2)
             canvas.drawRoundRect(box, r - sw / 2, r - sw / 2, paint)
+            paint.alpha = 255
             paint.style = Paint.Style.FILL
         }
-        paint.color = if (checked) onKnob else outline
-        val knob = Brand.dp(context, if (checked) 12f else 8f)
-        canvas.drawCircle(if (checked) width - r else r, height / 2f, knob, paint)
+        paint.color = blend(outline, onKnob, shown)
+        val knob = Brand.dp(context, 8f + 4f * shown)
+        canvas.drawCircle(r + (width - 2 * r) * shown, height / 2f, knob, paint)
     }
+
+    private fun blend(from: Int, to: Int, f: Float) = ArgbEvaluator().evaluate(f, from, to) as Int
 }

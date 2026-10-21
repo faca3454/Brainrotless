@@ -84,9 +84,14 @@ class OnboardingActivity : ComponentActivity() {
 
     private fun go(to: Int) {
         if (to >= STEPS) return finishGuide()
+        val forward = to > step
         step = to.coerceAtLeast(0)
         render()
         scroll.scrollTo(0, 0)
+        // Eje compartido: el paso nuevo entra desde el lado hacia el que se avanza
+        content.alpha = 0f
+        content.translationX = Brand.dp(this, if (forward) 24f else -24f) * if (resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_RTL) -1 else 1
+        content.animate().alpha(1f).translationX(0f).setDuration(220).setInterpolator(Brand.EASE_OUT).start()
     }
 
     private fun finishGuide() {

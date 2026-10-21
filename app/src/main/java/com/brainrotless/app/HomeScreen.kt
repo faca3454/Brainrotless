@@ -59,8 +59,8 @@ object HomeScreen {
         val settings: () -> Unit = {},
     )
 
-    /** La columna de la pantalla (va dentro de un ScrollView). */
-    fun build(c: Context, s: State, a: Actions): LinearLayout {
+    /** La columna de la pantalla (va dentro de un ScrollView). Con [animate], el anillo se llena (al abrir). */
+    fun build(c: Context, s: State, a: Actions, animate: Boolean = false): LinearLayout {
         val pad = Brand.px(c, 16)
         val list = LinearLayout(c).apply {
             orientation = LinearLayout.VERTICAL
@@ -70,7 +70,7 @@ object HomeScreen {
             list.addView(v, LinearLayout.LayoutParams(MATCH, WRAP).apply { topMargin = Brand.px(c, top) })
 
         add(header(c, a), top = 0)
-        add(today(c, s, a), top = 4)
+        add(today(c, s, a, animate), top = 4)
         add(appsRow(c, s, a), top = 20)
         if (s.showMessages) add(messagesCard(c, a))
         add(Brand.group(c, listOf(sleepRow(c, s, a), focusRow(c, s, a), commitmentRow(c, s, a),
@@ -100,7 +100,7 @@ object HomeScreen {
      * lo usado hoy. Abajo, cuándo se reinicia (o hasta cuándo dura la pausa) y la racha. Tocarlo
      * lleva a las estadísticas.
      */
-    private fun today(c: Context, s: State, a: Actions): View {
+    private fun today(c: Context, s: State, a: Actions, animate: Boolean): View {
         val limit = s.limitMs
         val over = limit != null && s.usedMs >= limit
         val reset = Sleep.fmt(c, s.resetAt)
@@ -119,7 +119,7 @@ object HomeScreen {
             now = hours(s.now)
             usage = limit?.let { s.usedMs.toFloat() / it }
             this.over = over
-            animateIn()
+            if (animate) animateIn()
         }
         // Lo de adentro entra en el anillo de uso: el número se achica si hace falta (letra grande)
         val amount = Brand.number(c, formatDuration(s.usedMs)).apply {
