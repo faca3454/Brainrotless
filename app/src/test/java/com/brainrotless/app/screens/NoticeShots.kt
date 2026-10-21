@@ -52,7 +52,10 @@ class NoticeShots : Shots(theme = "AppTheme") {
         screen(c, c.getString(R.string.guard_off_title), c.getString(R.string.guard_off_text), c.getString(R.string.turn_on))
     }
 
-    /** La barra de "solo mensajes" arriba de Instagram (con la pausa), y la de la pausa en curso. */
+    /**
+     * La barra de "solo mensajes" arriba de Instagram (con la pausa), la de la pausa en curso y los
+     * avisos de antes: cuándo empieza la noche y los últimos minutos del límite (1 y 10, por el plural).
+     */
     @Test fun barra() = shot("barra", ALL) { c ->
         fun bar(text: String, pause: Boolean) = Notices.lockBar(c) {}.apply {
             visibility = View.VISIBLE
@@ -69,6 +72,12 @@ class NoticeShots : Shots(theme = "AppTheme") {
             addView(bar(c.getString(R.string.ig_night_msg, "7:00"), pause = false))
             addView(FrameLayout(c), LinearLayout.LayoutParams(1, Brand.px(c, 24)))
             addView(bar(c.getString(R.string.pause_bar, "18:15"), pause = false))
+            addView(FrameLayout(c), LinearLayout.LayoutParams(1, Brand.px(c, 24)))
+            addView(bar(c.getString(R.string.sleep_warn_title, "23:30"), pause = false))
+            addView(FrameLayout(c), LinearLayout.LayoutParams(1, Brand.px(c, 24)))
+            addView(bar(c.resources.getQuantityString(R.plurals.minutes_left, 10, 10), pause = false))
+            addView(FrameLayout(c), LinearLayout.LayoutParams(1, Brand.px(c, 24)))
+            addView(bar(c.resources.getQuantityString(R.plurals.minutes_left, 1, 1), pause = false))
         }
     }
 }

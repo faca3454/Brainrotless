@@ -426,7 +426,7 @@ class MainActivity : ComponentActivity() {
     private fun countUsage() {
         val now = SystemClock.elapsedRealtime()
         val blocked = lockScreen.visibility == View.VISIBLE || guardScreen.visibility == View.VISIBLE
-        if (usageMark > 0 && !blocked) Usage.add(this, now - usageMark, if (onYouTube) Usage.App.YT else Usage.App.IG)
+        if (usageMark > 0 && !blocked) Usage.add(this, now - usageMark, if (onYouTube) Usage.App.YT else Usage.App.IG, toast = false)
         usageMark = now
     }
 
@@ -459,13 +459,22 @@ class MainActivity : ComponentActivity() {
         ytWebOrNull?.loadUrl("about:blank") // corta el video y el audio
     }
 
-    /** Barra arriba de la página: "solo mensajes" con el botón de pausa, o la pausa en curso. */
+    /**
+     * Barra arriba de la página: "solo mensajes" con el botón de pausa, la pausa en curso o, antes de
+     * que Instagram quede solo para mensajes, cuándo empieza la noche y los últimos minutos del límite.
+     */
     private fun refreshLockBar() {
         val ig = Lock.ig(this)
+        val shown = lockScreen.visibility != View.VISIBLE
+        val soon = Sleep.soon(this)
+        val left = Usage.remainingMs(this)?.takeIf { it in 1..10 * 60_000L }
         val text = when {
             Commitment.pauseActive(this) ->
                 getString(R.string.pause_bar, DateFormat.getTimeFormat(this).format(java.util.Date(Commitment.pauseUntil(this))))
-            ig != null && !onYouTube && lockScreen.visibility != View.VISIBLE -> Lock.igMessage(this, ig)
+            ig != null -> Lock.igMessage(this, ig).takeIf { !onYouTube && shown }
+            !shown -> null
+            soon != null -> getString(R.string.sleep_warn_title, Sleep.fmt(this, soon.toLocalTime()))
+            left != null -> ((left + 59_999) / 60_000).toInt().let { resources.getQuantityString(R.plurals.minutes_left, it, it) }
             else -> null
         }
         lockBar.visibility = if (text != null) View.VISIBLE else View.GONE

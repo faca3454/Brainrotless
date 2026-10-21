@@ -114,6 +114,13 @@ object Sleep {
 
     fun nextNight(c: Context) = next(c, TrustedClock.now(c))
 
+    /** Cuándo empieza la noche, si ya entramos en el aviso previo (los mismos minutos que la notificación). */
+    fun soon(c: Context): LocalDateTime? {
+        val now = TrustedClock.now(c)
+        val start = next(c, now)?.start ?: return null
+        return start.takeIf { warnMinutes(c) > 0 && !now.isBefore(start.minusMinutes(warnMinutes(c))) }
+    }
+
     /** Milisegundos hasta que empiece o termine una noche; null si el modo está apagado. */
     fun msUntilChange(c: Context): Long? {
         val now = TrustedClock.now(c)

@@ -63,8 +63,9 @@ object Rules {
             .put("smooth", p.getBoolean("smooth_transitions", false))
             .put("swipeReply", p.getBoolean("swipe_reply", true))
             .put("debug", testBuild) // APK de prueba: el script puede mandar diagnósticos y mediciones
-        // Hora de dormir o límite diario: Instagram solo para mensajes
-        Lock.ig(c)?.let { cfg.put("restricted", true).put("restrictedMsg", Lock.igMessage(c, it)) }
+        // Hora de dormir, foco o límite diario: Instagram solo para mensajes. El porqué y hasta cuándo
+        // lo dice la barra de la app (el cartel del script, restrictedMsg, queda para Safari)
+        if (Lock.ig(c) != null) cfg.put("restricted", true)
         val config = cfg.toString()
         val rules = current(c)
         if (config != built.first || rules != built.second) built = Triple(config, rules, "window.__noscrollCfg=$config;\n$rules")

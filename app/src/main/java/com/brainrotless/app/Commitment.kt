@@ -318,8 +318,11 @@ object Usage {
     fun overLimit(c: Context) = limitMs(c)?.let { todayMs(c) >= it } ?: false
     fun remainingMs(c: Context) = limitMs(c)?.let { (it - todayMs(c)).coerceAtLeast(0) }
 
-    /** Suma uso (salvo durante una pausa de emergencia) y avisa cuando queda poco o se termina. */
-    fun add(c: Context, ms: Long, app: App) {
+    /**
+     * Suma uso (salvo durante una pausa de emergencia) y avisa cuando queda poco o se termina. Con
+     * [toast] en false no muestra el aviso de "te quedan": IG Lite / YT Lite lo dicen en su barra.
+     */
+    fun add(c: Context, ms: Long, app: App, toast: Boolean = true) {
         if (ms <= 0 || Commitment.pauseActive(c)) return
         val before = remainingMs(c)
         val day = dayStart(c)
@@ -333,8 +336,8 @@ object Usage {
         val after = remainingMs(c) ?: return
         if (before == null) return
         for (min in listOf(10, 2)) {
-            if (before > min * 60_000 && after in 1..min * 60_000L)
-                Toast.makeText(c, c.getString(R.string.minutes_left, min), Toast.LENGTH_LONG).show()
+            if (toast && before > min * 60_000 && after in 1..min * 60_000L)
+                Toast.makeText(c, c.resources.getQuantityString(R.plurals.minutes_left, min, min), Toast.LENGTH_LONG).show()
         }
         if (before > 0 && after == 0L) notifyLimit(c)
     }

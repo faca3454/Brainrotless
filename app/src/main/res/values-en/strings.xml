@@ -76,7 +76,10 @@
     <string name="summary_pauses">\nEmergency breaks used: %1$d of %2$d</string>
     <string name="channel_commitment">Commitment</string>
     <string name="end_notif_text">Tap to see how much your usage dropped</string>
-    <string name="minutes_left">⏱ %1$d minutes of Instagram and YouTube left for today</string>
+    <plurals name="minutes_left">
+        <item quantity="one">⏱ %1$d minute of Instagram and YouTube left for today</item>
+        <item quantity="other">⏱ %1$d minutes of Instagram and YouTube left for today</item>
+    </plurals>
     <string name="channel_limit">Daily limit</string>
     <string name="limit_notif_title">⏱ You\'ve hit today\'s limit</string>
     <string name="limit_notif_text">Until %1$s, Instagram is messages only and YouTube is blocked.</string>
