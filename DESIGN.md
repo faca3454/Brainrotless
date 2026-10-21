@@ -2,210 +2,194 @@
 name: Lúcido
 description: Instagram y YouTube, sin piloto automático
 colors:
-  dawn-cream: "#FBF7F0"
-  paper-white: "#FFFFFF"
-  sand: "#F1EADF"
-  mint-mist: "#DDEFEA"
-  deep-teal: "#167A70"
-  on-deep-teal: "#FFFFFF"
-  sun-amber: "#F2A33A"
-  on-sun-amber: "#2B1A00"
-  ink: "#16211F"
-  ink-muted: "#5E6B68"
-  hairline: "#E6DED2"
-  ember: "#C9492E"
-  night-bg: "#0E1A1C"
-  night-surface: "#16272A"
-  night-surface-alt: "#1C3134"
-  night-tonal: "#1D3D3B"
-  night-teal: "#4FBFAD"
-  on-night-teal: "#06201D"
-  night-amber: "#F5B55C"
+  ground: "#F7F4EE"
+  surface: "#FFFFFF"
+  surface-alt: "#ECE6DC"
+  mint: "#DCEEE8"
+  on-mint: "#0B3F39"
+  teal: "#13695F"
+  on-teal: "#FFFFFF"
+  night: "#34447F"
+  sun: "#E8962A"
+  on-sun: "#2B1A00"
+  ink: "#15201E"
+  ink-muted: "#55625F"
+  hairline: "#E3DCD0"
+  outline: "#7A8683"
+  ember: "#B23A20"
+  night-ground: "#0B1416"
+  night-surface: "#132225"
+  night-surface-alt: "#1D2E31"
+  night-mint: "#1C3B39"
+  night-on-mint: "#BFE9E0"
+  night-teal: "#5CC8B6"
+  night-on-teal: "#04201C"
+  night-night: "#8C99E0"
+  night-sun: "#F5B55C"
   night-ink: "#EEE8DD"
-  night-ink-muted: "#9DAEAA"
-  night-hairline: "#25393C"
-  night-ember: "#F08467"
-  logo-deep: "#0F3B3A"
-  logo-cream: "#FBF3E6"
-  logo-sun: "#F4A93D"
+  night-ink-muted: "#A0B0AC"
+  night-hairline: "#223437"
+  night-outline: "#7F8F8B"
+  night-ember: "#F28B6E"
 typography:
-  numeral-xl:
-    fontFamily: "sans-serif-medium (Roboto Medium)"
+  hero:
+    fontFamily: "sans-serif-medium (Roboto Medium), tnum"
+    fontSize: "56sp"
+  display:
+    fontFamily: "sans-serif-medium (Roboto Medium), tnum"
     fontSize: "34sp"
-    fontWeight: 500
-  screen-title:
-    fontFamily: "sans-serif-medium (Roboto Medium)"
-    fontSize: "24-26sp"
-    fontWeight: 500
-  numeral:
+  headline:
     fontFamily: "sans-serif-medium (Roboto Medium)"
     fontSize: "22sp"
-    fontWeight: 500
   title:
     fontFamily: "sans-serif-medium (Roboto Medium)"
-    fontSize: "15.5-16sp"
-    fontWeight: 500
+    fontSize: "16sp"
   body:
     fontFamily: "sans-serif (Roboto)"
-    fontSize: "13-15sp"
-    fontWeight: 400
+    fontSize: "14sp"
   label:
-    fontFamily: "sans-serif-medium (Roboto Medium)"
+    fontFamily: "sans-serif (Roboto)"
     fontSize: "12sp"
-    fontWeight: 500
-    letterSpacing: "0.04em"
 rounded:
-  chip: "999dp"
-  banner: "14dp"
-  tile: "16dp"
-  card: "20dp"
+  chip: "12dp"
+  tile: "20dp"
+  card: "24dp"
+  dialog: "28dp"
+  pill: "999dp"
 spacing:
   xs: "4dp"
   sm: "8dp"
   md: "12dp"
   lg: "16dp"
-  screen: "18-20dp"
+  xl: "24dp"
 components:
   button-primary:
-    backgroundColor: "{colors.deep-teal}"
-    textColor: "{colors.on-deep-teal}"
-    rounded: "{rounded.chip}"
-    padding: "0 24dp"
-    height: "48dp"
+    backgroundColor: "{colors.teal}"
+    textColor: "{colors.on-teal}"
+    rounded: "{rounded.pill}"
+    height: "52dp"
   button-secondary:
-    backgroundColor: "{colors.dawn-cream}"
-    textColor: "{colors.deep-teal}"
+    backgroundColor: "{colors.ground}"
+    textColor: "{colors.teal}"
+    rounded: "{rounded.pill}"
+    height: "52dp"
+  chip:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
     rounded: "{rounded.chip}"
-    padding: "0 24dp"
-    height: "48dp"
-  chip-accent:
-    backgroundColor: "{colors.sun-amber}"
-    textColor: "{colors.on-sun-amber}"
+    height: "40dp (48dp táctil)"
+  chip-selected:
+    backgroundColor: "{colors.teal}"
+    textColor: "{colors.on-teal}"
     rounded: "{rounded.chip}"
-    height: "36dp"
-  card:
-    backgroundColor: "{colors.paper-white}"
+  group:
+    backgroundColor: "{colors.surface}"
     rounded: "{rounded.card}"
-    padding: "16dp"
-  stat-tile:
-    backgroundColor: "{colors.mint-mist}"
+  tile:
+    backgroundColor: "{colors.mint}"
+    textColor: "{colors.on-mint}"
     rounded: "{rounded.tile}"
-    padding: "10dp 12dp"
-  pill:
-    backgroundColor: "{colors.sun-amber}"
-    textColor: "{colors.on-sun-amber}"
-    rounded: "{rounded.chip}"
+    padding: "12dp 16dp"
 ---
 
 # Design System: Lúcido
 
-Estado: documenta la identidad **de hoy** (antes del rediseño). Fuente de verdad: `res/values/colors.xml`, `res/values-night/colors.xml` y `Brand.kt`.
+Fuente de verdad: `res/values/colors.xml`, `res/values-night/colors.xml`, `Brand.kt` (tipos, piezas, `EASE_OUT`) y `DayDial` en `Charts.kt`. Las capturas de cada pantalla están en `app/src/test/snapshots/images` (Paparazzi).
 
 ## Overview
 
-**Creative North Star: "El amanecer tranquilo"**
+**Creative North Star: "Reloj del día"**
 
-La madrugada todavía en calma (un verde azulado profundo) y un sol ámbar que asoma: el logo es literalmente eso, una L crema con un punto de sol. La app traduce esa escena a pantallas de papel crema con tarjetas blancas redondeadas, un solo acento verde azulado para todo lo que se toca y el ámbar reservado para lo que festeja o pide atención amable (rachas, días que quedan, la pausa). De noche la escena se invierte: fondo petróleo, tarjetas un poco más claras, el verde se aclara a menta.
+Lúcido no solo cuenta cuánto usaste: decide cuándo se cierra cada cosa. Por eso su pieza propia es un dial de 24 h con la medianoche arriba. La noche va en índigo y las horas de foco en verde azulado, como arcos sobre el borde. El sol ámbar del logo marca la hora actual, y adentro un anillo fino muestra lo usado del límite. El dial aparece en el inicio, en Modo dormir (con la luna al acostarse y el sol al levantarse) y en la bienvenida de la guía. El mismo sol vuelve en la punta del anillo de los widgets.
 
-Es una app para operar de pasada: densidad media, una columna, tarjetas apiladas con 12 dp entre sí, todo armado con vistas simples desde `Brand.kt`. No hay sombras ni capas: la profundidad es tonal (crema → blanco, petróleo → petróleo claro).
+El resto es una app Android de trabajo, tranquila y precisa. Una columna; grupos de filas en una sola superficie de 24 dp en vez de una tarjeta por cosa. Íconos de 48 dp, interruptores al estilo de Material 3 y una escala corta de tipos. La profundidad es tonal, sin sombras.
 
 **Key Characteristics:**
-- Una columna de tarjetas blancas de 20 dp sobre crema; en oscuro, superficies tonales sobre petróleo.
-- Un solo acento interactivo (verde azulado) y un acento cálido (ámbar) para logros y la pausa.
-- Rojo brasa solo para "te pasaste" o "falta un permiso".
-- Roboto y Roboto Medium del sistema, sin fuente propia.
-- Gráficos dibujados a mano (anillo, columnas, barras, puntos) con los mismos colores.
+- El dial de 24 h como firma; el sol ámbar marca "ahora".
+- Cada modo con su color: noche índigo, foco verde azulado, compromiso ámbar. El ícono se llena con su color solo si el modo está prendido.
+- Filas agrupadas con líneas finas; la flecha (chevron) y "volver" son íconos dibujados.
+- Todo texto en AA (4.5:1) en claro y oscuro.
+- Movimiento escaso, con una sola curva.
 
 ## Colors
 
-Cálida y contenida: crema y tinta casi negra, un verde azulado como única voz de acción, ámbar como sol.
+Cálida y contenida, con tres colores que significan algo.
 
 ### Primary
-- **Verde azulado profundo** (deep-teal / night-teal): botones primarios, interruptores prendidos, pastillas elegidas, anillos y columnas, links de ayuda, íconos dentro de círculos menta.
+- **Verde azulado** (teal / night-teal): todo lo que se toca (botones, interruptores, pastillas elegidas, subtítulos de sección) y el arco del foco.
 
 ### Secondary
-- **Sol ámbar** (sun-amber / night-amber): la pastilla de racha y de días del compromiso, el botón "Pausa" en la barra de IG Lite. Siempre con tinta café (on-sun-amber), 8:1.
+- **Índigo de noche** (night / night-night): el arco y el ícono del modo dormir, la perilla de "me acuesto".
 
 ### Tertiary
-- **Brasa** (ember / night-ember): texto de aviso (límite pasado, YouTube bloqueado, falta Accesibilidad), columnas de días pasados del límite, línea punteada del límite.
+- **Sol ámbar** (sun / night-sun): la hora actual en el dial, la perilla de "me levanto", la racha, los días del compromiso, el botón de pausa. Siempre con tinta café encima (on-sun), nunca como texto suelto sobre claro (2.4:1).
 
 ### Neutral
-- **Crema de amanecer** (dawn-cream / night-bg): fondo de todas las pantallas propias y de los avisos.
-- **Papel blanco** (paper-white / night-surface): tarjetas.
-- **Arena** (sand / night-surface-alt): pistas de anillos y barras, interruptor apagado, barra de "solo mensajes".
-- **Niebla menta** (mint-mist / night-tonal): fondo de íconos, banners, avisos de permisos, mosaicos de números, cajas de horario.
-- **Tinta** y **tinta suave** (ink, ink-muted): texto principal y secundario.
-- **Línea fina** (hairline): borde de botones secundarios y pastillas sin elegir.
+- **Fondo** (ground), **superficie** (surface), **arena** (surface-alt: pistas, apagado), **menta** (mint: avisos, mosaicos, horarios, con texto on-mint), **tinta** y **tinta suave**, **línea fina** (hairline: divisores) y **contorno** (outline: bordes de controles, 3:1).
+- **Brasa** (ember): solo para "te pasaste" y "falta un permiso".
 
 ### Named Rules
-**The One Voice Rule.** Todo lo que se toca es verde azulado; el ámbar no es un botón (salvo la pausa) y la brasa nunca.
-
-**The Contrast Debt Rule (hallazgo de hoy).** En claro, la brasa sobre crema da 4.39:1 y el verde sobre menta 4.35:1: quedan apenas por debajo de AA para texto chico. Hay que oscurecerlos antes de sumar más texto encima.
+**The Three Meanings Rule.** Índigo es noche, verde es foco y lo que se toca, ámbar es el sol (ahora, logros, la pausa). No se usan como decoración.
 
 ## Typography
 
-**Display Font:** Roboto Medium (`sans-serif-medium`)
-**Body Font:** Roboto (`sans-serif`)
+**Display/Body:** Roboto (Medium y Regular), sin fuente propia. Números con cifras tabulares.
 
-**Character:** la del sistema, sin fuente propia; la jerarquía sale solo de tamaño y del peso medio.
+### Hierarchy (Brand.Type)
+- **Hero** (56 sp): los días que faltan del compromiso.
+- **Display** (34 sp): uso de hoy, horarios, racha.
+- **Headline** (22 sp): título de pantalla (26 sp en la guía y los avisos).
+- **Title** (16 sp): título de fila o tarjeta.
+- **Body** (14 sp): estados, explicaciones, subtítulos de sección.
+- **Label** (12 sp): días del gráfico, leyendas.
 
-### Hierarchy
-- **Numeral XL** (Medium, 32–40 sp): los días que quedan, la racha, el "−49 %".
-- **Screen title** (Medium, 26 sp en inicio y guía, 24 sp en el panel).
-- **Numeral** (Medium, 20–22 sp): minutos de hoy, valores de los mosaicos; horarios en 28 sp.
-- **Title** (Medium, 15–16 sp): títulos de tarjetas y filas.
-- **Body** (Regular, 13–15 sp, tinta suave): explicaciones y estados.
-- **Label** (Medium, 12 sp, mayúsculas, 0.04 em): títulos de sección del panel.
-
-**The Size Sprawl Rule (hallazgo de hoy).** Hoy conviven 14 tamaños distintos (11.5 a 40 sp), elegidos pieza por pieza. Un rediseño debería reducirlos a la escala de roles.
+**The Shrink-Not-Wrap Rule.** Los números grandes (uso, horarios, mosaicos) van en una línea y se achican solos con letra grande, en vez de partirse.
 
 ## Layout
 
-Una columna con márgenes de 20 dp (inicio, guía) o 18 dp (panel). Tarjetas separadas por 12 dp; títulos de sección con 18 dp arriba. Interior de tarjeta 16 dp. En el inicio, IG y YT van lado a lado en dos tarjetas iguales y Ajustes queda empujado al pie. El panel no tiene barra superior del sistema: una fila con "←" y el título. Pastillas en filas que bajan de línea solas (FlowLayout).
+Una columna con 16 dp de margen. Bloques separados por 12 dp (20 dp antes de las apps en el inicio). Filas de 64 dp en grupos (56 dp dentro de tarjetas). El encabezado tiene 64 dp de alto, con volver y título a la izquierda y la acción (Ajustes, interruptor) a la derecha. En el inicio, el dial va arriba con 288 dp de alto; abajo, las apps lado a lado y el plan agrupado.
 
 ## Elevation & Depth
 
-Plano: sin sombras. La profundidad es tonal, de crema a blanco (claro) o de petróleo a petróleo claro (oscuro). Los botones primarios no tienen `stateListAnimator`.
-
-**The Flat Paper Rule.** Ninguna superficie propia proyecta sombra; solo los diálogos del sistema la tienen.
+Plano: sin sombras. La profundidad sale del tono (fondo, superficie, menta). Solo los diálogos flotan: superficie de la marca con esquinas de 28 dp (`BrandDialog`).
 
 ## Shapes
 
-Redondo y suave en todo: tarjetas 20 dp, mosaicos y cajas de horario 16 dp, banners 14 dp, botones y pastillas completamente redondos. Íconos dentro de círculos menta de 40–44 dp. El logo es un cuadrado redondeado.
+Esquinas de 24 dp en grupos y tarjetas, 20 dp en mosaicos y horarios, 12 dp en pastillas de opción, 28 dp en diálogos. Botones y etiquetas son completamente redondos; los íconos de modo van en círculos de 40 dp.
 
 ## Components
 
 ### Buttons
-- **Shape:** pastilla (999 dp), 48 dp de alto.
-- **Primary:** verde azulado lleno, texto blanco Medium 15 sp.
-- **Secondary:** crema con borde de línea fina y texto verde.
-- **Text:** sin fondo, texto tinta suave ("Ahora no").
-- **Accent chip:** ámbar, 36 dp de alto (por debajo de 48 dp).
-- **Press:** onda (ripple) verde translúcida recortada a la forma.
+- **Primary:** verde lleno, texto blanco Medium 15 sp, 52 dp de alto, pastilla.
+- **Secondary:** fondo del color de la pantalla, borde fino, texto verde.
+- **Text:** sin fondo ("Ahora no").
+- **Icon:** 48 dp, con descripción para TalkBack (volver, Ajustes).
+- **Pausa:** ámbar, 40 dp a la vista en una zona de 48 dp.
 
 ### Chips
-- **Style:** pastilla blanca con borde de línea fina; la elegida, verde llena con texto blanco. 13.5 sp Medium, ~34 dp de alto.
+- Opción: 40 dp a la vista en 48 dp táctiles, esquinas de 12 dp, borde de contorno; la elegida, verde llena.
+- Días de la semana: círculos de 40 dp en 48 dp.
 
-### Cards / Containers
-- **Corner Style:** 20 dp. **Background:** papel blanco. **Padding:** 16 dp. Las que se tocan llevan "›" a la derecha.
+### Rows and groups
+- `Brand.row`: ícono, título (con etiqueta ámbar opcional), estado (brasa si falta algo) y chevron. `Brand.group` las junta en una superficie con divisores sangrados.
+- Filas con interruptor: toda la fila lo cambia y TalkBack la lee como interruptor con su estado.
 
-### Navigation
-- Inicio como centro; cada tarjeta abre su pantalla del panel. Volver con "←" (texto) o el gesto del sistema.
+### Signature: DayDial
+- Banda de 14 dp con la noche y el foco; marcas de cada hora y 0 · 6 · 12 · 18; el sol ámbar en la hora actual; anillo de uso de 6 dp adentro, en brasa si se pasó del límite. Con `handles`, las perillas de luna y sol en las puntas de la noche.
 
-### Signature components
-- **Anillo de hoy** (RingView): aro de 7 dp, arena de pista, verde o brasa de progreso.
-- **Columnas por día** (DayBars): columnas de un color con la elegida llena, líneas punteadas de límite y "antes".
-- **Interruptor dibujado** (ToggleView): 48×28 dp, pista verde o arena.
-- **Aviso suave** (Brand.notice): bloque menta con el texto, el botón y "¿Un permiso aparece gris?".
+### Motion
+- Una curva: `Brand.EASE_OUT` (cubic-bezier 0.23, 1, 0.32, 1). Interruptor: 150 ms. Pasos de la guía: 220 ms (eje compartido, 24 dp). Gráficos: 500 ms, solo al abrir la pantalla. Entrada del inicio: 240 ms, escalonada de a 40 ms. Todo con animadores de Android, que respetan "quitar animaciones".
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** tomar colores de `colors.xml` (claro y oscuro), nunca hex sueltos en las pantallas.
-- **Do** usar tarjetas de 20 dp sobre el fondo crema y 12 dp entre ellas.
-- **Do** reservar el ámbar para logros y la pausa, y la brasa para límites y permisos que faltan.
+- **Do** tomar colores de `colors.xml` y tamaños de `Brand.Type`.
+- **Do** agrupar filas relacionadas en un `Brand.group` en vez de apilar tarjetas.
+- **Do** darle 48 dp a todo lo que se toca y descripción a todo ícono que se toca.
+- **Do** regrabar Paparazzi (`recordPaparazziDebug`) y mirar las capturas después de cada cambio visual.
 
 ### Don't:
-- **Don't** sumar sombras: la profundidad es tonal.
-- **Don't** usar Material Components ni Compose: todo sale de `Brand.kt`.
-- **Don't** poner texto chico en brasa sobre crema ni verde sobre menta sin corregir su contraste.
+- **Don't** usar el ámbar como texto sobre fondo claro ni la brasa fuera de avisos.
+- **Don't** escribir flechas o tildes como texto ("←", "›", "✓"): son íconos.
+- **Don't** sumar sombras, Material Components ni Compose.
+- **Don't** animar lo que se rearma seguido (un cambio de ajuste): solo al abrir.
