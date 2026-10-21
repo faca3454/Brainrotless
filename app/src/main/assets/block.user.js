@@ -588,7 +588,37 @@
     }, { capture: true, passive: true });
   }
 
-  // --- 10. Mediciones (solo APK de prueba) ---
+  // --- 10. Citas en los chats: tocar la foto o el reel de una respuesta abre el original ---
+  // Instagram web no hace nada al tocar la cita. Si el original está cargado en el chat (la misma
+  // imagen, más grande y con su botón), se toca ese. Si no está, queda como antes.
+  if (IG) {
+    const CLICKABLE = 'a[href],button,[role="button"],[role="link"]';
+    const fileOf = (m) => ((m.currentSrc || m.src || m.poster || '').split('?')[0].match(/[^/]+$/) || [''])[0];
+    addEventListener('click', (e) => {
+      if (!e.isTrusted || !/^\/direct\/t\//.test(location.pathname)) return;
+      const t = e.target.nodeType === 1 ? e.target : e.target.parentElement;
+      const btn = t && t.closest(CLICKABLE);
+      if (!btn || btn.hasAttribute('href')) return; // un link (perfil, post) ya lleva a algún lado
+      const media = t.matches('img,video') ? [t] : btn.querySelectorAll('img,video');
+      if (media.length !== 1) return;
+      const m = media[0], file = fileOf(m), w = m.getBoundingClientRect().width;
+      const original = file && [...document.querySelectorAll('img,video')].find((o) =>
+        o !== m && fileOf(o) === file && o.getBoundingClientRect().width > w * 1.1 && o.closest(CLICKABLE));
+      if (!original) return;
+      note('citas: toqué el original');
+      const r = original.getBoundingClientRect();
+      const at = { bubbles: true, cancelable: true, composed: true, view: window, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 };
+      setTimeout(() => { // como un dedo: el sitio puede escuchar cualquiera de estos
+        for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+          original.dispatchEvent(type.startsWith('pointer')
+            ? new PointerEvent(type, { ...at, pointerId: 9998, pointerType: 'touch', isPrimary: true })
+            : new MouseEvent(type, at));
+        }
+      }, 0);
+    }, true);
+  }
+
+  // --- 11. Mediciones (solo APK de prueba) ---
   // Tareas largas, cuánto tarda cada cambio de página en dibujarse y cada video en arrancar (de play()
   // a 'playing'). Al salir de la app se copia un resumen al portapapeles, para pegarlo en el chat.
   if (CFG.debug && window.NoScrollBridge && NoScrollBridge.report) {
@@ -695,7 +725,10 @@
       const tap = {
         t: e.timeStamp, event: e, reached: false, prevented: false, after: '', // hora del toque, antes que cualquier listener
         media: `${m.tagName.toLowerCase()} de ${Math.round(m.getBoundingClientRect().width)}px`,
-        twins: twins.map((o) => { const b = o.closest('a[href],button,[role="button"],[role="link"]'); return b ? desc(b) : 'sin botón'; }).join(' | ') || 'ninguna',
+        twins: twins.map((o) => {
+          const b = o.closest('a[href],button,[role="button"],[role="link"]');
+          return `${b ? desc(b) : 'sin botón'} de ${Math.round(o.getBoundingClientRect().width)}px`;
+        }).join(' | ') || 'ninguna',
         chain: chain.join(' < ').slice(0, 700), card: sanitize(card),
       };
       taps.push(tap);
