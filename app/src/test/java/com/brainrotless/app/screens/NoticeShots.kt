@@ -22,9 +22,22 @@ class NoticeShots : Shots(theme = "AppTheme") {
         screen(c, c.getString(R.string.offline_title), c.getString(R.string.offline_text), c.getString(R.string.retry))
     }
 
-    @Test fun youtubeLimite() = shot("youtube_limite", ALL) { c ->
+    private fun limit(c: Context) =
         screen(c, c.getString(R.string.lock_limit_title), c.getString(R.string.lock_limit_text, "4:00"), c.getString(R.string.go_to_messages),
             pause = c.getString(R.string.lock_pause_button, c.resources.getQuantityString(R.plurals.left_n, 2, 2)))
+
+    @Test fun youtubeLimite() = shot("youtube_limite", ALL) { c -> limit(c) }
+
+    /**
+     * Acostado, en un teléfono chico, en inglés y con letra al 130 %: no entra, así que queda con
+     * scroll en vez de aplastar (o hacer desaparecer) el botón de pausa. Con el alto real de la
+     * pantalla: si no, la captura crece hasta mostrar todo.
+     */
+    @Test fun youtubeLimiteAcostado() = shot("youtube_limite", listOf(TURNED)) { c ->
+        FrameLayout(c).apply {
+            addView(limit(c), FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+                Brand.px(c, c.resources.configuration.screenHeightDp - 24)))
+        }
     }
 
     @Test fun youtubeNoche() = shot("youtube_noche", listOf(BASE, DARK, EN)) { c ->

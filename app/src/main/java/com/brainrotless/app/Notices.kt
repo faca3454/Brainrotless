@@ -6,19 +6,30 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import androidx.core.view.ViewCompat
 
 /** Avisos de IG Lite y YT Lite (MainActivity): sin conexión, bloqueos, Accesibilidad apagada y la barra de "solo mensajes". */
 object Notices {
-    /** Pantalla completa con el logo, título, texto y uno o dos botones (sin conexión, bloqueos). */
+    /**
+     * Pantalla completa con el logo, título, texto y uno o dos botones (sin conexión, bloqueos).
+     * Centrada si entra; con scroll si no (teléfono acostado, letra grande), en vez de aplastar los botones.
+     */
     fun screen(
         c: Context, title: String, subtitle: String, button: String, button2: String? = null, onClick: () -> Unit
-    ) = LinearLayout(c).apply {
-        orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER
+    ) = ScrollView(c).apply {
         setBackgroundColor(Brand.color(c, R.color.brand_bg))
         visibility = View.GONE
         isClickable = true // que no pase el toque a la WebView de atrás
+        isFillViewport = true
+        addView(body(c, title, subtitle, button, button2, onClick))
+    }
+
+    private fun body(
+        c: Context, title: String, subtitle: String, button: String, button2: String?, onClick: () -> Unit
+    ) = LinearLayout(c).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER
         val pad = Brand.px(c, 32)
         setPadding(pad, pad, pad, pad)
         val wrap = ViewGroup.LayoutParams.WRAP_CONTENT

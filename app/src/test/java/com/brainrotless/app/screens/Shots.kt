@@ -14,6 +14,7 @@ import app.cash.paparazzi.Paparazzi
 import com.android.ide.common.rendering.api.SessionParams
 import com.android.resources.Density
 import com.android.resources.NightMode
+import com.android.resources.ScreenOrientation
 import com.brainrotless.app.Brand
 import com.brainrotless.app.R
 import org.junit.Rule
@@ -26,7 +27,8 @@ import java.util.TimeZone
  */
 abstract class Shots(theme: String = "HomeTheme") {
     /** Una variante: cómo se ve el teléfono. */
-    data class Look(val name: String, val dark: Boolean = false, val en: Boolean = false, val small: Boolean = false, val font: Float = 1f)
+    data class Look(val name: String, val dark: Boolean = false, val en: Boolean = false, val small: Boolean = false, val font: Float = 1f,
+                    val landscape: Boolean = false)
 
     companion object {
         val BASE = Look("claro")
@@ -36,6 +38,7 @@ abstract class Shots(theme: String = "HomeTheme") {
         val BIG_FONT = Look("letra130", font = 1.3f)
         val WORST = Look("chico_letra130_en", en = true, small = true, font = 1.3f)
         val ALL = listOf(BASE, DARK, EN, SMALL, BIG_FONT, WORST)
+        val TURNED = Look("acostado_chico_letra130_en", en = true, small = true, font = 1.3f, landscape = true)
 
         // A 2x (no a la densidad real): las imágenes se leen bien y pesan menos en el repo
         private val PHONE = DeviceConfig.PIXEL_5.copy(screenWidth = 786, screenHeight = 1702, xdpi = 320, ydpi = 320, density = Density.XHIGH)
@@ -57,7 +60,10 @@ abstract class Shots(theme: String = "HomeTheme") {
 
     fun shot(name: String, looks: List<Look>, draw: (Context) -> View) {
         for (look in looks) {
-            val device = if (look.small) SMALL_PHONE else PHONE
+            val phone = if (look.small) SMALL_PHONE else PHONE
+            // Acostado: ancho y alto se dan vuelta
+            val device = if (!look.landscape) phone else phone.copy(
+                screenWidth = phone.screenHeight, screenHeight = phone.screenWidth, orientation = ScreenOrientation.LANDSCAPE)
             paparazzi.unsafeUpdateConfig(deviceConfig = device.copy(
                 nightMode = if (look.dark) NightMode.NIGHT else NightMode.NOTNIGHT,
                 locale = if (look.en) "en" else "es",
