@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Lúcido
 // @description  Bloquea el feed de Reels/Shorts pero deja ver los que te mandan
-// @version      10
+// @version      11
 // @match        *://*.instagram.com/*
 // @match        *://instagram.com/*
 // @match        *://*.youtube.com/*
@@ -448,19 +448,27 @@
     const reply = async (bubble, target, x, y) => {
       const list = scrollerOf(bubble);
       const box = bubble.getBoundingClientRect();
-      // Un botón dentro de la lista solo vale si se ve y está a la altura de este mensaje
+      // La fila del mensaje (el primer ancestro de ancho completo). Instagram pone su barra (⋮ ↩ ☺) al
+      // costado del texto, que puede no ser lo que deslizaste: la cita de una respuesta, por ejemplo
+      const row = bubble.parentElement !== list ? bubble.parentElement : null;
+      // Un botón dentro de la lista solo vale si se ve y es de este mensaje: en su fila o a su altura
       // (puede haber quedado el de otro mensaje); uno en un menú aparte, sí
       const mine = (b) => {
         if (!list || !list.contains(b)) return true;
         const r = b.getBoundingClientRect();
         const cy = (r.top + r.bottom) / 2;
-        return r.width > 0 && r.height > 0 && cy >= box.top - 4 && cy <= box.bottom + 4;
+        return r.width > 0 && r.height > 0 && ((row && row.contains(b)) || (cy >= box.top - 4 && cy <= box.bottom + 4));
       };
+      // El más cercano al mensaje, por si quedó a la vista la barra de otro
       const findReply = (root) => {
+        let best = null, dist = Infinity;
         for (const el of root.querySelectorAll('[aria-label], [title], svg, [role="button"], [role="menuitem"], button')) {
-          if (isReply(el) && mine(el)) return el;
+          if (!isReply(el) || !mine(el)) continue;
+          const r = el.getBoundingClientRect();
+          const d = Math.abs(r.top + r.bottom - box.top - box.bottom);
+          if (d < dist) { best = el; dist = d; }
         }
-        return null;
+        return best;
       };
       // 1. Barra que aparece al pasar el mouse (Instagram en pantallas grandes)
       for (const type of ['mouseover', 'mouseenter', 'mousemove']) fire(target, type, x, y);
@@ -475,7 +483,12 @@
           if (!btn) await sleep(100);
         }
       }
-      if (!btn) { if (CFG.debug) report(bubble); return; }
+      if (!btn) {
+        // Que no quede colgada la barra de Instagram que abrió el "pasar el mouse"
+        for (const type of ['mouseout', 'mouseleave']) fire(target, type, x, y);
+        if (CFG.debug) report(bubble);
+        return;
+      }
       // Se toca el elemento mismo, aunque sea un dibujo SVG (que no tiene click()): el evento sube
       // hasta el botón que lo maneja, igual que con un dedo
       const r = btn.getBoundingClientRect();
@@ -525,8 +538,26 @@
       }, ms);
     });
 
+    // Pasado el punto de responder la burbuja sigue al dedo cada vez menos, en vez de frenar en seco
+    const rubber = (o) => (o * 120 * 0.55) / (120 + 0.55 * o);
+    const EASE = 'cubic-bezier(.23,1,.32,1)'; // la curva de la app (Brand.EASE_OUT)
+    const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches; // "quitar animaciones"
+    const haptic = () => { if (window.NoScrollBridge && typeof NoScrollBridge.haptic === 'function') NoScrollBridge.haptic(); };
+    // Flecha de responder dibujada (no un carácter), del color de los textos secundarios de Instagram
+    const replyIcon = () => {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('width', '24');
+      svg.setAttribute('height', '24');
+      const path = document.createElementNS(svg.namespaceURI, 'path');
+      path.setAttribute('d', 'M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z');
+      path.setAttribute('fill', 'currentColor');
+      svg.appendChild(path);
+      return svg;
+    };
+
     // Al tocar solo se anota dónde: la burbuja se busca (y se mide) si el dedo va hacia la derecha
-    let bubble = null, target = null, arrow = null, sx = 0, sy = 0, dx = 0, decided = false;
+    let bubble = null, target = null, arrow = null, sx = 0, sy = 0, dx = 0, decided = false, armed = false;
     addEventListener('touchstart', (e) => {
       bubble = target = null;
       if (simulating || !inChat() || e.touches.length !== 1) return;
@@ -535,6 +566,7 @@
       sy = e.touches[0].clientY;
       dx = 0;
       decided = false;
+      armed = false;
     }, { capture: true, passive: true });
     addEventListener('touchmove', (e) => {
       if (simulating || !(decided ? bubble : target)) return;
@@ -547,22 +579,28 @@
         panY(bubble);
         const r = bubble.getBoundingClientRect();
         arrow = document.createElement('div');
-        arrow.textContent = '↩';
-        arrow.style.cssText = `position:fixed;left:${Math.max(8, r.left - 30)}px;top:${r.top + r.height / 2 - 14}px;` +
-          'font:22px/28px sans-serif;opacity:0;pointer-events:none;z-index:2147483647;color:#888;transition:transform .15s';
+        arrow.appendChild(replyIcon());
+        arrow.style.cssText = `position:fixed;left:${Math.max(8, r.left - 32)}px;top:${r.top + r.height / 2 - 12}px;` +
+          'width:24px;height:24px;opacity:0;pointer-events:none;z-index:2147483647;color:#8e8e8e;' +
+          (still() ? '' : `transition:transform .15s ${EASE}`);
         document.body.appendChild(arrow);
       }
-      dx = Math.max(0, Math.min(mx, 90));
+      dx = Math.max(0, mx);
       bubble.style.transition = 'none';
-      bubble.style.transform = `translateX(${dx}px)`;
+      bubble.style.transform = `translateX(${dx <= 60 ? dx : 60 + rubber(dx - 60)}px)`;
       arrow.style.opacity = String(Math.min(dx / 60, 1));
-      arrow.style.transform = dx >= 60 ? 'scale(1.25)' : ''; // pasó el punto: soltar responde
+      // Pasó el punto: soltar responde. Se marca con la flecha y una vibración corta (una vez por pasada)
+      if ((dx >= 60) !== armed) {
+        armed = dx >= 60;
+        arrow.style.transform = armed ? 'scale(1.25)' : '';
+        if (armed) haptic();
+      }
     }, { capture: true, passive: true });
     const end = (cancel) => () => {
       if (simulating || !bubble || !decided) { bubble = null; return; }
       const b = bubble, t = target;
       bubble = null;
-      b.style.transition = 'transform .2s';
+      b.style.transition = still() ? 'none' : `transform .2s ${EASE}`;
       b.style.transform = '';
       if (arrow) { arrow.remove(); arrow = null; }
       if (!cancel && dx >= 60) setTimeout(() => reply(b, t, sx, sy), 220); // cuando volvió a su lugar

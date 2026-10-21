@@ -19,6 +19,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.text.format.DateFormat
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.*
@@ -78,7 +79,12 @@ class MainActivity : ComponentActivity() {
     private var lang = "" // idioma con el que se armó la pantalla
     private lateinit var guardScreen: View // accesibilidad apagada durante un compromiso
 
-    private val bridge = Bridge { text -> runOnUiThread { copyDiagnostic(text) } }
+    private val bridge = Bridge(
+        onReport = { text -> runOnUiThread { copyDiagnostic(text) } },
+        // Deslizar para responder pasó el punto: la vibración del sistema (respeta "respuesta táctil")
+        onHaptic = { runOnUiThread { web.performHapticFeedback(
+            if (Build.VERSION.SDK_INT >= 34) HapticFeedbackConstants.GESTURE_THRESHOLD_ACTIVATE else HapticFeedbackConstants.CONTEXT_CLICK) } },
+    )
     private val scriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private var injectedScript = ""
     private var mainFrameError = false
@@ -209,7 +215,7 @@ class MainActivity : ComponentActivity() {
             allowFileAccess = false
             userAgentString = userAgentString.replace("; wv", "") // ayuda con algunos logins
         }
-        // Solo expone setAtTop(boolean) y, en los APK de prueba, report(texto): nada sensible si una página lo llama
+        // Solo expone setAtTop(boolean), haptic() y, en los APK de prueba, report(texto): nada sensible si una página lo llama
         addJavascriptInterface(bridge, "NoScrollBridge")
         webViewClient = client
         webChromeClient = chromeClient
@@ -568,11 +574,19 @@ class MainActivity : ComponentActivity() {
         scriptHandlers[v] = WebViewCompat.addDocumentStartJavaScript(v, injectedScript, scriptOrigins)
     }
 
-    /** Puente JS → app: pull-to-refresh y, solo en los APK de prueba, diagnósticos del script. */
-    class Bridge(private val onReport: (String) -> Unit) {
+    /** Puente JS → app: pull-to-refresh, la vibración de deslizar para responder y, solo en los APK de prueba, diagnósticos del script. */
+    class Bridge(private val onReport: (String) -> Unit, private val onHaptic: () -> Unit) {
         @Volatile private var top = false
         val atTop get() = top
+        @Volatile private var lastHaptic = 0L
         @JavascriptInterface fun setAtTop(value: Boolean) { top = value }
+        // Una vibración corta, como mucho una cada 300 ms (si una página la llamara de más, solo vibra)
+        @JavascriptInterface fun haptic() {
+            val now = SystemClock.uptimeMillis()
+            if (now - lastHaptic < 300) return
+            lastHaptic = now
+            onHaptic()
+        }
         @JavascriptInterface fun report(text: String) { if (testBuild) onReport(text.take(10_000)) }
     }
 
