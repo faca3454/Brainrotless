@@ -38,6 +38,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.webkit.ScriptHandler
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
     private lateinit var root: FrameLayout
@@ -58,6 +59,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var webs: FrameLayout
     private var lostUrl: String? = null // página que el sistema cerró con la app en segundo plano
     private var backToYouTube: Boolean? = null // llegaste por un link desde la otra plataforma: atrás vuelve ahí
+    private var pendingChat: String? = null // chat a abrir cuando termine de cargar Instagram (notificación)
     private lateinit var content: LinearLayout
     private lateinit var offline: View
     private lateinit var retryButton: View
@@ -182,7 +184,7 @@ class MainActivity : ComponentActivity() {
             }
         })
 
-        if (savedInstanceState == null) open(urlFromIntent(intent) ?: launcherUrl(intent))
+        if (savedInstanceState == null) open(urlFromIntent(intent) ?: launcherUrl(intent), intent.getStringExtra(EXTRA_CHAT))
         else {
             savedInstanceState.getBundle("ig")?.let { igWeb.restoreState(it) }
             savedInstanceState.getBundle("yt")?.let { ytWeb.restoreState(it) }
@@ -263,6 +265,10 @@ class MainActivity : ComponentActivity() {
             }
             // Respaldo para WebViews viejas; el script tiene guardia contra doble inyección
             v.evaluateJavascript(injectedScript, null)
+            if (v === igWeb) pendingChat?.let { chat ->
+                pendingChat = null
+                v.evaluateJavascript("window.__lucidoGo && __lucidoGo(null, ${JSONObject.quote(chat)})", null)
+            }
         }
 
         // El sistema cerró la página (falta de memoria) o se cayó: WebView nueva en su lugar, en vez de
@@ -458,13 +464,20 @@ class MainActivity : ComponentActivity() {
         usageMark = now
     }
 
-    /** Carga una URL en la WebView de su plataforma, salvo YouTube bloqueado. */
-    private fun open(url: String) {
+    /** Carga una URL en la WebView de su plataforma, salvo YouTube bloqueado. Con [chat], abre ese chat de Instagram. */
+    private fun open(url: String, chat: String? = null) {
         val v = if (isYouTube(url)) ytWeb else igWeb
         switchTo(v)
         if (v !== igWeb && Lock.yt(this) != null) { showLockScreen(); return }
         lockScreen.visibility = View.GONE
-        v.loadUrl(url)
+        val load = { pendingChat = chat; v.loadUrl(url) }
+        if (v !== igWeb || !hasPage(v)) return load()
+        // Instagram ya cargado (ej: una notificación): el script navega dentro del sitio, sin recargar ni
+        // parpadeo, y abre el chat. Si no se encarga (otra ruta, un script viejo), se carga como siempre.
+        val path = JSONObject.quote(Uri.parse(url).path ?: "/")
+        v.evaluateJavascript("window.__lucidoGo ? __lucidoGo($path, ${chat?.let(JSONObject::quote)}) : false") {
+            if (it != "true") load()
+        }
     }
 
     private fun showLockScreen() {
@@ -537,7 +550,7 @@ class MainActivity : ComponentActivity() {
         if (fullscreenView != null) exitFullscreen()
         handlePauseIntent(intent)
         val url = urlFromIntent(intent)
-        if (url != null) { open(url); return }
+        if (url != null) { open(url, intent.getStringExtra(EXTRA_CHAT)); return }
         // Tocaste un ícono: volver a donde estabas en esa plataforma, sin recargar
         goTo(isYouTubeAlias(intent))
     }
@@ -709,6 +722,7 @@ class MainActivity : ComponentActivity() {
         private const val YT_HOME = "https://m.youtube.com"
         private const val YT_DARK = 0xFF0F0F0F.toInt() // fondo de YouTube en oscuro (su theme-color)
         const val EXTRA_PAUSE = "pause" // desde la notificación del límite: usar la pausa de emergencia
+        const val EXTRA_CHAT = "chat" // desde la notificación de un mensaje: el nombre del chat, para abrirlo
         private const val PERF_REPORT = "Lúcido rendimiento" // así empieza el resumen de mediciones del script
     }
 }

@@ -86,8 +86,11 @@ class NotifRedirect : NotificationListenerService() {
             else sbn.key
         val id = "${sbn.packageName}/$key".hashCode()
 
+        // Un mensaje de Instagram abre ese chat (IG Lite lo busca por el nombre con que aparece en la lista)
+        val chat = if (ig && isMessage) (original?.conversationTitle ?: title)?.toString() else null
         val open = Intent(Intent.ACTION_VIEW, Uri.parse(url), this, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            .putExtra(MainActivity.EXTRA_CHAT, chat)
         val pi = PendingIntent.getActivity(
             this, id, open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )

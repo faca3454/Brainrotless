@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Lúcido
 // @description  Bloquea el feed de Reels/Shorts pero deja ver los que te mandan
-// @version      9
+// @version      10
 // @match        *://*.instagram.com/*
 // @match        *://instagram.com/*
 // @match        *://*.youtube.com/*
@@ -763,5 +763,92 @@
           `\n  después: ${t.after || 'sin medir'}\n  otra igual: ${t.twins}\n  cadena: ${t.chain}\n  ${t.card}`),
       ].join('\n'));
     });
+  }
+
+  // --- 12. Abrir desde una notificación, sin recargar (Instagram) ---
+  // La app llama a __lucidoGo(ruta, chat) si Instagram ya está cargado: se navega dentro del sitio
+  // (como el botón atrás) y, si viene el nombre del chat, se toca su fila en la lista. Devuelve true
+  // si se encarga; si no, la app carga la URL como antes. Solo toca una fila si hay una sola con ese
+  // nombre exacto (si no, queda en la lista: nunca abre otro chat), y si tocás algo, deja de buscar.
+  if (IG) {
+    const CLICKABLE = 'a[href],button,[role="button"],[role="link"]';
+    const norm = (t) => (t || '').normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase();
+    const named = (name) => {
+      const out = [];
+      if (!document.body) return out;
+      const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let n; (n = walk.nextNode());) if (n.parentElement && norm(n.data) === name) out.push(n.parentElement);
+      return out;
+    };
+    // Las filas de la lista ocupan casi todo el ancho (las notas de arriba, no)
+    const rows = (name) => {
+      const found = new Set();
+      for (const el of named(name)) {
+        const row = el.closest(CLICKABLE);
+        const r = row && row.getBoundingClientRect();
+        if (r && r.width >= innerWidth * 0.6 && r.height > 0 && r.height < innerHeight / 2) found.add(row);
+      }
+      return [...found];
+    };
+    // Ya en ese chat: su nombre está en el encabezado
+    const inChat = (name) => /^\/direct\/t\//.test(location.pathname) &&
+      named(name).some((el) => { const r = el.getBoundingClientRect(); return r.height > 0 && r.bottom < 140; });
+    const tap = (el) => {
+      const r = el.getBoundingClientRect();
+      const at = { bubbles: true, cancelable: true, composed: true, view: window, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 };
+      for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+        el.dispatchEvent(type.startsWith('pointer')
+          ? new PointerEvent(type, { ...at, pointerId: 9997, pointerType: 'touch', isPrimary: true })
+          : new MouseEvent(type, at));
+      }
+    };
+
+    let stopLooking = () => {};
+    const openChat = (name) => {
+      stopLooking();
+      let done = false;
+      const stop = () => { done = true; removeEventListener('touchstart', stop, true); };
+      stopLooking = stop;
+      addEventListener('touchstart', stop, { capture: true, passive: true });
+      const until = performance.now() + 8000; // la lista tarda en llegar
+      const tick = () => {
+        if (done) return;
+        if (performance.now() > until || !/^\/direct\//.test(location.pathname) || inChat(name)) return stop();
+        const found = rows(name);
+        if (found.length === 1) { stop(); note('notificación: abrí el chat'); tap(found[0]); return; }
+        setTimeout(tick, 250);
+      };
+      tick();
+    };
+
+    window.__lucidoGo = (to, chat) => {
+      try {
+        const name = chat ? norm(chat) : null;
+        if (to) {
+          if (!/^\/direct\//.test(to)) return false;
+          if (name && inChat(name)) return true;
+          if (location.pathname !== to) {
+            const before = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
+            history.pushState(null, '', to);
+            dispatchEvent(new PopStateEvent('popstate', { state: null }));
+            // Si en 1 s lo que estaba en pantalla sigue ahí, el sitio no se movió: cargarla (y el chat después)
+            setTimeout(() => {
+              if (location.pathname !== to || !before || !before.isConnected || !before.getClientRects().length) return;
+              stopLooking();
+              try { if (name) sessionStorage.setItem('brl_chat', name); } catch (e) {}
+              location.assign(to);
+            }, 1000);
+          }
+        }
+        if (name) openChat(name);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    };
+
+    let left = null; // chat que quedó por abrir de la página anterior
+    try { left = sessionStorage.getItem('brl_chat'); sessionStorage.removeItem('brl_chat'); } catch (e) {}
+    if (left) document.body ? openChat(left) : addEventListener('DOMContentLoaded', () => openChat(left));
   }
 })();
