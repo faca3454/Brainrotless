@@ -81,19 +81,17 @@ class HomeActivity : ComponentActivity() {
         val yt = Lock.yt(this)
         val today = Usage.today(this)
         val history = Usage.history(this)
-        val limit = Usage.limitMs(this)
         return HomeScreen.State(
+            now = TrustedClock.now(this),
             showMessages = !Setup.listenerOn(this) && !userPrefs().getBoolean("hide_messages_card", false),
             igLocked = Lock.ig(this) != null,
             reelsAllowed = Lock.reelsAllowed(this),
             igFeed = userPrefs().getString("ig_feed", "normal") ?: "normal",
             ytLockedUntil = yt?.let { Lock.until(this, it) },
             usedMs = Usage.todayMs(this),
-            limitMs = limit,
+            limitMs = Usage.limitMs(this),
             resetAt = Usage.nextReset(this).toLocalTime(),
             pauseUntil = Commitment.pauseUntil(this).takeIf { Commitment.pauseActive(this) },
-            week = StatsMath.window(history, today, 7).map { it?.total },
-            limitFrom = if (limit != null) StatsMath.indexOf(Commitment.startDay(this), today, 7) else 0,
             streak = StreakGoal.of(this)?.let { StatsMath.streaks(history, today, it.max, it.from).first } ?: 0,
             guardOn = Setup.guardOn(this),
             sleepOn = Sleep.enabled(this),

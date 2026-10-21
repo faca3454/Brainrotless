@@ -775,14 +775,18 @@ class FlowLayout(c: Context) : ViewGroup(c) {
         var x = 0
         var y = 0
         var rowH = 0
+        var widest = 0
         for (i in 0 until childCount) {
             val v = getChildAt(i)
             measureChild(v, MeasureSpec.makeMeasureSpec(max, MeasureSpec.AT_MOST), MeasureSpec.UNSPECIFIED)
             if (x > 0 && x + v.measuredWidth > max) { x = 0; y += rowH + gap; rowH = 0 }
             x += v.measuredWidth + gap
+            widest = maxOf(widest, x - gap)
             rowH = maxOf(rowH, v.measuredHeight)
         }
-        setMeasuredDimension(MeasureSpec.getSize(widthSpec), y + rowH + paddingTop + paddingBottom)
+        // Con ancho justo ocupa todo; si no, solo lo que necesita (así se puede centrar)
+        val w = if (MeasureSpec.getMode(widthSpec) == MeasureSpec.EXACTLY) MeasureSpec.getSize(widthSpec) else widest + paddingLeft + paddingRight
+        setMeasuredDimension(w, y + rowH + paddingTop + paddingBottom)
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {

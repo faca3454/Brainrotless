@@ -184,6 +184,51 @@ object Brand {
                 .apply { topMargin = px(c, 10) })
         }
 
+    /**
+     * Fila de lista (64 dp o más): lo de la izquierda, título (con una pastilla opcional) y estado
+     * (en color de aviso con [warn]), y a la derecha [trailing] o la flecha si se puede tocar.
+     */
+    fun row(c: Context, lead: View?, title: String, sub: String?, warn: Boolean = false, pill: String? = null,
+            trailing: View? = null, onClick: (() -> Unit)? = null) = LinearLayout(c).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        minimumHeight = px(c, 64)
+        setPadding(px(c, 16), px(c, 10), px(c, 12), px(c, 10))
+        lead?.let { addView(it) }
+        val titleRow = LinearLayout(c).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(text(c, title, Type.TITLE, bold = true), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).takeIf { pill == null }
+                ?: LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+            pill?.let { addView(pill(c, it), LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                .apply { marginStart = px(c, 8) }) }
+        }
+        addView(LinearLayout(c).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(titleRow)
+            sub?.let { addView(text(c, it, Type.BODY, if (warn) R.color.brand_warning else R.color.brand_text_muted).apply { setPadding(0, px(c, 2), 0, 0) }) }
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+            marginStart = px(c, if (lead != null) 16 else 4)
+            marginEnd = px(c, 8)
+        })
+        (trailing ?: if (onClick != null) chevron(c) else null)?.let { addView(it) }
+        onClick?.let { f ->
+            background = pressable(c, GradientDrawable(), 0f)
+            setOnClickListener { f() }
+        }
+    }
+
+    /** Varias filas en una sola superficie de 24 dp, separadas por líneas finas. */
+    fun group(c: Context, rows: List<View>, insetDp: Int = 72) = LinearLayout(c).apply {
+        orientation = LinearLayout.VERTICAL
+        background = rounded(c, R.color.brand_surface, 24f)
+        clipToOutline = true // la onda al tocar respeta las esquinas
+        setPadding(0, px(c, 4), 0, px(c, 4))
+        rows.forEachIndexed { i, r ->
+            if (i > 0) addView(View(c).apply { setBackgroundColor(color(c, R.color.brand_line)) },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, px(c, 1)).apply { marginStart = px(c, insetDp) })
+            addView(r, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        }
+    }
+
     /** Etiqueta chica ámbar dentro de un texto (ej: "5 días"). */
     fun pill(c: Context, label: String) = text(c, label, Type.LABEL, R.color.brand_on_accent, bold = true).apply {
         background = rounded(c, R.color.brand_accent, 999f)
