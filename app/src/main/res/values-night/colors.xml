@@ -1,16 +1,19 @@
 <resources>
     <!-- Lúcido, modo oscuro -->
-    <color name="brand_bg">#0E1A1C</color>
-    <color name="brand_surface">#16272A</color>
-    <color name="brand_surface_alt">#1C3134</color>
-    <color name="brand_tonal">#1D3D3B</color>
-    <color name="brand_primary">#4FBFAD</color>
-    <color name="brand_on_primary">#06201D</color>
+    <color name="brand_bg">#0B1416</color>
+    <color name="brand_surface">#132225</color>
+    <color name="brand_surface_alt">#1D2E31</color>
+    <color name="brand_tonal">#1C3B39</color>
+    <color name="brand_primary">#5CC8B6</color>
+    <color name="brand_on_primary">#04201C</color>
     <color name="brand_accent">#F5B55C</color>
     <color name="brand_on_accent">#2B1A00</color>
     <color name="brand_text">#EEE8DD</color>
-    <color name="brand_text_muted">#9DAEAA</color>
-    <color name="brand_line">#25393C</color>
-    <color name="brand_warning">#F08467</color>
-    <color name="brand_ripple">#294FBFAD</color>
+    <color name="brand_text_muted">#A0B0AC</color>
+    <color name="brand_line">#223437</color>
+    <color name="brand_warning">#F28B6E</color>
+    <color name="brand_night">#8C99E0</color>
+    <color name="brand_on_tonal">#BFE9E0</color>
+    <color name="brand_outline">#7F8F8B</color>
+    <color name="brand_ripple">#295CC8B6</color>
 </resources>

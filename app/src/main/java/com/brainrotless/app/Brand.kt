@@ -9,13 +9,18 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.InsetDrawable
 import android.graphics.drawable.RippleDrawable
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import android.view.animation.DecelerateInterpolator
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.Switch
 import android.widget.TextView
 import androidx.annotation.ColorRes
 import androidx.core.content.ContextCompat
@@ -27,6 +32,19 @@ import androidx.core.content.ContextCompat
  */
 object Brand {
     private val MEDIUM: Typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+
+    /**
+     * Escala de tipos (sp): pocos tamaños con un papel cada uno, en vez de uno por pieza. Los
+     * números grandes van con cifras tabulares para que no bailen al cambiar.
+     */
+    object Type {
+        const val HERO = 56f // el número de la pantalla (días que quedan)
+        const val DISPLAY = 34f // números grandes (uso de hoy, horarios)
+        const val HEADLINE = 22f // título de la pantalla
+        const val TITLE = 16f // título de fila o tarjeta
+        const val BODY = 14f // estados y explicaciones
+        const val LABEL = 12f // nombres chicos (días del gráfico, leyendas)
+    }
 
     fun color(c: Context, @ColorRes id: Int) = ContextCompat.getColor(c, id)
     fun dp(c: Context, v: Float) = v * c.resources.displayMetrics.density
@@ -43,10 +61,10 @@ object Brand {
     fun pressable(c: Context, base: Drawable, radiusDp: Float): Drawable =
         RippleDrawable(ColorStateList.valueOf(color(c, R.color.brand_ripple)), base, rounded(c, R.color.brand_text, radiusDp))
 
-    /** Tarjeta: superficie con esquinas de 20 dp; con [onClick], se puede tocar. */
+    /** Tarjeta: superficie con esquinas de 24 dp; con [onClick], se puede tocar. */
     fun card(v: View, onClick: (() -> Unit)? = null) = v.apply {
-        val base = rounded(context, R.color.brand_surface, 20f)
-        background = if (onClick != null) pressable(context, base, 20f) else base
+        val base = rounded(context, R.color.brand_surface, 24f)
+        background = if (onClick != null) pressable(context, base, 24f) else base
         val pad = px(context, 16)
         setPadding(pad, pad, pad, pad)
         onClick?.let { f -> isClickable = true; setOnClickListener { f() } }
@@ -60,6 +78,48 @@ object Brand {
             if (bold) typeface = MEDIUM
         }
 
+    /** Número grande (uso, horas, días): Medium con cifras tabulares. */
+    fun number(c: Context, s: CharSequence, sp: Float = Type.DISPLAY, @ColorRes color: Int = R.color.brand_text) =
+        text(c, s, sp, color, bold = true).apply {
+            fontFeatureSettings = "tnum"
+            includeFontPadding = false
+        }
+
+    /** Ícono tocable de 48 dp (atrás, ajustes) con su descripción para TalkBack. */
+    fun iconButton(c: Context, icon: Int, description: String, @ColorRes tint: Int = R.color.brand_text, onClick: () -> Unit) =
+        ImageView(c).apply {
+            setImageResource(icon)
+            setColorFilter(color(c, tint))
+            scaleType = ImageView.ScaleType.CENTER
+            contentDescription = description
+            background = pressable(c, GradientDrawable(), 999f)
+            minimumWidth = px(c, 48)
+            minimumHeight = px(c, 48)
+            setOnClickListener { onClick() }
+        }
+
+    /** Flecha de "entrar" al final de una fila (decorativa: la fila ya dice adónde va). */
+    fun chevron(c: Context) = ImageView(c).apply {
+        setImageResource(R.drawable.ic_chevron)
+        setColorFilter(color(c, R.color.brand_text_muted))
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    }
+
+    /** Ícono en un círculo de color (filas del inicio y del panel). */
+    fun badge(c: Context, icon: Int, @ColorRes fill: Int = R.color.brand_tonal, @ColorRes tint: Int = R.color.brand_primary, sizeDp: Int = 40) =
+        ImageView(c).apply {
+            setImageResource(icon)
+            setColorFilter(color(c, tint))
+            background = rounded(c, fill, 999f)
+            val p = px(c, sizeDp / 4)
+            setPadding(p, p, p, p)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            layoutParams = LinearLayout.LayoutParams(px(c, sizeDp), px(c, sizeDp))
+        }
+
+    /** Fondo de 40 dp de alto dentro de una zona táctil de 48 dp (pastillas, botón de pausa). */
+    fun inset48(c: Context, d: Drawable): Drawable = InsetDrawable(d, 0, px(c, 4), 0, px(c, 4))
+
     private fun button(c: Context, label: String, background: Drawable, @ColorRes textColor: Int, onClick: () -> Unit) =
         Button(c).apply {
             text = label
@@ -71,8 +131,8 @@ object Brand {
             stateListAnimator = null
             minWidth = 0
             minimumWidth = 0
-            minHeight = px(c, 48)
-            minimumHeight = px(c, 48)
+            minHeight = px(c, 52)
+            minimumHeight = px(c, 52)
             setPadding(px(c, 24), 0, px(c, 24), 0)
             setOnClickListener { onClick() }
         }
@@ -83,13 +143,13 @@ object Brand {
     fun secondaryButton(c: Context, label: String, onClick: () -> Unit = {}) =
         button(c, label, pressable(c, rounded(c, R.color.brand_bg, 999f, stroke = R.color.brand_line), 999f), R.color.brand_primary, onClick)
 
-    /** Botón chico ámbar (ej: "Pausa"). */
+    /** Botón chico ámbar (ej: "Pausa"): se ve de 40 dp, se toca en 48. */
     fun accentChip(c: Context, label: String, onClick: () -> Unit = {}) =
-        button(c, label, pressable(c, rounded(c, R.color.brand_accent, 999f), 999f), R.color.brand_on_accent, onClick).apply {
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            minHeight = px(c, 36)
-            minimumHeight = px(c, 36)
-            setPadding(px(c, 14), 0, px(c, 14), 0)
+        button(c, label, inset48(c, pressable(c, rounded(c, R.color.brand_accent, 999f), 999f)), R.color.brand_on_accent, onClick).apply {
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, Type.BODY)
+            minHeight = px(c, 48)
+            minimumHeight = px(c, 48)
+            setPadding(px(c, 16), 0, px(c, 16), 0)
         }
 
     /** Botón sin fondo, al lado de uno que sí lo tiene (ej: "Ahora no"). */
@@ -105,14 +165,14 @@ object Brand {
     fun notice(c: Context, message: String, action: String, onAction: () -> Unit, help: String? = null, onHelp: () -> Unit = {}) =
         LinearLayout(c).apply {
             orientation = LinearLayout.VERTICAL
-            background = rounded(c, R.color.brand_tonal, 16f)
-            setPadding(px(c, 14), px(c, 12), px(c, 14), px(c, 12))
-            addView(text(c, message, 14f))
+            background = rounded(c, R.color.brand_tonal, 20f)
+            setPadding(px(c, 16), px(c, 14), px(c, 16), px(c, 8))
+            addView(text(c, message, Type.BODY, R.color.brand_on_tonal))
             addView(LinearLayout(c).apply {
                 gravity = Gravity.CENTER_VERTICAL
                 addView(secondaryButton(c, action, onAction))
                 help?.let {
-                    addView(text(c, it, 13.5f, R.color.brand_primary, bold = true).apply {
+                    addView(text(c, it, Type.BODY, R.color.brand_primary, bold = true).apply {
                         gravity = Gravity.CENTER_VERTICAL
                         minHeight = px(c, 48)
                         setPadding(px(c, 14), 0, px(c, 4), 0)
@@ -125,9 +185,9 @@ object Brand {
         }
 
     /** Etiqueta chica ámbar dentro de un texto (ej: "5 días"). */
-    fun pill(c: Context, label: String) = text(c, label, 11.5f, R.color.brand_on_accent, bold = true).apply {
+    fun pill(c: Context, label: String) = text(c, label, Type.LABEL, R.color.brand_on_accent, bold = true).apply {
         background = rounded(c, R.color.brand_accent, 999f)
-        setPadding(px(c, 8), px(c, 1), px(c, 8), px(c, 2))
+        setPadding(px(c, 10), px(c, 3), px(c, 10), px(c, 4))
         gravity = Gravity.CENTER
     }
 }
@@ -163,16 +223,17 @@ class RingView(c: Context) : View(c) {
 }
 
 /**
- * Interruptor dibujado con Canvas (no depende de los drawables del tema, así se ve seguro en
- * cualquier teléfono). Tocarlo lo cambia y avisa; tocar la fila entera también, vía performClick.
+ * Interruptor dibujado con Canvas, al estilo de Material 3 (no depende de los drawables del tema,
+ * así se ve igual en cualquier teléfono): 52×32 dp dentro de 48 dp de alto. Tocarlo lo cambia y
+ * avisa; tocar la fila entera también, vía performClick. Con [describe], TalkBack lee la fila
+ * entera como un interruptor con su estado.
  */
 class ToggleView(c: Context) : View(c) {
-    private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val knobPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val onTrack = Brand.color(c, R.color.brand_primary)
     private val offTrack = Brand.color(c, R.color.brand_surface_alt)
+    private val outline = Brand.color(c, R.color.brand_outline)
     private val onKnob = Brand.color(c, R.color.brand_on_primary)
-    private val offKnob = Brand.color(c, R.color.brand_text_muted)
     private val box = RectF()
 
     var onChange: (Boolean) -> Unit = {}
@@ -190,21 +251,53 @@ class ToggleView(c: Context) : View(c) {
         setOnClickListener {
             checked = !checked
             onChange(checked)
+            sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_CLICKED)
         }
     }
 
+    /** La fila [row] (con el título y la explicación) pasa a ser el interruptor para TalkBack. */
+    fun describe(row: View) {
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        row.accessibilityDelegate = object : View.AccessibilityDelegate() {
+            override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfo) {
+                super.onInitializeAccessibilityNodeInfo(host, info)
+                info.className = Switch::class.java.name
+                info.isCheckable = true
+                info.isChecked = checked
+            }
+        }
+    }
+
+    override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {
+        super.onInitializeAccessibilityNodeInfo(info)
+        info.className = Switch::class.java.name
+        info.isCheckable = true
+        info.isChecked = checked
+    }
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        setMeasuredDimension(Brand.px(context, 48), Brand.px(context, 28))
+        setMeasuredDimension(Brand.px(context, 52), Brand.px(context, 48))
     }
 
     override fun onDraw(canvas: Canvas) {
-        val r = height / 2f
-        box.set(0f, 0f, width.toFloat(), height.toFloat())
-        trackPaint.color = if (checked) onTrack else offTrack
-        canvas.drawRoundRect(box, r, r, trackPaint)
-        val pad = Brand.dp(context, 3f)
-        val cx = if (checked) width - r else r
-        knobPaint.color = if (checked) onKnob else offKnob
-        canvas.drawCircle(cx, r, r - pad, knobPaint)
+        val r = Brand.dp(context, 16f)
+        val top = height / 2f - r
+        box.set(0f, top, width.toFloat(), top + 2 * r)
+        paint.style = Paint.Style.FILL
+        paint.color = if (checked) onTrack else offTrack
+        canvas.drawRoundRect(box, r, r, paint)
+        if (!checked) {
+            // Apagado: borde y perilla chica en el color del contorno (se distingue sin color)
+            val sw = Brand.dp(context, 2f)
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = sw
+            paint.color = outline
+            box.inset(sw / 2, sw / 2)
+            canvas.drawRoundRect(box, r - sw / 2, r - sw / 2, paint)
+            paint.style = Paint.Style.FILL
+        }
+        paint.color = if (checked) onKnob else outline
+        val knob = Brand.dp(context, if (checked) 12f else 8f)
+        canvas.drawCircle(if (checked) width - r else r, height / 2f, knob, paint)
     }
 }
