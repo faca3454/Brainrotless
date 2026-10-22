@@ -2,6 +2,7 @@ package com.brainrotless.app
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.ActivityManager
 import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -226,6 +227,7 @@ class MainActivity : ComponentActivity() {
         root.viewTreeObserver.addOnGlobalLayoutListener {
             paintBars()
             updateBack()
+            watchKeyboard()
         }
         if (kept == null) installScript()
         else {
@@ -267,7 +269,8 @@ class MainActivity : ComponentActivity() {
 
         Lang.askIfNeeded(this) // sin guía (se abrió con un link compartido): el idioma, nada más
         Rules.refreshAsync(this) { runOnUiThread { installScript() } } // se aplica en la próxima carga
-        Updater.maybeCheck(this)
+        // Solo al abrir desde el ícono: no interrumpir un chat al que llegaste por una notificación o un link
+        if (intent.action == Intent.ACTION_MAIN) Updater.maybeCheck(this)
         Sleep.reschedule(this)
     }
 
@@ -474,6 +477,7 @@ class MainActivity : ComponentActivity() {
         progress.animate().cancel()
         progress.alpha = 0f // la que se va puede haber estado cargando
         v.animate().alpha(1f).setDuration(180).setInterpolator(Brand.EASE_OUT).withEndAction { if (web !== old) old.visibility = View.GONE }.start()
+        nameTask()
         if (old !== v) {
             pauseMedia(old)
             old.onPause()
@@ -643,7 +647,8 @@ class MainActivity : ComponentActivity() {
             left != null -> ((left + 59_999) / 60_000).toInt().let { resources.getQuantityString(R.plurals.minutes_left, it, it) }
             else -> null
         }
-        lockBar.visibility = if (text != null) View.VISIBLE else View.GONE
+        // Con el teclado abierto se esconde: el chat necesita el lugar (y ya se ve que es solo mensajes)
+        lockBar.visibility = if (text != null && !keyboard) View.VISIBLE else View.GONE
         lockBarText.text = text
         lockBarPause.visibility = if (ig != null && Commitment.canPause(this)) View.VISIBLE else View.GONE
         lockBarPause.text = getString(R.string.pause_chip, Commitment.pausesLeft(this))
@@ -966,6 +971,30 @@ class MainActivity : ComponentActivity() {
             .putExtras(Bundle().apply { putBinder("android.support.customtabs.extra.SESSION", null) })
         if (barsColor != 0) tab.putExtra("android.support.customtabs.extra.TOOLBAR_COLOR", barsColor) // como la página
         runCatching { startActivity(tab) }
+    }
+
+    // ---------- Teclado y Recientes ----------
+
+    private var keyboard = false
+
+    /** Teclado abierto: lo que se ve de la ventana se achicó bastante (vale en todas las versiones). */
+    private fun watchKeyboard() {
+        val visible = Rect().also(root::getWindowVisibleDisplayFrame)
+        val open = root.rootView.height - visible.bottom > root.rootView.height * 0.15
+        if (open == keyboard) return
+        keyboard = open
+        refreshLockBar()
+    }
+
+    /** En Recientes, IG Lite o YT Lite según lo que se ve, no según el ícono con el que se abrió. */
+    private fun nameTask() {
+        val label = getString(if (onYouTube) R.string.label_yt else R.string.label_ig)
+        @Suppress("DEPRECATION") // el Builder es de Android 13
+        runCatching {
+            setTaskDescription(if (Build.VERSION.SDK_INT >= 28)
+                ActivityManager.TaskDescription(label, if (onYouTube) R.mipmap.ic_yt else R.mipmap.ic_ig, 0)
+            else ActivityManager.TaskDescription(label))
+        }
     }
 
     // ---------- Atrás ----------
