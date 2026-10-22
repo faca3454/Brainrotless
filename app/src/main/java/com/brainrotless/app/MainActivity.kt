@@ -7,6 +7,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.MutableContextWrapper
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -88,15 +89,6 @@ class MainActivity : ComponentActivity() {
     private var lang = "" // idioma con el que se armó la pantalla
     private lateinit var guardScreen: View // accesibilidad apagada durante un compromiso
 
-    private val bridge = Bridge(
-        onReport = { text -> runOnUiThread { copyDiagnostic(text) } },
-        // Deslizar para responder pasó el punto: la vibración del sistema (respeta "respuesta táctil")
-        onHaptic = { runOnUiThread { web.performHapticFeedback(
-            if (Build.VERSION.SDK_INT >= 34) HapticFeedbackConstants.GESTURE_THRESHOLD_ACTIVATE else HapticFeedbackConstants.CONTEXT_CLICK) } },
-        onPlaying = { on -> runOnUiThread { keepScreenOn(on) } },
-        // La página que se ve ya cargó: sacar la foto de la de antes
-        onReady = { host -> runOnUiThread { if (isYouTube("https://$host") == onYouTube) hideStill() } },
-    )
     private val scriptHandlers = mutableMapOf<WebView, ScriptHandler>()
     private var injectedScript = ""
     private var mainFrameError = false
@@ -151,11 +143,19 @@ class MainActivity : ComponentActivity() {
             return
         }
         lang = Lang.current(this)
+        Bridge.screen = this
 
-        igWeb = buildWebView()
+        // Las páginas de la vez anterior, si siguen vivas (se cerró desde Recientes hace poco): al instante
+        val kept = Kept.take()
+        igWeb = kept?.ig ?: buildWebView()
+        ytWebOrNull = kept?.yt
+        kept?.let { k -> listOfNotNull(k.ig, k.yt).forEach(::attach) }
         web = igWeb
-        setFront(igWeb, true)
-        webs = FrameLayout(this).apply { addView(igWeb, FrameLayout.LayoutParams(MATCH, MATCH)) }
+        if (kept == null) setFront(igWeb, true)
+        webs = FrameLayout(this).apply {
+            addView(igWeb, FrameLayout.LayoutParams(MATCH, MATCH))
+            ytWebOrNull?.let { addView(it, 0, FrameLayout.LayoutParams(MATCH, MATCH)) }
+        }
         progress = View(this).apply {
             setBackgroundColor(Brand.color(context, R.color.brand_primary))
             pivotX = 0f
@@ -175,7 +175,7 @@ class MainActivity : ComponentActivity() {
         refresh = SwipeRefreshLayout(this).apply {
             addView(webs, ViewGroup.LayoutParams(MATCH, MATCH))
             // La página avisa (vía JS) si el gesto empezó arriba de todo
-            setOnChildScrollUpCallback { _, _ -> fullscreenView != null || !bridge.atTop }
+            setOnChildScrollUpCallback { _, _ -> fullscreenView != null || !Bridge.atTop }
             setColorSchemeColors(Brand.color(context, R.color.brand_primary))
             setProgressBackgroundColorSchemeColor(Brand.color(context, R.color.brand_surface))
             setOnRefreshListener { reloadSmooth(web) }
@@ -208,7 +208,13 @@ class MainActivity : ComponentActivity() {
         setContentView(root)
         // Cada vez que aparece o se va un aviso, o se cambia de plataforma, hay un layout: repintar las barras
         root.viewTreeObserver.addOnGlobalLayoutListener { paintBars() }
-        installScript()
+        if (kept == null) installScript()
+        else {
+            // Corren con el script de cuando se guardaron: si cambió algo (empezó la noche), applyLock lo
+            // aplica al volver (en vivo o recargando), como con cualquier cambio
+            injectedScript = kept.script
+            scriptHandlers.putAll(kept.handlers)
+        }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -225,11 +231,17 @@ class MainActivity : ComponentActivity() {
             }
         })
 
-        if (savedInstanceState == null) open(urlFromIntent(intent) ?: launcherUrl(intent), intent.getStringExtra(EXTRA_CHAT))
-        else {
-            savedInstanceState.getBundle("ig")?.let { igWeb.restoreState(it) }
-            savedInstanceState.getBundle("yt")?.let { ytWeb.restoreState(it) }
-            switchTo(if (savedInstanceState.getBoolean("onYouTube")) ytWeb else igWeb)
+        val url = urlFromIntent(intent)
+        when {
+            // Se rearmó la pantalla (letra, idioma): la misma plataforma de antes
+            kept != null && savedInstanceState != null -> switchTo(if (kept.onYouTube) ytWeb else igWeb)
+            kept != null -> if (url != null) open(url, intent.getStringExtra(EXTRA_CHAT)) else goTo(isYouTubeAlias(intent))
+            savedInstanceState == null -> open(url ?: launcherUrl(intent), intent.getStringExtra(EXTRA_CHAT))
+            else -> {
+                savedInstanceState.getBundle("ig")?.let { igWeb.restoreState(it) }
+                savedInstanceState.getBundle("yt")?.let { ytWeb.restoreState(it) }
+                switchTo(if (savedInstanceState.getBoolean("onYouTube")) ytWeb else igWeb)
+            }
         }
         handlePauseIntent(intent)
 
@@ -240,7 +252,8 @@ class MainActivity : ComponentActivity() {
     }
 
     @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
-    private fun buildWebView(): WebView = WebView(this).apply {
+    // Con un contexto que se puede cambiar: así la página puede seguir viva sin esta pantalla (ver Kept)
+    private fun buildWebView(): WebView = WebView(MutableContextWrapper(this)).apply {
         setBackgroundColor(if (dark) Color.BLACK else Color.WHITE) // sin flash blanco al cargar en modo oscuro
         CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
         settings.apply {
@@ -252,13 +265,21 @@ class MainActivity : ComponentActivity() {
         }
         // Solo expone setAtTop(boolean), haptic(), setPlaying(boolean) y, en los APK de prueba, report(texto):
         // nada sensible si una página lo llama
-        addJavascriptInterface(bridge, "NoScrollBridge")
+        addJavascriptInterface(Bridge, "NoScrollBridge")
         webViewClient = client
         webChromeClient = chromeClient
     }.also {
         // Crear una WebView puede devolver los textos al idioma del sistema: volver al elegido
         Lang.applyTo(this, resources)
         Lang.applyTo(this)
+    }
+
+    /** Una página guardada pasa a esta pantalla. */
+    private fun attach(v: WebView) {
+        (v.context as? MutableContextWrapper)?.baseContext = this
+        v.visibility = View.GONE // switchTo la muestra y la despierta
+        v.webViewClient = client
+        v.webChromeClient = chromeClient
     }
 
     private val client = object : WebViewClient() {
@@ -638,27 +659,86 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Puente JS → app: pull-to-refresh, la vibración de deslizar para responder, si hay un video
-     * reproduciéndose (pantalla prendida) y, solo en los APK de prueba, diagnósticos del script.
+     * Puente JS → app, uno solo para todas las páginas: las que siguen vivas al cerrar la pantalla le
+     * hablan a la nueva. Pull-to-refresh, la vibración de deslizar para responder, si hay un video
+     * reproduciéndose (pantalla prendida), cuándo ya se ve la página nueva y, solo en los APK de prueba,
+     * diagnósticos del script.
      */
-    class Bridge(
-        private val onReport: (String) -> Unit, private val onHaptic: () -> Unit,
-        private val onPlaying: (Boolean) -> Unit, private val onReady: (String) -> Unit,
-    ) {
+    object Bridge {
+        @SuppressLint("StaticFieldLeak") // la pantalla que se ve: se suelta en onDestroy
+        @Volatile var screen: MainActivity? = null
         @Volatile private var top = false
         val atTop get() = top
         @Volatile private var lastHaptic = 0L
+
+        private fun ui(f: MainActivity.() -> Unit) {
+            val a = screen ?: return
+            a.runOnUiThread { if (screen === a) a.f() }
+        }
+
         @JavascriptInterface fun setAtTop(value: Boolean) { top = value }
-        @JavascriptInterface fun setPlaying(value: Boolean) = onPlaying(value)
-        @JavascriptInterface fun ready(host: String) = onReady(host)
-        // Una vibración corta, como mucho una cada 300 ms (si una página la llamara de más, solo vibra)
+        // Deslizar para responder pasó el punto: la vibración del sistema (respeta "respuesta táctil"),
+        // como mucho una cada 300 ms (si una página la llamara de más, solo vibra)
         @JavascriptInterface fun haptic() {
             val now = SystemClock.uptimeMillis()
             if (now - lastHaptic < 300) return
             lastHaptic = now
-            onHaptic()
+            ui { web.performHapticFeedback(
+                if (Build.VERSION.SDK_INT >= 34) HapticFeedbackConstants.GESTURE_THRESHOLD_ACTIVATE else HapticFeedbackConstants.CONTEXT_CLICK) }
         }
-        @JavascriptInterface fun report(text: String) { if (testBuild) onReport(text.take(10_000)) }
+        @JavascriptInterface fun setPlaying(value: Boolean) = ui { keepScreenOn(value) }
+        // La página que se ve ya cargó: sacar la foto de la de antes
+        @JavascriptInterface fun ready(host: String) = ui { if (isYouTube("https://$host") == onYouTube) hideStill() }
+        @JavascriptInterface fun report(text: String) { if (testBuild) ui { copyDiagnostic(text.take(10_000)) } }
+    }
+
+    /**
+     * Las páginas siguen vivas un rato al cerrar IG Lite / YT Lite (deslizarla de Recientes, o si Android
+     * rearma la pantalla): al volver a abrirla aparecen al instante, donde estaban. Sin la pantalla vieja
+     * (no queda colgada en memoria), en pausa y con prioridad baja: si Android necesita la memoria, cierra la
+     * página y acá se sueltan. Pasados 30 minutos, también. El proceso suele seguir vivo por Accesibilidad.
+     */
+    private class Pages(val ig: WebView, val yt: WebView?, val onYouTube: Boolean, val script: String,
+                        val handlers: Map<WebView, ScriptHandler>)
+
+    private object Kept {
+        @SuppressLint("StaticFieldLeak") // a propósito: sin la pantalla vieja y por 30 minutos como mucho
+        private var pages: Pages? = null
+        private val main = Handler(Looper.getMainLooper())
+        private val release = Runnable { clear() }
+        private val alone = object : WebViewClient() {
+            override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean { clear(); return true }
+        }
+
+        fun keep(c: Context, ig: WebView, yt: WebView?, onYouTube: Boolean, script: String, handlers: Map<WebView, ScriptHandler>) {
+            clear()
+            for (v in listOfNotNull(ig, yt)) {
+                v.evaluateJavascript("document.querySelectorAll('video,audio').forEach(m => m.pause())", null)
+                (v.parent as? ViewGroup)?.removeView(v)
+                (v.context as? MutableContextWrapper)?.baseContext = c.applicationContext
+                v.webViewClient = alone
+                v.webChromeClient = null
+                v.settings.offscreenPreRaster = false
+                v.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_WAIVED, false)
+                v.onPause()
+            }
+            pages = Pages(ig, yt, onYouTube, script, handlers.toMap())
+            main.postDelayed(release, 30 * 60_000L)
+        }
+
+        fun take(): Pages? = pages.also {
+            pages = null
+            main.removeCallbacks(release)
+        }
+
+        fun clear() {
+            main.removeCallbacks(release)
+            val p = pages ?: return
+            pages = null
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT))
+                p.handlers.values.forEach { runCatching { it.remove() } }
+            listOfNotNull(p.ig, p.yt).forEach { runCatching { it.destroy() } }
+        }
     }
 
     /** Diagnóstico o mediciones del script (APK de prueba): al portapapeles, para pegarlo en el chat. */
@@ -862,6 +942,16 @@ class MainActivity : ComponentActivity() {
         Session.pause(this)
         handler.removeCallbacks(lockTicker)
         CookieManager.getInstance().flush()
+    }
+
+    override fun onDestroy() {
+        if (Bridge.screen === this) Bridge.screen = null
+        // Las páginas quedan vivas un rato (ver Kept). No si se cerró antes de armarlas (guía, app oficial)
+        if (::igWeb.isInitialized) {
+            if (fullscreenView != null) exitFullscreen()
+            Kept.keep(this, igWeb, ytWebOrNull, onYouTube, injectedScript, scriptHandlers)
+        }
+        super.onDestroy()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
