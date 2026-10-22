@@ -1,11 +1,12 @@
 // Herramientas de los APK de prueba. No va en la versión publicada (ver app/build.gradle.kts).
 // La app lo pone antes de block.user.js en cada página:
 // - Mediciones: tareas largas, cuánto tarda cada cambio de página en dibujarse y cada video en arrancar.
-//   Al salir de la app se copia un resumen al portapapeles, para pegarlo en el chat.
+//   La medición automática de Ajustes (DevTools.kt) agrega este resumen (summary) a su informe, y mide
+//   cada paso con start() y result().
 // - Si deslizar para responder no encuentra "Responder", copia la estructura del mensaje (sin el texto).
-// - La medición automática de Ajustes (DevTools.kt) mide cada paso con start() y result().
 (() => {
   if (window.__lucidoDev || !window.LucidoDev) return;
+  const id = Math.random().toString(36).slice(2); // esta página: la medición sabe cuándo ya cargó otra
 
   // Solo el tipo de pantalla: nada de usuarios ni chats
   const screen = () => {
@@ -64,7 +65,7 @@
   history.pushState = function (...a) { const r = push.apply(this, a); auto(); return r; };
   addEventListener('popstate', auto);
 
-  let benching = false; // la medición automática pasó por esta página: no copiar el resumen al salir
+  let benching = false; // midiendo en esta página: los videos, en silencio
   let wantVideo = null; // paso "abrir un video": desde cuándo y desde qué página (no cuentan las vistas previas de ahí)
   const asked = new WeakMap(), videos = [];
   addEventListener('play', (e) => {
@@ -84,12 +85,6 @@
     asked.delete(e.target);
     videos.push(Math.round(performance.now() - t));
   }, true);
-
-  // Si copiaste algo en la página (un link, un texto), salir no lo pisa: se copia la próxima vez
-  let copied = false;
-  addEventListener('copy', () => { copied = true; }, true);
-  const write = navigator.clipboard && navigator.clipboard.writeText;
-  if (write) navigator.clipboard.writeText = function (...a) { copied = true; return write.apply(this, a); };
 
   // Toques sobre fotos o videos en los chats: qué se tocó (la estructura, sin el texto), si el toque
   // llegó a la página, qué pasó en el segundo y medio siguiente y si hay otra igual (el original) con botón
@@ -155,10 +150,9 @@
     if (lastTap && lastTap.event === e) { lastTap.reached = true; lastTap.prevented = e.defaultPrevented; }
   });
 
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'hidden' || benching) return;
-    if (copied) { copied = false; return; }
-    if (!navs.length && !videos.length && !tasks.length) return;
+  // Resumen de lo medido en esta página (para el informe de la medición automática); null si no hay nada
+  const summary = () => {
+    if (!navs.length && !videos.length && !tasks.length) return null;
     const long = {}; // pantalla → [cantidad, ms en total, ms la más larga]
     for (const [start, ms] of tasks) {
       const k = visits.filter(([t]) => t <= start).pop()[1], t = long[k] || (long[k] = [0, 0, 0]);
@@ -166,7 +160,7 @@
     }
     const sorted = [...videos].sort((a, b) => a - b);
     const chrome = (navigator.userAgent.match(/Chrome\/[\d.]+/) || ['?'])[0];
-    LucidoDev.report([
+    return [
       `Lúcido rendimiento · ${location.hostname} · ${chrome} · ${Math.round(performance.now() / 60000)} min`,
       'Tareas largas (cantidad, ms en total, la más larga):',
       ...Object.entries(long).map(([k, [n, sum, max]]) => `  ${k}: ${n}, ${Math.round(sum)}, ${Math.round(max)}`),
@@ -176,8 +170,8 @@
       '  ' + videos.slice(-30).join(' '),
       ...taps.map((t) => `Toque en foto/video de un chat: ${t.media} · llegó a la página: ${t.reached ? (t.prevented ? 'sí (y alguien lo usó)' : 'sí') : 'no'}` +
         `\n  después: ${t.after || 'sin medir'}\n  otra igual: ${t.twins}\n  cadena: ${t.chain}\n  ${t.card}`),
-    ].join('\n'));
-  });
+    ].join('\n');
+  };
 
   // Si no apareció "Responder", mandar a la app la estructura del mensaje y las etiquetas que hay a su
   // altura (sin el texto de los mensajes), para arreglarlo
@@ -217,27 +211,31 @@
       else if (what === 'swipe') swipeFailed(x);
     },
     // Medición automática: empieza a medir lo que hace el paso que sigue (con video, hasta que arranca).
-    // Devuelve la hora en ms desde 1970, como las de result().
+    // Devuelve el id de la página, para saber después si se recargó.
     start(video) {
       benching = true;
       const t0 = performance.now();
       measure(t0, screen() + (video ? ' (video)' : ''), true, video ? null : keep(t0));
       last = null; // no lo que cortó recién
       wantVideo = video ? { t0, path: location.pathname } : null;
-      return performance.timeOrigin + t0;
+      return id;
     },
-    // Lo que midió (horas en ms desde 1970) o null si sigue midiendo. Para una carga, since (cuando la app
-    // la pidió) descarta la página de antes. long: [cantidad, ms en total] de tareas largas en el paso.
-    result(since) {
+    // Lo que midió, en ms, o null si sigue midiendo. Para una carga, old es el id de la página de antes (si
+    // todavía es esa, null) y fcp/ready son desde que empezó a cargar (después de la carga, hasta 6 s, se
+    // espera ready). long: [cantidad, ms en total] de tareas largas en el paso.
+    result(old) {
       benching = true;
-      if (performance.timeOrigin < since || !last) return null;
+      if (id === old || !last) return null;
+      if (last.t0 === 0 && ready === null && performance.now() < last.end + 6000) return null;
       if (longObs) for (const e of longObs.takeRecords()) tasks.push([e.startTime, e.duration]);
-      const at = (t) => (t === null ? null : performance.timeOrigin + t);
+      const ms = (t) => (t === null ? null : Math.round(t));
       const mine = tasks.filter(([t]) => t >= last.t0 && t <= last.end);
       return {
-        origin: performance.timeOrigin, end: at(last.end), more: last.more, fcp: at(fcp), ready: at(ready),
-        long: [mine.length, Math.round(mine.reduce((s, [, ms]) => s + ms, 0))],
+        id, ms: ms(last.end - last.t0), more: last.more, fcp: ms(fcp), ready: ms(ready),
+        long: [mine.length, Math.round(mine.reduce((sum, [, d]) => sum + d, 0))],
       };
     },
+    id,
+    summary,
   };
 })();

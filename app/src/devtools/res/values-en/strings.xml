@@ -5,9 +5,11 @@
     <string name="diag_copied">Couldn\'t find the Reply button. Copied a diagnostic (without your messages\' text): paste it in the chat.</string>
     <string name="dev_cat">Testing (test build only)</string>
     <string name="dev_bench">Measure IG Lite and YT Lite</string>
-    <string name="dev_bench_summary">Goes through both by itself 3 times (about 2 minutes) and copies the times to paste in the chat. Doesn\'t open chats.</string>
-    <string name="dev_bench_running">Measuring… don\'t touch the screen or leave the app</string>
-    <string name="dev_bench_cancelled">Measurement cancelled: you left the app</string>
-    <string name="dev_bench_done">Done: measurements copied</string>
+    <string name="dev_bench_summary">Goes through both by itself 3 times (about 2 minutes), shows you the times and copies them to send in the chat. Doesn\'t open chats.</string>
+    <string name="dev_bench_progress">Measuring, don\'t touch the screen · round %1$d of %2$d, step %3$d of %4$d</string>
+    <string name="dev_bench_stop">Stop</string>
+    <string name="dev_bench_cancelled">Measurement cancelled</string>
+    <string name="dev_bench_done">Measurements copied</string>
+    <string name="dev_share">Share</string>
     <string name="dev_copy_again">Copy again</string>
 </resources>
