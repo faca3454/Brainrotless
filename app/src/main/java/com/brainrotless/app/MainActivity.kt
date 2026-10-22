@@ -39,7 +39,9 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -108,9 +110,18 @@ class MainActivity : ComponentActivity() {
     private var fileCallback: ValueCallback<Array<Uri>>? = null
     private val filePicker =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
-            fileCallback?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(res.resultCode, res.data))
-            fileCallback = null
+            answerFiles(WebChromeClient.FileChooserParams.parseResult(res.resultCode, res.data))
         }
+    // Fotos y videos: la galería de Android (sin permisos); en teléfonos viejos, el selector de siempre
+    private val pickOne = registerForActivityResult(PickVisualMedia()) { uri -> answerFiles(uri?.let { arrayOf(it) }) }
+    private val pickMany = registerForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
+        answerFiles(uris.takeIf { it.isNotEmpty() }?.toTypedArray())
+    }
+
+    private fun answerFiles(files: Array<Uri>?) {
+        fileCallback?.onReceiveValue(files)
+        fileCallback = null
+    }
 
     // --- Micrófono, para grabar audios en los chats (Instagram lo pide al mantener el botón) ---
     private var micRequest: PermissionRequest? = null
@@ -313,7 +324,7 @@ class MainActivity : ComponentActivity() {
                 Toast.makeText(this@MainActivity, getString(R.string.external_links_night, until), Toast.LENGTH_LONG).show()
                 return true
             }
-            runCatching { startActivity(Intent(Intent.ACTION_VIEW, u)) }
+            openOutside(u)
             return true
         }
 
@@ -387,6 +398,19 @@ class MainActivity : ComponentActivity() {
         ): Boolean {
             fileCallback?.onReceiveValue(null) // cancela uno pendiente
             fileCallback = callback
+            // Solo fotos y videos (lo que pide Instagram): la galería. Otro tipo, o sacar una foto, como siempre
+            val types = params.acceptTypes.flatMap { it.split(',') }.map { it.trim().lowercase() }.filter { it.isNotEmpty() }
+            val media = when {
+                params.isCaptureEnabled || types.isEmpty() || types.any { !it.startsWith("image/") && !it.startsWith("video/") } -> null
+                types.all { it.startsWith("image/") } -> PickVisualMedia.ImageOnly
+                types.all { it.startsWith("video/") } -> PickVisualMedia.VideoOnly
+                else -> PickVisualMedia.ImageAndVideo
+            }
+            if (media != null) return runCatching {
+                val request = PickVisualMediaRequest(media)
+                if (params.mode == FileChooserParams.MODE_OPEN_MULTIPLE) pickMany.launch(request) else pickOne.launch(request)
+                true
+            }.getOrElse { fileCallback = null; false }
             val intent = params.createIntent().apply {
                 if (params.mode == FileChooserParams.MODE_OPEN_MULTIPLE)
                     putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
@@ -888,6 +912,17 @@ class MainActivity : ComponentActivity() {
             online = ok
         }
         override fun onLost(n: Network) { online = false }
+    }
+
+    /**
+     * Link externo (una noticia en un chat): en una pestaña del navegador encima de la app (Chrome, Brave y
+     * otros lo saben hacer), así atrás vuelve al chat. Si el navegador no sabe, se abre como siempre.
+     */
+    private fun openOutside(u: Uri) {
+        val tab = Intent(Intent.ACTION_VIEW, u)
+            .putExtras(Bundle().apply { putBinder("android.support.customtabs.extra.SESSION", null) })
+        if (barsColor != 0) tab.putExtra("android.support.customtabs.extra.TOOLBAR_COLOR", barsColor) // como la página
+        runCatching { startActivity(tab) }
     }
 
     // ---------- Atrás ----------
