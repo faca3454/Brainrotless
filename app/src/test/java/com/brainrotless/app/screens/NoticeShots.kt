@@ -57,13 +57,15 @@ class NoticeShots : Shots(theme = "AppTheme") {
      * avisos de antes: cuándo empieza la noche y los últimos minutos del límite (1 y 10, por el plural).
      */
     @Test fun barra() = shot("barra", ALL) { c ->
-        fun bar(text: String, pause: Boolean) = Notices.lockBar(c) {}.apply {
+        fun bar(text: String, pause: Boolean, left: Float? = null) = Notices.lockBar(c) {}.apply {
             visibility = View.VISIBLE
             findViewWithTag<TextView>("text").text = text
             findViewWithTag<TextView>("pause").apply {
                 visibility = if (pause) View.VISIBLE else View.GONE
                 this.text = c.getString(R.string.pause_chip, 2)
             }
+            // Pausa en curso: lo que queda (acá, el 60 %)
+            left?.let { findViewWithTag<View>("time").apply { visibility = View.VISIBLE; scaleX = it } }
         }
         LinearLayout(c).apply {
             orientation = LinearLayout.VERTICAL
@@ -71,7 +73,7 @@ class NoticeShots : Shots(theme = "AppTheme") {
             addView(FrameLayout(c), LinearLayout.LayoutParams(1, Brand.px(c, 24)))
             addView(bar(c.getString(R.string.ig_night_msg, "7:00"), pause = false))
             addView(FrameLayout(c), LinearLayout.LayoutParams(1, Brand.px(c, 24)))
-            addView(bar(c.getString(R.string.pause_bar, "18:15"), pause = false))
+            addView(bar(c.getString(R.string.pause_bar, "18:15"), pause = false, left = 0.6f))
             addView(FrameLayout(c), LinearLayout.LayoutParams(1, Brand.px(c, 24)))
             addView(bar(c.getString(R.string.sleep_warn_title, "23:30"), pause = false))
             addView(FrameLayout(c), LinearLayout.LayoutParams(1, Brand.px(c, 24)))

@@ -195,8 +195,10 @@ class PanelActivity : AppCompatActivity() {
         startCommit = { confirmCommitment(draftDays) },
         showLast = { Commitment.lastSummary(this)?.let { showSummary(it, markSeen = false) } },
         pause = {
-            if (Commitment.startPause(this)) toast(getString(R.string.pause_15))
-            changed()
+            Dialogs.pauseConfirm(this, Commitment.pausesLeft(this)) {
+                if (Commitment.startPause(this)) toast(getString(R.string.pause_15))
+                changed()
+            }.show()
         },
         openUsageAccess = { UsageAccess.open(this) },
         debugEnd = {

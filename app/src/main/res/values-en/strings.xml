@@ -30,6 +30,12 @@
     <string name="lock_pause_button">Emergency break, 15 min (%1$s)</string>
     <string name="pause_bar">🆘 Emergency break until %1$s (doesn\'t count toward your limit)</string>
     <string name="pause_chip">Break (%1$d)</string>
+    <string name="pause_confirm_title">Use an emergency break?</string>
+    <plurals name="pause_confirm_text">
+        <item quantity="one">15 minutes that don\'t count toward your limit. %1$d left.</item>
+        <item quantity="other">15 minutes that don\'t count toward your limit. %1$d left.</item>
+    </plurals>
+    <string name="pause_confirm_use">Use break</string>
     <string name="pause_started_ig">🆘 Emergency break: all of Instagram for 15 minutes</string>
     <string name="pause_started_all">🆘 Emergency break: Instagram and YouTube for 15 minutes</string>
     <string name="pause_15">🆘 Emergency break: 15 minutes</string>

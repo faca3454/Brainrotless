@@ -34,6 +34,8 @@ class DialogShots : Shots(theme = "HomeTheme") {
     @Test fun resumen() = shot("resumen", looks) { c -> dialog(c, Dialogs.summary(c, SUMMARY, R.string.not_now, {}, {})) }
     @Test fun sesion() = shot("sesion", looks) { c -> dialog(c, Dialogs.session(c, 20) {}) }
     @Test fun permisoGris() = shot("permiso_gris", looks) { c -> dialog(c, Dialogs.restricted(c) {}) }
+    @Test fun pausa() = shot("pausa", looks) { c -> dialog(c, Dialogs.pauseConfirm(c, 2) {}) }
+    @Test fun pausaUltima() = shot("pausa_ultima", listOf(BASE, EN)) { c -> dialog(c, Dialogs.pauseConfirm(c, 1) {}) }
     @Test fun idioma() = shot("idioma", listOf(BASE, DARK)) { c -> dialog(c, Dialogs.language(c) {}) }
     @Test fun actualizacion() = shot("actualizacion", listOf(BASE, DARK, WORST)) { c ->
         dialog(c, Dialogs.update(c, "1.4.0", "• Citas en los chats\n• Permisos a demanda") {})

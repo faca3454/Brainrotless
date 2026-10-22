@@ -87,6 +87,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var lockBar: View
     private lateinit var lockBarText: TextView
     private lateinit var lockBarPause: Button
+    private lateinit var lockBarTime: View // lo que queda de la pausa en curso
     private var usageMark = 0L // desde cuándo se cuenta el uso sin sumar
     private var lang = "" // idioma con el que se armó la pantalla
     private lateinit var guardScreen: View // accesibilidad apagada durante un compromiso
@@ -199,14 +200,15 @@ class MainActivity : ComponentActivity() {
         lockTitle = lockScreen.findViewWithTag("title")
         lockText = lockScreen.findViewWithTag("subtitle")
         lockPause = lockScreen.findViewWithTag("button2")
-        lockPause.setOnClickListener { usePause() }
+        lockPause.setOnClickListener { askPause() }
         guardScreen = Notices.screen(
             this,
             getString(R.string.guard_off_title), getString(R.string.guard_off_text), getString(R.string.turn_on)
         ) { Setup.openAccessibility(this) }
-        lockBar = Notices.lockBar(this) { usePause() }
+        lockBar = Notices.lockBar(this) { askPause() }
         lockBarText = lockBar.findViewWithTag("text")
         lockBarPause = lockBar.findViewWithTag("pause")
+        lockBarTime = lockBar.findViewWithTag("time")
         content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(lockBar, LinearLayout.LayoutParams(MATCH, ViewGroup.LayoutParams.WRAP_CONTENT))
@@ -643,9 +645,18 @@ class MainActivity : ComponentActivity() {
         lockBarText.text = text
         lockBarPause.visibility = if (ig != null && Commitment.canPause(this)) View.VISIBLE else View.GONE
         lockBarPause.text = getString(R.string.pause_chip, Commitment.pausesLeft(this))
+        // Pausa en curso: la línea ámbar se achica con lo que queda (se recalcula en cada vuelta, sin animar)
+        val pauseLeft = Commitment.pauseUntil(this) - TrustedClock.millis(this)
+        lockBarTime.visibility = if (Commitment.pauseActive(this)) View.VISIBLE else View.GONE
+        lockBarTime.scaleX = (pauseLeft / (Commitment.PAUSE_MINUTES * 60_000f)).coerceIn(0f, 1f)
     }
 
     private fun left(n: Int) = resources.getQuantityString(R.plurals.left_n, n, n)
+
+    /** La pausa se gasta con una confirmación: hay pocas y la pastilla está cerca de los íconos de Instagram. */
+    private fun askPause() {
+        if (Commitment.canPause(this)) Dialogs.pauseConfirm(this, Commitment.pausesLeft(this)) { usePause() }.show()
+    }
 
     private fun usePause() {
         if (!Commitment.startPause(this)) return

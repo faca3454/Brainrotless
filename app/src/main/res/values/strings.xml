@@ -30,6 +30,12 @@
     <string name="lock_pause_button">Pausa de emergencia, 15 min (%1$s)</string>
     <string name="pause_bar">🆘 Pausa de emergencia hasta las %1$s (no suma al límite)</string>
     <string name="pause_chip">Pausa (%1$d)</string>
+    <string name="pause_confirm_title">¿Usar una pausa de emergencia?</string>
+    <plurals name="pause_confirm_text">
+        <item quantity="one">Son 15 minutos que no suman al límite. Te queda %1$d.</item>
+        <item quantity="other">Son 15 minutos que no suman al límite. Te quedan %1$d.</item>
+    </plurals>
+    <string name="pause_confirm_use">Usar pausa</string>
     <string name="pause_started_ig">🆘 Pausa de emergencia: Instagram completo por 15 minutos</string>
     <string name="pause_started_all">🆘 Pausa de emergencia: Instagram y YouTube por 15 minutos</string>
     <string name="pause_15">🆘 Pausa de emergencia: 15 minutos</string>

@@ -43,6 +43,14 @@ object Dialogs {
             .setPositiveButton(R.string.session_exit) { _, _ -> onExit() }
             .setNegativeButton(R.string.session_more, null)
 
+    /** Antes de gastar una pausa de emergencia (hay pocas): cuánto dura y cuántas quedan. */
+    fun pauseConfirm(c: Context, left: Int, onUse: () -> Unit): AlertDialog.Builder =
+        AlertDialog.Builder(c)
+            .setTitle(R.string.pause_confirm_title)
+            .setMessage(c.resources.getQuantityString(R.plurals.pause_confirm_text, left, left))
+            .setPositiveButton(R.string.pause_confirm_use) { _, _ -> onUse() }
+            .setNegativeButton(R.string.cancel, null)
+
     /** Cómo destrabar un permiso gris (Android 13+). */
     fun restricted(c: Context, onOpen: () -> Unit): AlertDialog.Builder =
         AlertDialog.Builder(c)
