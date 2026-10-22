@@ -72,6 +72,12 @@ object Rules {
         return built.third
     }
 
+    /** Solo la configuración (JSON), para aplicarla en una página abierta sin recargarla. */
+    fun config(c: Context): String {
+        build(c)
+        return built.first
+    }
+
     /** Busca reglas nuevas en segundo plano; llama a onUpdated (en otro hilo) si cambiaron. */
     fun refreshAsync(c: Context, force: Boolean = false, onUpdated: () -> Unit) {
         val app = c.applicationContext

@@ -487,8 +487,11 @@ class MainActivity : ComponentActivity() {
             if (guardOff) webViews().forEach { it.loadUrl("about:blank") } else goTo(onYouTube)
         }
         val yt = Lock.yt(this)
-        // Cambió el modo solo mensajes o algún ajuste: reinyectar y recargar para aplicarlo ya
-        val scriptChanged = Rules.build(this) != injectedScript
+        // Cambió el modo solo mensajes o algún ajuste: reinyectar y aplicarlo ya. Si solo cambió la
+        // configuración (noche, foco, límite, pausa), la página que se ve la aplica sin recargar
+        val script = Rules.build(this)
+        val scriptChanged = script != injectedScript
+        val onlyConfig = scriptChanged && script.substringAfter('\n') == injectedScript.substringAfter('\n')
         if (scriptChanged) installScript()
         // YouTube bloqueado: pantalla de bloqueo si está a la vista; si está de fondo, cortarlo igual
         if (yt != null && ytWebOrNull?.let(::hasPage) == true) {
@@ -496,7 +499,8 @@ class MainActivity : ComponentActivity() {
         }
         when {
             yt == null && lockScreen.visibility == View.VISIBLE -> open(YT_HOME) // se terminó el bloqueo
-            scriptChanged && lockScreen.visibility != View.VISIBLE -> webViews().filter(::hasPage).forEach(::reloadSmooth)
+            scriptChanged && lockScreen.visibility != View.VISIBLE ->
+                webViews().filter(::hasPage).forEach { if (onlyConfig && it === web) applyLive(it) else reloadSmooth(it) }
         }
         if (lockScreen.visibility == View.VISIBLE) showLockScreen() // refrescar texto y pausa
         refreshLockBar()
@@ -746,6 +750,10 @@ class MainActivity : ComponentActivity() {
             }, handler)
         }.onFailure { v.reload() }
     }
+
+    /** Regla nueva sin recargar: el script la aplica en la página abierta (sección 15); si no puede, se recarga. */
+    private fun applyLive(v: WebView) =
+        v.evaluateJavascript("window.__lucidoConfig ? __lucidoConfig(${Rules.config(this)}) : false") { if (it != "true") reloadSmooth(v) }
 
     private val stillTimeout = Runnable { hideStill() }
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Lúcido
 // @description  Bloquea el feed de Reels/Shorts pero deja ver los que te mandan
-// @version      13
+// @version      14
 // @match        *://*.instagram.com/*
 // @match        *://instagram.com/*
 // @match        *://*.youtube.com/*
@@ -16,14 +16,18 @@
   window.__noscroll = true;
 
   // --- Config (la app la inyecta desde Ajustes; en Safari/Userscripts usa estos valores) ---
-  const CFG = Object.assign(
-    {
-      igFeed: 'normal', igBlockExplore: true, igTapToPlay: false, igReels: false, ytShorts: false,
-      restricted: false, restrictedMsg: '', smooth: false, swipeReply: false, debug: false,
-    },
-    window.__noscrollCfg || {}
-  );
-  if (CFG.igBlockFeed) CFG.igFeed = 'blocked'; // versiones viejas de la app mandan igBlockFeed
+  const DEFAULTS = {
+    igFeed: 'normal', igBlockExplore: true, igTapToPlay: false, igReels: false, ytShorts: false,
+    restricted: false, restrictedMsg: '', smooth: false, swipeReply: false, debug: false,
+  };
+  const config = (given) => {
+    const c = Object.assign({}, DEFAULTS, given || {});
+    if (c.igBlockFeed) c.igFeed = 'blocked'; // versiones viejas de la app mandan igBlockFeed
+    delete c.igBlockFeed;
+    return c;
+  };
+  // Solo mensajes, Reels y Shorts pueden cambiar con la página abierta (sección 15); el resto, al cargar
+  const CFG = config(window.__noscrollCfg);
 
   const IG = /(^|\.)instagram\.com$/.test(location.hostname);
   const YT = /(^|\.)youtube\.com$/.test(location.hostname);
@@ -35,30 +39,35 @@
   try { pendingToast = sessionStorage.getItem('brl_toast'); sessionStorage.removeItem('brl_toast'); } catch (e) {}
 
   // --- 1. Ocultar accesos al feed (cosmético; los selectores pueden romperse) ---
-  // igReels / ytShorts: la app los deja ver mientras no se llegue al límite diario (ni sea de noche)
-  const hidden = [!CFG.igReels && 'a[href="/reels/"]', CFG.igBlockExplore && 'a[href="/explore/"]'].filter(Boolean);
-  const SMOOTH = CFG.smooth
-    ? '@view-transition { navigation: auto; }' + // fundido también en las páginas que se recargan
-      '::view-transition-old(root), ::view-transition-new(root) { animation-duration: .18s; }'
-    : '';
-  const CSS = SMOOTH + (IG
-    ? (hidden.length ? `${hidden.join(', ')} { display:none !important; }` : '') +
-      (CFG.restricted ? 'a[href="/"], video { display:none !important; }' : '')
-    : CFG.ytShorts ? '' : `
-      ytm-reel-shelf-renderer, ytm-shorts-lockup-view-model,
-      ytm-rich-item-renderer:has(a[href^="/shorts/"]),
-      ytm-video-with-context-renderer:has(a[href^="/shorts/"]),
-      ytm-pivot-bar-item-renderer:has(.pivot-shorts),
-      ytd-reel-shelf-renderer, ytd-rich-shelf-renderer[is-shorts],
-      ytd-rich-item-renderer:has(a[href^="/shorts/"]),
-      ytd-guide-entry-renderer:has(a[title="Shorts"]),
-      ytd-mini-guide-entry-renderer[aria-label="Shorts"]
-      { display:none !important; }`);
-  const addStyle = () => {
-    const s = document.createElement('style');
-    s.textContent = CSS;
-    (document.head || document.documentElement).appendChild(s);
+  // igReels / ytShorts: la app los deja ver mientras no se llegue al límite diario (ni sea de noche).
+  // Se rearma si cambia la configuración con la página abierta.
+  const css = () => {
+    const hidden = [!CFG.igReels && 'a[href="/reels/"]', CFG.igBlockExplore && 'a[href="/explore/"]'].filter(Boolean);
+    const SMOOTH = CFG.smooth
+      ? '@view-transition { navigation: auto; }' + // fundido también en las páginas que se recargan
+        '::view-transition-old(root), ::view-transition-new(root) { animation-duration: .18s; }'
+      : '';
+    return SMOOTH + (IG
+      ? (hidden.length ? `${hidden.join(', ')} { display:none !important; }` : '') +
+        (CFG.restricted ? 'a[href="/"], video { display:none !important; }' : '')
+      : CFG.ytShorts ? '' : `
+        ytm-reel-shelf-renderer, ytm-shorts-lockup-view-model,
+        ytm-rich-item-renderer:has(a[href^="/shorts/"]),
+        ytm-video-with-context-renderer:has(a[href^="/shorts/"]),
+        ytm-pivot-bar-item-renderer:has(.pivot-shorts),
+        ytd-reel-shelf-renderer, ytd-rich-shelf-renderer[is-shorts],
+        ytd-rich-item-renderer:has(a[href^="/shorts/"]),
+        ytd-guide-entry-renderer:has(a[title="Shorts"]),
+        ytd-mini-guide-entry-renderer[aria-label="Shorts"]
+        { display:none !important; }`);
   };
+  let style = null;
+  const addStyle = () => {
+    style = document.createElement('style');
+    style.textContent = css();
+    (document.head || document.documentElement).appendChild(style);
+  };
+  const restyle = () => { if (style) style.textContent = css(); };
   document.documentElement ? addStyle() : addEventListener('DOMContentLoaded', addStyle);
 
   // APK de prueba: lo que hace el script por su cuenta (frenar un toque, cerrar un cartel), para el diagnóstico
@@ -68,13 +77,16 @@
   // Lo que una sección rehace al cambiar la URL: corre ahora y después en cada cambio (desde check)
   const onRoute = [];
   const route = (f) => { onRoute.push(f); f(); };
+  // Lo que una sección rehace si cambia la configuración con la página abierta (sección 15)
+  const onConfig = [];
 
   // --- 2. Reels: que la pantalla no se mueva al deslizar ---
   // Bloquea el gesto sobre el contenedor que pasa de un video al siguiente.
   // Los comentarios y todo lo que no tenga videos adentro sigue scrolleando.
   // Un touchmove que puede frenar el gesto hace que el navegador espere a la página en cada
-  // movimiento: por eso va en ese contenedor y en la página entera solo en /reel/.
-  if (IG && !CFG.igReels) {
+  // movimiento: por eso va en ese contenedor y en la página entera solo en /reel/. Con Reels permitidos
+  // (dentro del límite) no hace nada, y se activa si se termina el tiempo con la página abierta.
+  if (IG) {
     const onReel = () => /^\/reels?\/[\w-]+/.test(location.pathname);
     // Con snap vertical cuenta aunque todavía no desborde: el visor puede sumar el siguiente reel después
     const scrollerOf = (el) => {
@@ -95,18 +107,19 @@
 
     let blocking = false;
     const START = { capture: true, passive: true }, MOVE = { capture: true, passive: false };
-    const start = (e) => { if (e.touches.length === 1) blocking = blocks(e.target); };
+    const start = (e) => { if (e.touches.length === 1) blocking = !CFG.igReels && blocks(e.target); };
     const move = (e) => { if (blocking && e.cancelable) e.preventDefault(); };
     const listen = (el, on) => {
       const f = on ? 'addEventListener' : 'removeEventListener';
       el[f]('touchstart', start, START);
       el[f]('touchmove', move, MOVE);
     };
-    route(() => listen(window, onReel()));
+    route(() => listen(window, onReel() && !CFG.igReels));
     // El visor puede abrirse encima del chat sin cambiar la URL: se engancha su contenedor
     // (el que tiene scroll-snap) apenas un video carga o arranca, antes de que lo deslices
     const hooked = new WeakSet();
     const hook = (e) => {
+      if (CFG.igReels) return;
       const s = e.target instanceof HTMLVideoElement && scrollerOf(e.target);
       if (!s || hooked.has(s) || getComputedStyle(s).scrollSnapType === 'none') return;
       hooked.add(s);
@@ -114,12 +127,14 @@
     };
     addEventListener('loadstart', hook, true);
     addEventListener('playing', hook, true);
+    // Se terminó el tiempo con un reel abierto encima del chat: engancharlo ya, sin esperar al próximo
+    onConfig.push(() => { for (const v of document.getElementsByTagName('video')) hook({ target: v }); });
     addEventListener('wheel', (e) => {
-      if (blocks(e.target)) e.preventDefault();
+      if (!CFG.igReels && blocks(e.target)) e.preventDefault();
     }, { capture: true, passive: false });
     addEventListener('keydown', (e) => {
       const t = e.target;
-      if (/^(ArrowUp|ArrowDown|PageUp|PageDown)$/.test(e.key) &&
+      if (!CFG.igReels && /^(ArrowUp|ArrowDown|PageUp|PageDown)$/.test(e.key) &&
           !(t.isContentEditable || /^(INPUT|TEXTAREA)$/.test(t.tagName)) && blocks(t)) e.preventDefault();
     }, true);
   }
@@ -232,13 +247,16 @@
   check();
 
   // --- 4. Modo solo mensajes: sin videos (ni reels que te mandan); los audios sí ---
-  if (IG && CFG.restricted) {
+  // Siempre instalado en Instagram y activo según CFG.restricted: puede empezar con la página abierta
+  if (IG) {
     const play = HTMLMediaElement.prototype.play;
     HTMLMediaElement.prototype.play = function () {
-      if (!(this instanceof HTMLVideoElement)) return play.call(this);
+      if (!CFG.restricted || !(this instanceof HTMLVideoElement)) return play.call(this);
       return Promise.reject(new DOMException('Hora de dormir', 'NotAllowedError'));
     };
-    addEventListener('play', (e) => { if (e.target instanceof HTMLVideoElement) e.target.pause(); }, true);
+    addEventListener('play', (e) => { if (CFG.restricted && e.target instanceof HTMLVideoElement) e.target.pause(); }, true);
+    // Empezó con la página abierta: frenar el video que se estaba viendo
+    onConfig.push(() => { if (CFG.restricted) for (const v of document.getElementsByTagName('video')) v.pause(); });
 
     // Aviso de por qué te devolvió al inbox
     const toast = () => {
@@ -251,7 +269,7 @@
       document.body.appendChild(t);
       setTimeout(() => t.remove(), 4000);
     };
-    if (pendingToast) document.body ? toast() : addEventListener('DOMContentLoaded', toast);
+    if (CFG.restricted && pendingToast) document.body ? toast() : addEventListener('DOMContentLoaded', toast);
   }
 
   // --- 5. Videos solo al tocar (Instagram, opcional) ---
@@ -946,4 +964,27 @@
     obs.observe(document, { childList: true, subtree: true });
     setTimeout(fin, 5000);
   }
+
+  // --- 15. Reglas nuevas sin recargar ---
+  // Cuando empieza o termina la noche, el foco, el límite o una pausa, la app llama a __lucidoConfig con
+  // la configuración nueva y se aplica en la página abierta: estilos, guardia de URL (vuelve al inbox si
+  // hace falta), videos y el bloqueo del deslizamiento de Reels. Si cambió otra cosa (un ajuste del
+  // panel), devuelve false y la app recarga la página, como antes.
+  const LIVE = ['restricted', 'restrictedMsg', 'igReels', 'ytShorts'];
+  window.__lucidoConfig = (given) => {
+    try {
+      const next = config(given);
+      for (const k of new Set([...Object.keys(next), ...Object.keys(CFG)])) {
+        if (!LIVE.includes(k) && next[k] !== CFG[k]) return false;
+      }
+      for (const k of LIVE) CFG[k] = next[k];
+      restyle();
+      for (const f of onRoute) f();
+      for (const f of onConfig) f();
+      check();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
 })();
