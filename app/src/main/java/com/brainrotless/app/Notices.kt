@@ -15,19 +15,21 @@ object Notices {
     /**
      * Pantalla completa con el logo, título, texto y uno o dos botones (sin conexión, bloqueos).
      * Centrada si entra; con scroll si no (teléfono acostado, letra grande), en vez de aplastar los botones.
+     * Con [dial], en vez del logo va el dial del día ("dial", la pantalla le pone la noche, el foco y la hora).
      */
     fun screen(
-        c: Context, title: String, subtitle: String, button: String, button2: String? = null, onClick: () -> Unit
+        c: Context, title: String, subtitle: String, button: String, button2: String? = null, dial: Boolean = false,
+        onClick: () -> Unit
     ) = ScrollView(c).apply {
         setBackgroundColor(Brand.color(c, R.color.brand_bg))
         visibility = View.GONE
         isClickable = true // que no pase el toque a la WebView de atrás
         isFillViewport = true
-        addView(body(c, title, subtitle, button, button2, onClick))
+        addView(body(c, title, subtitle, button, button2, dial, onClick))
     }
 
     private fun body(
-        c: Context, title: String, subtitle: String, button: String, button2: String?, onClick: () -> Unit
+        c: Context, title: String, subtitle: String, button: String, button2: String?, dial: Boolean, onClick: () -> Unit
     ) = LinearLayout(c).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER
@@ -35,7 +37,12 @@ object Notices {
         setPadding(pad, pad, pad, pad)
         val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
         val wide = Brand.px(c, 280) // los botones, del mismo ancho y fáciles de tocar
-        addView(ImageView(c).apply { setImageResource(R.drawable.ic_logo); importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO },
+        if (dial) addView(DayDial(c).apply {
+            tag = "dial"
+            compact = true
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO // el texto ya dice hasta cuándo
+        }, LinearLayout.LayoutParams(Brand.px(c, 144), Brand.px(c, 144)).apply { bottomMargin = Brand.px(c, 20) })
+        else addView(ImageView(c).apply { setImageResource(R.drawable.ic_logo); importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO },
             LinearLayout.LayoutParams(Brand.px(c, 56), Brand.px(c, 56)).apply { bottomMargin = Brand.px(c, 24) })
         addView(Brand.text(c, title, Brand.Type.HEADLINE + 4, bold = true).apply {
             tag = "title"

@@ -6,16 +6,19 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.brainrotless.app.Brand
+import com.brainrotless.app.DayDial
 import com.brainrotless.app.Notices
 import com.brainrotless.app.R
 import org.junit.Test
 
 /** Avisos de IG Lite y YT Lite (MainActivity), como los arma y completa la pantalla. */
 class NoticeShots : Shots(theme = "AppTheme") {
-    private fun screen(c: Context, title: String, text: String, button: String, pause: String? = null) =
-        Notices.screen(c, title, text, button, if (pause != null) "" else null) {}.apply {
+    private fun screen(c: Context, title: String, text: String, button: String, pause: String? = null,
+                       dial: (DayDial.() -> Unit)? = null) =
+        Notices.screen(c, title, text, button, if (pause != null) "" else null, dial = dial != null) {}.apply {
             visibility = View.VISIBLE
             pause?.let { findViewWithTag<TextView>("button2").apply { this.text = it; visibility = View.VISIBLE } }
+            dial?.let { findViewWithTag<DayDial>("dial").apply(it) }
         }
 
     @Test fun sinConexion() = shot("sin_conexion", listOf(BASE, DARK, EN, WORST)) { c ->
@@ -24,7 +27,10 @@ class NoticeShots : Shots(theme = "AppTheme") {
 
     private fun limit(c: Context) =
         screen(c, c.getString(R.string.lock_limit_title), c.getString(R.string.lock_limit_text, "4:00"), c.getString(R.string.go_to_messages),
-            pause = c.getString(R.string.lock_pause_button, c.resources.getQuantityString(R.plurals.left_n, 2, 2)))
+            pause = c.getString(R.string.lock_pause_button, c.resources.getQuantityString(R.plurals.left_n, 2, 2))) {
+            // Se pasó del límite a las 20:30; la noche, de 23:30 a 7
+            night = 23.5f to 7f; now = 20.5f; usage = 1f; over = true
+        }
 
     @Test fun youtubeLimite() = shot("youtube_limite", ALL) { c -> limit(c) }
 
@@ -41,11 +47,15 @@ class NoticeShots : Shots(theme = "AppTheme") {
     }
 
     @Test fun youtubeNoche() = shot("youtube_noche", listOf(BASE, DARK, EN)) { c ->
-        screen(c, c.getString(R.string.lock_night_title), c.getString(R.string.lock_blocked_text, "7:00"), c.getString(R.string.go_to_messages))
+        screen(c, c.getString(R.string.lock_night_title), c.getString(R.string.lock_blocked_text, "7:00"), c.getString(R.string.go_to_messages)) {
+            night = 23.5f to 7f; now = 0.75f; usage = 0.6f
+        }
     }
 
     @Test fun youtubeFoco() = shot("youtube_foco", listOf(BASE, DARK)) { c ->
-        screen(c, c.getString(R.string.lock_focus_title), c.getString(R.string.lock_blocked_text, "13:00"), c.getString(R.string.go_to_messages))
+        screen(c, c.getString(R.string.lock_focus_title), c.getString(R.string.lock_blocked_text, "13:00"), c.getString(R.string.go_to_messages)) {
+            night = 23.5f to 7f; focus = 9f to 13f; now = 10.25f; usage = 0.4f
+        }
     }
 
     @Test fun accesibilidadApagada() = shot("accesibilidad_apagada", listOf(BASE, DARK, EN, WORST)) { c ->

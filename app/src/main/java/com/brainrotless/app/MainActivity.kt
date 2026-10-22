@@ -51,6 +51,7 @@ import androidx.webkit.ScriptHandler
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import org.json.JSONObject
+import java.time.LocalDateTime
 
 class MainActivity : ComponentActivity() {
     private lateinit var root: FrameLayout
@@ -196,7 +197,7 @@ class MainActivity : ComponentActivity() {
         }
         offline = Notices.screen(this, getString(R.string.offline_title), getString(R.string.offline_text), getString(R.string.retry)) { retry() }
         retryButton = offline.findViewWithTag("button")
-        lockScreen = Notices.screen(this, "", "", getString(R.string.go_to_messages), "") { goTo(youtube = false) }
+        lockScreen = Notices.screen(this, "", "", getString(R.string.go_to_messages), "", dial = true) { goTo(youtube = false) }
         lockTitle = lockScreen.findViewWithTag("title")
         lockText = lockScreen.findViewWithTag("subtitle")
         lockPause = lockScreen.findViewWithTag("button2")
@@ -616,6 +617,7 @@ class MainActivity : ComponentActivity() {
         val canPause = r == Lock.Reason.LIMIT && Commitment.canPause(this)
         lockPause.visibility = if (canPause) View.VISIBLE else View.GONE
         lockPause.text = getString(R.string.lock_pause_button, left(Commitment.pausesLeft(this)))
+        fillDial(lockScreen.findViewWithTag("dial"))
         if (lockScreen.visibility == View.VISIBLE) return
         countUsage()
         lockScreen.visibility = View.VISIBLE
@@ -652,6 +654,20 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun left(n: Int) = resources.getQuantityString(R.plurals.left_n, n, n)
+
+    /** El dial del día en el aviso: la noche y el foco de hoy, el sol en la hora y lo usado del límite. */
+    private fun fillDial(d: DayDial) {
+        val now = TrustedClock.now(this)
+        fun hours(t: LocalDateTime) = t.hour + t.minute / 60f
+        d.night = (Sleep.current(this) ?: Sleep.nextNight(this))?.let { hours(it.start) to hours(it.end) }
+        // El foco, solo si cae hoy (el de otro día confundiría el dial)
+        d.focus = (Focus.current(this) ?: Focus.next(this))?.takeIf { it.start.toLocalDate() == now.toLocalDate() }
+            ?.let { hours(it.start) to hours(it.end) }
+        d.now = hours(now)
+        d.usage = Usage.limitMs(this)?.let { Usage.todayMs(this).toFloat() / it }
+        d.over = Usage.overLimit(this)
+        d.invalidate()
+    }
 
     /** La pausa se gasta con una confirmación: hay pocas y la pastilla está cerca de los íconos de Instagram. */
     private fun askPause() {

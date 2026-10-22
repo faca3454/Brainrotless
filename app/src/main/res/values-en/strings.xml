@@ -24,8 +24,8 @@
     <string name="guard_off_text">Your commitment is still on. Turn \"Block official apps\" back on in Accessibility to keep using IG Lite and YT Lite.</string>
     <string name="turn_on">Turn on</string>
     <string name="external_links_night">🌙 External links open after %1$s</string>
-    <string name="lock_night_title">Bedtime 🌙</string>
-    <string name="lock_limit_title">Today\'s limit ⏱</string>
+    <string name="lock_night_title">Bedtime</string>
+    <string name="lock_limit_title">Today\'s limit</string>
     <string name="lock_limit_text">You\'ve used up today\'s time. YouTube is back at %1$s</string>
     <string name="lock_pause_button">Emergency break, 15 min (%1$s)</string>
     <string name="pause_bar">🆘 Emergency break until %1$s (doesn\'t count toward your limit)</string>
@@ -190,7 +190,7 @@
     <string name="pref_version">Version</string>
     <string name="pref_cat_general">General</string>
     <string name="ig_focus_msg">🎯 Focus mode: messages only until %1$s</string>
-    <string name="lock_focus_title">Focus mode 🎯</string>
+    <string name="lock_focus_title">Focus mode</string>
     <string name="lock_blocked_text">YouTube is blocked until %1$s</string>
     <string name="home_focus">Focus mode</string>
     <string name="home_focus_off">Off · Tap to set your focus hours</string>

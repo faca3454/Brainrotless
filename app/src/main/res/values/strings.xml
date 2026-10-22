@@ -24,8 +24,8 @@
     <string name="guard_off_text">Tu compromiso sigue. Volvé a activar \"Bloquear apps oficiales\" en Accesibilidad para seguir usando IG Lite y YT Lite.</string>
     <string name="turn_on">Activar</string>
     <string name="external_links_night">🌙 Los links externos se abren después de las %1$s</string>
-    <string name="lock_night_title">Hora de dormir 🌙</string>
-    <string name="lock_limit_title">Límite de hoy ⏱</string>
+    <string name="lock_night_title">Hora de dormir</string>
+    <string name="lock_limit_title">Límite de hoy</string>
     <string name="lock_limit_text">Usaste tu tiempo de hoy. YouTube vuelve a las %1$s</string>
     <string name="lock_pause_button">Pausa de emergencia, 15 min (%1$s)</string>
     <string name="pause_bar">🆘 Pausa de emergencia hasta las %1$s (no suma al límite)</string>
@@ -190,7 +190,7 @@
     <string name="pref_version">Versión</string>
     <string name="pref_cat_general">General</string>
     <string name="ig_focus_msg">🎯 Modo foco: solo mensajes hasta las %1$s</string>
-    <string name="lock_focus_title">Modo foco 🎯</string>
+    <string name="lock_focus_title">Modo foco</string>
     <string name="lock_blocked_text">YouTube está bloqueado hasta las %1$s</string>
     <string name="home_focus">Modo foco</string>
     <string name="home_focus_off">Apagado · Tocá para elegir tus horas de foco</string>
