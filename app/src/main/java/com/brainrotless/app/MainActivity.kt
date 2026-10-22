@@ -43,6 +43,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -622,6 +623,7 @@ class MainActivity : ComponentActivity() {
         lockPause.visibility = if (canPause) View.VISIBLE else View.GONE
         lockPause.text = getString(R.string.lock_pause_button, left(Commitment.pausesLeft(this)))
         fillDial(lockScreen.findViewWithTag("dial"))
+        ViewCompat.setAccessibilityPaneTitle(lockScreen, lockTitle.text)
         if (lockScreen.visibility == View.VISIBLE) return
         countUsage()
         lockScreen.visibility = View.VISIBLE
@@ -650,8 +652,11 @@ class MainActivity : ComponentActivity() {
         // Con el teclado abierto se esconde: el chat necesita el lugar (y ya se ve que es solo mensajes)
         lockBar.visibility = if (text != null && !keyboard) View.VISIBLE else View.GONE
         lockBarText.text = text
+        // TalkBack sin el nombre del emoji del principio ("cronómetro, Llegaste…")
+        lockBarText.contentDescription = text?.replace(Regex("^[^\\p{L}\\p{N}]+"), "")
         lockBarPause.visibility = if (ig != null && Commitment.canPause(this)) View.VISIBLE else View.GONE
         lockBarPause.text = getString(R.string.pause_chip, Commitment.pausesLeft(this))
+        lockBarPause.contentDescription = getString(R.string.lock_pause_button, left(Commitment.pausesLeft(this)))
         // Pausa en curso: la línea ámbar se achica con lo que queda (se recalcula en cada vuelta, sin animar)
         val pauseLeft = Commitment.pauseUntil(this) - TrustedClock.millis(this)
         lockBarTime.visibility = if (Commitment.pauseActive(this)) View.VISIBLE else View.GONE
@@ -931,8 +936,9 @@ class MainActivity : ComponentActivity() {
             cm.activeNetwork?.let(cm::getNetworkCapabilities)?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
         } == true
         val site = if (youtube) "YouTube" else "Instagram"
-        offline.findViewWithTag<TextView>("title").text =
-            if (online) getString(R.string.site_down_title, site) else getString(R.string.offline_title)
+        val title = if (online) getString(R.string.site_down_title, site) else getString(R.string.offline_title)
+        offline.findViewWithTag<TextView>("title").text = title
+        ViewCompat.setAccessibilityPaneTitle(offline, title)
         offline.findViewWithTag<TextView>("subtitle").text =
             if (online) getString(R.string.site_down_text, site) else getString(R.string.offline_text)
         offline.visibility = View.VISIBLE
@@ -1019,6 +1025,9 @@ class MainActivity : ComponentActivity() {
     /** Barras de estado y de navegación del color de lo que se ve: la página, o el aviso que la tapa. */
     private fun paintBars() {
         val notice = listOf(offline, lockScreen, guardScreen).any { it.visibility == View.VISIBLE }
+        // Con un aviso encima, TalkBack no recorre la página de atrás (sigue ahí, tapada)
+        content.importantForAccessibility =
+            if (notice) View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS else View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
         val color = when {
             notice -> Brand.color(this, R.color.brand_bg)
             !dark -> Color.WHITE

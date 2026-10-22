@@ -25,6 +25,8 @@ object Notices {
         visibility = View.GONE
         isClickable = true // que no pase el toque a la WebView de atrás
         isFillViewport = true
+        // TalkBack lo anuncia al aparecer (la pantalla lo actualiza si cambia el título)
+        if (title.isNotBlank()) ViewCompat.setAccessibilityPaneTitle(this, title)
         addView(body(c, title, subtitle, button, button2, dial, onClick))
     }
 
