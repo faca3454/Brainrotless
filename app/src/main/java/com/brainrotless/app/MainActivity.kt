@@ -121,6 +121,8 @@ class MainActivity : ComponentActivity() {
             if (ok) r.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) else r.deny()
         }
 
+    private lateinit var back: OnBackPressedCallback
+
     // --- Pantalla completa de video ---
     private var fullscreenView: View? = null
     private var fullscreenCallback: WebChromeClient.CustomViewCallback? = null
@@ -207,7 +209,10 @@ class MainActivity : ComponentActivity() {
         }
         setContentView(root)
         // Cada vez que aparece o se va un aviso, o se cambia de plataforma, hay un layout: repintar las barras
-        root.viewTreeObserver.addOnGlobalLayoutListener { paintBars() }
+        root.viewTreeObserver.addOnGlobalLayoutListener {
+            paintBars()
+            updateBack()
+        }
         if (kept == null) installScript()
         else {
             // Corren con el script de cuando se guardaron: si cambió algo (empezó la noche), applyLock lo
@@ -216,7 +221,7 @@ class MainActivity : ComponentActivity() {
             scriptHandlers.putAll(kept.handlers)
         }
 
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+        back = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 val blocked = lockScreen.visibility == View.VISIBLE || guardScreen.visibility == View.VISIBLE
                 val origin = backToYouTube
@@ -229,7 +234,8 @@ class MainActivity : ComponentActivity() {
                     else -> moveTaskToBack(true)
                 }
             }
-        })
+        }
+        onBackPressedDispatcher.addCallback(this, back)
 
         val url = urlFromIntent(intent)
         when {
@@ -309,6 +315,11 @@ class MainActivity : ComponentActivity() {
             }
             runCatching { startActivity(Intent(Intent.ACTION_VIEW, u)) }
             return true
+        }
+
+        // También al navegar dentro del sitio (pushState): si ahora hay a dónde volver, el atrás es propio
+        override fun doUpdateVisitedHistory(v: WebView, url: String?, isReload: Boolean) {
+            if (v === web) updateBack()
         }
 
         override fun onPageStarted(v: WebView, url: String?, favicon: android.graphics.Bitmap?) {
@@ -637,6 +648,7 @@ class MainActivity : ComponentActivity() {
             return
         }
         backToYouTube = null // llegaste desde afuera: atrás vuelve a esa app
+        updateBack()
         if (fullscreenView != null) exitFullscreen()
         handlePauseIntent(intent)
         val url = urlFromIntent(intent)
@@ -876,6 +888,21 @@ class MainActivity : ComponentActivity() {
             online = ok
         }
         override fun onLost(n: Network) { online = false }
+    }
+
+    // ---------- Atrás ----------
+
+    /**
+     * Atrás propio solo si hay algo que hacer acá: salir de pantalla completa, volver en la página o a la
+     * otra plataforma. Si no, lo maneja Android: en Android 14, con la animación de volver al inicio (el
+     * gesto predictivo), y la app pasa al fondo como con moveTaskToBack. Antes de Android 13, siempre propio.
+     */
+    private fun updateBack() {
+        if (!::back.isInitialized) return
+        val guard = guardScreen.visibility == View.VISIBLE
+        val blocked = guard || lockScreen.visibility == View.VISIBLE
+        back.isEnabled = Build.VERSION.SDK_INT < 33 || fullscreenView != null ||
+            (!blocked && web.canGoBack()) || (backToYouTube != null && !guard)
     }
 
     // ---------- Barras del sistema ----------
