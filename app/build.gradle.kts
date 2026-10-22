@@ -8,6 +8,9 @@ plugins {
 val appVersionName: String = System.getenv("VERSION_NAME") ?: "dev"
 val appVersionCode: Int = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
 val keystoreFile: String? = System.getenv("KEYSTORE_FILE")
+// Herramientas de prueba (mediciones, diagnósticos): solo en los APK de prueba ("dev", "dev-<commit>").
+// La versión publicada se arma con src/nodevtools, que no hace nada: ni el código ni los textos entran
+val devTools = appVersionName.startsWith("dev")
 
 android {
     namespace = "com.brainrotless.app"
@@ -49,6 +52,13 @@ android {
     }
     buildFeatures {
         buildConfig = true
+    }
+    sourceSets["main"].apply {
+        java.srcDir(if (devTools) "src/devtools/java" else "src/nodevtools/java")
+        if (devTools) {
+            assets.srcDir("src/devtools/assets")
+            res.srcDir("src/devtools/res")
+        }
     }
 }
 

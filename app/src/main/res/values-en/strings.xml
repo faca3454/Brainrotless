@@ -215,8 +215,6 @@
     <string name="pref_focus_youtube">Block YouTube</string>
     <string name="pref_focus_youtube_summary">Turn it off if you use YouTube for study or work</string>
     <string name="pref_session">Long session reminder</string>
-    <string name="perf_copied">Copied the performance measurements: paste them in the chat.</string>
-    <string name="diag_copied">Couldn\'t find the Reply button. Copied a diagnostic (without your messages\' text): paste it in the chat.</string>
     <string name="widget_mini_label">Lúcido · Mini</string>
     <string name="widget_bar_label">Lúcido · Bar</string>
     <string name="widget_mini_desc">A ring with today\'s usage</string>

@@ -4,8 +4,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.app.AlertDialog
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.MutableContextWrapper
@@ -273,6 +271,7 @@ class MainActivity : ComponentActivity() {
         // Solo al abrir desde el ícono: no interrumpir un chat al que llegaste por una notificación o un link
         if (intent.action == Intent.ACTION_MAIN) Updater.maybeCheck(this)
         Sleep.reschedule(this)
+        DevTools.onIntent(this, intent)
     }
 
     @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
@@ -287,9 +286,9 @@ class MainActivity : ComponentActivity() {
             allowFileAccess = false
             userAgentString = userAgentString.replace("; wv", "") // ayuda con algunos logins
         }
-        // Solo expone setAtTop(boolean), haptic(), setPlaying(boolean) y, en los APK de prueba, report(texto):
-        // nada sensible si una página lo llama
+        // Solo expone setAtTop(boolean), haptic(), setPlaying(boolean) y ready(host): nada sensible si una página lo llama
         addJavascriptInterface(Bridge, "NoScrollBridge")
+        DevTools.attach(this) // APK de prueba: copiar mediciones y diagnósticos
         webViewClient = client
         webChromeClient = chromeClient
     }.also {
@@ -716,6 +715,7 @@ class MainActivity : ComponentActivity() {
         if (url != null) { open(url, intent.getStringExtra(EXTRA_CHAT)); return }
         // Tocaste un ícono: volver a donde estabas en esa plataforma, sin recargar
         goTo(isYouTubeAlias(intent))
+        DevTools.onIntent(this, intent)
     }
 
     // ---------- Script de bloqueo ----------
@@ -734,8 +734,7 @@ class MainActivity : ComponentActivity() {
     /**
      * Puente JS → app, uno solo para todas las páginas: las que siguen vivas al cerrar la pantalla le
      * hablan a la nueva. Pull-to-refresh, la vibración de deslizar para responder, si hay un video
-     * reproduciéndose (pantalla prendida), cuándo ya se ve la página nueva y, solo en los APK de prueba,
-     * diagnósticos del script.
+     * reproduciéndose (pantalla prendida) y cuándo ya se ve la página nueva.
      */
     object Bridge {
         @SuppressLint("StaticFieldLeak") // la pantalla que se ve: se suelta en onDestroy
@@ -762,7 +761,6 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface fun setPlaying(value: Boolean) = ui { keepScreenOn(value) }
         // La página que se ve ya cargó: sacar la foto de la de antes
         @JavascriptInterface fun ready(host: String) = ui { if (isYouTube("https://$host") == onYouTube) hideStill() }
-        @JavascriptInterface fun report(text: String) { if (testBuild) ui { copyDiagnostic(text.take(10_000)) } }
     }
 
     /**
@@ -812,13 +810,6 @@ class MainActivity : ComponentActivity() {
                 p.handlers.values.forEach { runCatching { it.remove() } }
             listOfNotNull(p.ig, p.yt).forEach { runCatching { it.destroy() } }
         }
-    }
-
-    /** Diagnóstico o mediciones del script (APK de prueba): al portapapeles, para pegarlo en el chat. */
-    private fun copyDiagnostic(text: String) {
-        getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Lúcido", text))
-        val msg = if (text.startsWith(PERF_REPORT)) R.string.perf_copied else R.string.diag_copied
-        Toast.makeText(this, getString(msg), Toast.LENGTH_LONG).show()
     }
 
     // ---------- Intents ----------
@@ -904,7 +895,16 @@ class MainActivity : ComponentActivity() {
         }.onFailure { v.reload() }
     }
 
-    /** Regla nueva sin recargar: el script la aplica en la página abierta (sección 15); si no puede, se recarga. */
+    // Para la medición automática de los APK de prueba (DevTools): mostrar una plataforma sin cargar nada y recargar
+    internal fun benchShow(youtube: Boolean): WebView {
+        lockScreen.visibility = View.GONE
+        switchTo(if (youtube) ytWeb else igWeb)
+        return web
+    }
+
+    internal fun benchReload() = reloadSmooth(web)
+
+    /** Regla nueva sin recargar: el script la aplica en la página abierta (sección 14); si no puede, se recarga. */
     private fun applyLive(v: WebView) =
         v.evaluateJavascript("window.__lucidoConfig ? __lucidoConfig(${Rules.config(this)}) : false") { if (it != "true") reloadSmooth(v) }
 
@@ -1106,12 +1106,11 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
-        private const val IG_INBOX = "https://www.instagram.com/direct/inbox/"
-        private const val YT_HOME = "https://m.youtube.com"
+        const val IG_INBOX = "https://www.instagram.com/direct/inbox/"
+        const val YT_HOME = "https://m.youtube.com"
         private const val YT_DARK = 0xFF0F0F0F.toInt() // fondo de YouTube en oscuro (su theme-color)
         const val EXTRA_PAUSE = "pause" // desde la notificación del límite: usar la pausa de emergencia
         const val EXTRA_CHAT = "chat" // desde la notificación de un mensaje: el nombre del chat, para abrirlo
         const val EXTRA_FROM_GUARD = "from_guard" // AppGuard te sacó de la app oficial: quedarse acá
-        private const val PERF_REPORT = "Lúcido rendimiento" // así empieza el resumen de mediciones del script
     }
 }

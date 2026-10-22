@@ -64,6 +64,7 @@ class SettingsActivity : AppCompatActivity() {
                 value = Lang.current(requireContext())
                 setOnPreferenceChangeListener { _, v -> Lang.set(requireActivity(), v as String); true }
             }
+            DevTools.addTo(this) // APK de prueba: la medición automática
         }
 
         override fun onResume() {

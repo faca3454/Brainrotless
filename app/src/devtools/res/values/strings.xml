@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Solo en los APK de prueba (ver app/build.gradle.kts) -->
+<resources>
+    <string name="perf_copied">Copié las mediciones de rendimiento: pegalas en el chat.</string>
+    <string name="diag_copied">No encontré el botón Responder. Copié un diagnóstico (sin el texto de tus mensajes): pegalo en el chat.</string>
+    <string name="dev_cat">Pruebas (solo en el APK de prueba)</string>
+    <string name="dev_bench">Medir IG Lite y YT Lite</string>
+    <string name="dev_bench_summary">Las recorre solas 3 veces (unos 2 minutos) y copia los tiempos para pegarlos en el chat. No abre chats.</string>
+    <string name="dev_bench_running">Midiendo… no toques la pantalla ni salgas de la app</string>
+    <string name="dev_bench_cancelled">Medición cancelada: saliste de la app</string>
+    <string name="dev_bench_done">Listo: copié las mediciones</string>
+    <string name="dev_copy_again">Copiar de nuevo</string>
+</resources>

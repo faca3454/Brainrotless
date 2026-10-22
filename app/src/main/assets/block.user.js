@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Lúcido
 // @description  Bloquea el feed de Reels/Shorts pero deja ver los que te mandan
-// @version      14
+// @version      15
 // @match        *://*.instagram.com/*
 // @match        *://instagram.com/*
 // @match        *://*.youtube.com/*
@@ -18,7 +18,7 @@
   // --- Config (la app la inyecta desde Ajustes; en Safari/Userscripts usa estos valores) ---
   const DEFAULTS = {
     igFeed: 'normal', igBlockExplore: true, igTapToPlay: false, igReels: false, ytShorts: false,
-    restricted: false, restrictedMsg: '', smooth: false, swipeReply: false, debug: false,
+    restricted: false, restrictedMsg: '', smooth: false, swipeReply: false,
   };
   const config = (given) => {
     const c = Object.assign({}, DEFAULTS, given || {});
@@ -26,7 +26,7 @@
     delete c.igBlockFeed;
     return c;
   };
-  // Solo mensajes, Reels y Shorts pueden cambiar con la página abierta (sección 15); el resto, al cargar
+  // Solo mensajes, Reels y Shorts pueden cambiar con la página abierta (sección 14); el resto, al cargar
   const CFG = config(window.__noscrollCfg);
 
   const IG = /(^|\.)instagram\.com$/.test(location.hostname);
@@ -70,14 +70,14 @@
   const restyle = () => { if (style) style.textContent = css(); };
   document.documentElement ? addStyle() : addEventListener('DOMContentLoaded', addStyle);
 
-  // APK de prueba: lo que hace el script por su cuenta (frenar un toque, cerrar un cartel), para el diagnóstico
-  const trace = [];
-  const note = (what) => { if (CFG.debug) trace.push([performance.now(), what]); };
+  // Los APK de prueba ponen antes sus herramientas (devtools.js, que no va en la versión publicada): les
+  // cuenta lo que hace el script por su cuenta, cuándo ya se ve la página y si no encontró "Responder"
+  const dev = (what, x) => { if (window.__lucidoDev) window.__lucidoDev.on(what, x); };
 
   // Lo que una sección rehace al cambiar la URL: corre ahora y después en cada cambio (desde check)
   const onRoute = [];
   const route = (f) => { onRoute.push(f); f(); };
-  // Lo que una sección rehace si cambia la configuración con la página abierta (sección 15)
+  // Lo que una sección rehace si cambia la configuración con la página abierta (sección 14)
   const onConfig = [];
 
   // --- 2. Reels: que la pantalla no se mueva al deslizar ---
@@ -337,7 +337,7 @@
         if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) continue;
         e.preventDefault();
         e.stopPropagation();
-        note('videos al tocar: frené el toque y reproduje el video');
+        dev('note', 'videos al tocar: frené el toque y reproduje el video');
         tapped.add(v);
         v.preload = 'auto';
         v.play().catch(() => {});
@@ -361,9 +361,9 @@
       if (!APP.test(text(el))) return;
       const dialog = el.closest('[role="dialog"]');
       const later = dialog && [...dialog.querySelectorAll(CLICKABLE)].find((b) => LATER.test(text(b)));
-      if (later) { note(`carteles: toqué "${text(later)}" en una ventana con "${text(el)}"`); later.click(); return; }
+      if (later) { dev('note', `carteles: toqué "${text(later)}" en una ventana con "${text(el)}"`); later.click(); return; }
 
-      note(`carteles: oculté "${text(el)}"`);
+      dev('note', `carteles: oculté "${text(el)}"`);
       el.style.setProperty('display', 'none', 'important');
       for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
         const pos = getComputedStyle(p).position;
@@ -533,7 +533,7 @@
       if (!btn) {
         // Que no quede colgada la barra de Instagram que abrió el "pasar el mouse"
         for (const type of ['mouseout', 'mouseleave']) fire(target, type, x, y);
-        if (CFG.debug) report(bubble);
+        dev('swipe', bubble);
         return;
       }
       // Se toca el elemento mismo, aunque sea un dibujo SVG (que no tiene click()): el evento sube
@@ -541,37 +541,6 @@
       const r = btn.getBoundingClientRect();
       const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
       for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) fire(btn, type, cx, cy);
-    };
-
-    // Solo en los APK de prueba: si no apareció "Responder", mandar a la app la estructura del
-    // mensaje y las etiquetas que hay a su altura (sin el texto de los mensajes), para arreglarlo
-    const report = (bubble) => {
-      if (!window.NoScrollBridge || !NoScrollBridge.report) return;
-      const box = bubble.getBoundingClientRect();
-      let row = bubble;
-      for (let i = 0; i < 3 && row.parentElement && row.parentElement !== document.body; i++) row = row.parentElement;
-      const clone = row.cloneNode(true);
-      const KEEP = /^(role|aria-|tabindex|title|dir|data-)/;
-      const walk = (n) => {
-        if (n.nodeType === 3) {
-          const inButton = n.parentElement && n.parentElement.closest('[role="button"], [role="menuitem"], button');
-          if (n.textContent.trim() && !(inButton && n.textContent.trim().length <= 25)) n.textContent = '…';
-          return;
-        }
-        if (n.nodeType !== 1) return;
-        for (const a of [...n.attributes]) if (!KEEP.test(a.name)) n.removeAttribute(a.name);
-        [...n.childNodes].forEach(walk);
-      };
-      walk(clone);
-      const html = clone.outerHTML.replace(/<path[^>]*>(<\/path>)?/g, '').slice(0, 6000);
-      const near = [...document.querySelectorAll('[aria-label], [title]')].filter((e) => {
-        const r = e.getBoundingClientRect();
-        return r.width > 0 && r.bottom > box.top - 150 && r.top < box.bottom + 150;
-      }).map((e) => `${e.tagName.toLowerCase()}[role=${e.getAttribute('role')}] ${e.getAttribute('aria-label') || e.getAttribute('title')}`);
-      const menus = [...document.querySelectorAll('[role="dialog"], [role="menu"], [role="listbox"]')]
-        .map((m) => (m.innerText || '').slice(0, 300));
-      NoScrollBridge.report(`Lúcido swipe-reply\n${location.pathname.replace(/\d+/g, '#')}\n` +
-        `cerca: ${near.join(' | ').slice(0, 2000)}\nmenús: ${menus.join(' || ')}\n${html}`);
     };
 
     // La lista de mensajes con touch-action: pan-y: deslizar de costado no la mueve y el navegador
@@ -690,7 +659,7 @@
       const original = file && [...document.querySelectorAll('img,video')].find((o) =>
         o !== m && fileOf(o) === file && o.getBoundingClientRect().width > w * 1.1 && o.closest(CLICKABLE));
       if (!original) return;
-      note('citas: toqué el original');
+      dev('note', 'citas: toqué el original');
       const r = original.getBoundingClientRect();
       const at = { bubbles: true, cancelable: true, composed: true, view: window, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 };
       setTimeout(() => { // como un dedo: el sitio puede escuchar cualquiera de estos
@@ -703,154 +672,7 @@
     }, true);
   }
 
-  // --- 11. Mediciones (solo APK de prueba) ---
-  // Tareas largas, cuánto tarda cada cambio de página en dibujarse y cada video en arrancar (de play()
-  // a 'playing'). Al salir de la app se copia un resumen al portapapeles, para pegarlo en el chat.
-  if (CFG.debug && window.NoScrollBridge && NoScrollBridge.report) {
-    // Solo el tipo de pantalla: nada de usuarios ni chats
-    const screen = () => {
-      const p = location.pathname;
-      const m = p.match(/^\/(direct\/\w+|reels?|p|stories|explore|accounts|watch|shorts|results|feed)\b/);
-      return m ? '/' + m[1] : p === '/' ? '/' : '/@';
-    };
-
-    const visits = [[0, screen()]]; // [desde cuándo, pantalla]: las tareas largas se avisan tarde
-    const long = {}; // pantalla → [cantidad, ms en total, ms la más larga]
-    try {
-      new PerformanceObserver((list) => {
-        for (const e of list.getEntries()) {
-          const k = visits.filter(([t]) => t <= e.startTime).pop()[1], t = long[k] || (long[k] = [0, 0, 0]);
-          t[0]++; t[1] += e.duration; t[2] = Math.max(t[2], e.duration);
-        }
-      }).observe({ type: 'longtask', buffered: true });
-    } catch (e) {}
-
-    // Cambio de página: hasta el último cuadro con cambios, cuando pasa medio segundo sin ninguno
-    // (10 s como mucho). Si cambiás de página antes, queda lo que se llegó a medir, con *.
-    const navs = [];
-    let stop = null;
-    const measure = (t0, label) => {
-      if (stop) stop(true, '*');
-      if (t0) visits.push([t0, screen()]);
-      let last = t0, frame = false, quiet = 0;
-      const obs = new MutationObserver(() => {
-        if (!frame) { frame = true; requestAnimationFrame(() => { frame = false; last = performance.now(); }); }
-        clearTimeout(quiet);
-        quiet = setTimeout(() => stop(true), 500);
-      });
-      const max = setTimeout(() => stop(true, '+'), 10000);
-      stop = (save, more = '') => {
-        obs.disconnect(); clearTimeout(quiet); clearTimeout(max); stop = null;
-        if (save) navs.push(`${label} ${Math.round(last - t0)}${more}`);
-      };
-      obs.observe(document, { childList: true, subtree: true });
-      quiet = setTimeout(() => stop(true), 500);
-    };
-    measure(0, screen() + ' (carga)');
-    const push = history.pushState;
-    history.pushState = function (...a) { const r = push.apply(this, a); measure(performance.now(), screen()); return r; };
-    addEventListener('popstate', () => measure(performance.now(), screen()));
-
-    const asked = new WeakMap(), videos = [];
-    addEventListener('play', (e) => { if (e.target instanceof HTMLVideoElement) asked.set(e.target, performance.now()); }, true);
-    addEventListener('playing', (e) => {
-      const t = asked.get(e.target);
-      if (t === undefined) return;
-      asked.delete(e.target);
-      videos.push(Math.round(performance.now() - t));
-    }, true);
-
-    // Si copiaste algo en la página (un link, un texto), salir no lo pisa: se copia la próxima vez
-    let copied = false;
-    addEventListener('copy', () => { copied = true; }, true);
-    const write = navigator.clipboard && navigator.clipboard.writeText;
-    if (write) navigator.clipboard.writeText = function (...a) { copied = true; return write.apply(this, a); };
-
-    // Toques sobre fotos o videos en los chats: qué se tocó (la estructura, sin el texto), si el toque
-    // llegó a la página, qué pasó en el segundo y medio siguiente y si hay otra igual (el original) con botón
-    const taps = [];
-    const shape = (u) => {
-      try {
-        const x = new URL(u, location.href);
-        return x.hostname === location.hostname ? x.pathname.replace(/\/(reels?|p|t|stories)\/[^/]+/g, '/$1/#') : x.hostname;
-      } catch (e) { return '?'; }
-    };
-    const desc = (el) => el.tagName.toLowerCase() + ['role', 'aria-label', 'href', 'tabindex'].map((a) => {
-      const v = el.getAttribute(a);
-      return v === null ? '' : `[${a}=${a === 'href' ? shape(v) : v.slice(0, 30)}]`;
-    }).join('');
-    const mediaIn = (el) => (el.matches('img,video') ? el : el.querySelector('img,video'));
-    const key = (m) => ((m.currentSrc || m.src || m.poster || '').split('?')[0].match(/[^/]+$/) || [''])[0];
-    const sanitize = (el) => {
-      const c = el.cloneNode(true);
-      const walk = (n) => {
-        if (n.nodeType === 3) { if (n.textContent.trim()) n.textContent = '…'; return; }
-        if (n.nodeType !== 1) return;
-        for (const a of [...n.attributes]) {
-          if (a.name === 'href') n.setAttribute('href', shape(a.value));
-          else if (a.name === 'aria-label') n.setAttribute('aria-label', a.value.slice(0, 30));
-          else if (!/^(role|aria-|tabindex|data-)/.test(a.name)) n.removeAttribute(a.name);
-        }
-        [...n.childNodes].forEach(walk);
-      };
-      walk(c);
-      return c.outerHTML.replace(/<path[^>]*>(<\/path>)?/g, '').slice(0, 1500);
-    };
-    let lastTap = null;
-    addEventListener('click', (e) => {
-      if (!/^\/direct\/t\//.test(location.pathname) || !e.isTrusted) return;
-      let card = e.target.nodeType === 1 ? e.target : e.target.parentElement;
-      for (let i = 0; card && i < 8 && !mediaIn(card); i++) card = card.parentElement; // hasta la foto o el video
-      const m = card && mediaIn(card);
-      if (!m) return;
-      const chain = [];
-      for (let el = e.target; el && el !== document.body && chain.length < 12; el = el.parentElement) chain.push(desc(el));
-      const k = key(m);
-      const twins = k ? [...document.querySelectorAll('img,video')].filter((o) => o !== m && key(o) === k) : [];
-      const tap = {
-        t: e.timeStamp, event: e, reached: false, prevented: false, after: '', // hora del toque, antes que cualquier listener
-        media: `${m.tagName.toLowerCase()} de ${Math.round(m.getBoundingClientRect().width)}px`,
-        twins: twins.map((o) => {
-          const b = o.closest('a[href],button,[role="button"],[role="link"]');
-          return `${b ? desc(b) : 'sin botón'} de ${Math.round(o.getBoundingClientRect().width)}px`;
-        }).join(' | ') || 'ninguna',
-        chain: chain.join(' < ').slice(0, 700), card: sanitize(card),
-      };
-      taps.push(tap);
-      if (taps.length > 2) taps.shift();
-      lastTap = tap;
-      const p0 = location.pathname;
-      setTimeout(() => {
-        const ours = trace.filter(([t]) => t >= tap.t).map(([, w]) => w).join('; ');
-        tap.after = `url ${location.pathname === p0 ? 'igual' : 'cambió a ' + shape(location.pathname)}, ` +
-          `ventanas abiertas ${document.querySelectorAll('[role="dialog"]').length}, el script: ${ours || 'nada'}`;
-      }, 1500);
-    }, true);
-    addEventListener('click', (e) => { // al final del recorrido: nadie lo frenó en el camino
-      if (lastTap && lastTap.event === e) { lastTap.reached = true; lastTap.prevented = e.defaultPrevented; }
-    });
-
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState !== 'hidden') return;
-      if (copied) { copied = false; return; }
-      if (!navs.length && !videos.length && !Object.keys(long).length) return;
-      const sorted = [...videos].sort((a, b) => a - b);
-      const chrome = (navigator.userAgent.match(/Chrome\/[\d.]+/) || ['?'])[0];
-      NoScrollBridge.report([
-        `Lúcido rendimiento · ${location.hostname} · ${chrome} · ${Math.round(performance.now() / 60000)} min`,
-        'Tareas largas (cantidad, ms en total, la más larga):',
-        ...Object.entries(long).map(([k, [n, sum, max]]) => `  ${k}: ${n}, ${Math.round(sum)}, ${Math.round(max)}`),
-        'Cambios de página (ms hasta dibujarse; + = seguía cambiando a los 10 s, * = cambiaste antes):',
-        '  ' + navs.slice(-30).join(' · '),
-        `Videos, de play() a playing (ms): ${sorted.length ? `mediana ${sorted[sorted.length >> 1]}, máx ${sorted[sorted.length - 1]} (n=${sorted.length})` : 'ninguno'}`,
-        '  ' + videos.slice(-30).join(' '),
-        ...taps.map((t) => `Toque en foto/video de un chat: ${t.media} · llegó a la página: ${t.reached ? (t.prevented ? 'sí (y alguien lo usó)' : 'sí') : 'no'}` +
-          `\n  después: ${t.after || 'sin medir'}\n  otra igual: ${t.twins}\n  cadena: ${t.chain}\n  ${t.card}`),
-      ].join('\n'));
-    });
-  }
-
-  // --- 12. Abrir desde una notificación, sin recargar (Instagram) ---
+  // --- 11. Abrir desde una notificación, sin recargar (Instagram) ---
   // La app llama a __lucidoGo(ruta, chat) si Instagram ya está cargado: se navega dentro del sitio
   // (como el botón atrás) y, si viene el nombre del chat, se toca su fila en la lista. Devuelve true
   // si se encarga; si no, la app carga la URL como antes. Solo toca una fila si hay una sola con ese
@@ -900,7 +722,7 @@
         if (done) return;
         if (performance.now() > until || !/^\/direct\//.test(location.pathname) || inChat(name)) return stop();
         const found = rows(name);
-        if (found.length === 1) { stop(); note('notificación: abrí el chat'); tap(found[0]); return; }
+        if (found.length === 1) { stop(); dev('note', 'notificación: abrí el chat'); tap(found[0]); return; }
         setTimeout(tick, 250);
       };
       tick();
@@ -930,7 +752,7 @@
     if (left) document.body ? openChat(left) : addEventListener('DOMContentLoaded', () => openChat(left));
   }
 
-  // --- 13. Pantalla prendida mientras se ve un video (Instagram y YouTube) ---
+  // --- 12. Pantalla prendida mientras se ve un video (Instagram y YouTube) ---
   // Le avisa a la app si hay un video reproduciéndose: así el teléfono no apaga la pantalla en medio de
   // un video (en pantalla completa se apagaba). En pausa o al terminar, vuelve a apagarse sola.
   if (window.NoScrollBridge && typeof NoScrollBridge.setPlaying === 'function') {
@@ -943,7 +765,7 @@
     addEventListener('pagehide', () => { if (was) { was = false; NoScrollBridge.setPlaying(false); } });
   }
 
-  // --- 14. La página nueva ya se ve (Instagram y YouTube) ---
+  // --- 13. La página nueva ya se ve (Instagram y YouTube) ---
   // Al recargar, la app deja a la vista una foto de la página de antes hasta este aviso, en vez de la
   // pantalla de carga. Cuenta cuando hay contenido de verdad (no solo el logo de carga: cientos de
   // elementos) y pasaron 300 ms sin cambios; a los 5 s, igual.
@@ -956,6 +778,7 @@
       obs.disconnect();
       clearTimeout(quiet);
       NoScrollBridge.ready(location.hostname);
+      dev('ready');
     };
     const obs = new MutationObserver(() => {
       clearTimeout(quiet);
@@ -965,7 +788,7 @@
     setTimeout(fin, 5000);
   }
 
-  // --- 15. Reglas nuevas sin recargar ---
+  // --- 14. Reglas nuevas sin recargar ---
   // Cuando empieza o termina la noche, el foco, el límite o una pausa, la app llama a __lucidoConfig con
   // la configuración nueva y se aplica en la página abierta: estilos, guardia de URL (vuelve al inbox si
   // hace falta), videos y el bloqueo del deslizamiento de Reels. Si cambió otra cosa (un ajuste del

@@ -21,9 +21,6 @@ import androidx.preference.PreferenceManager
 const val PKG = "com.brainrotless.app"
 const val REPO = "faca3454/Brainrotless"
 
-/** APK de prueba: el local ("dev") o uno de CI sin versión ("dev-<commit>"); los de CI no son debug. */
-val testBuild = BuildConfig.VERSION_NAME.startsWith("dev")
-
 /** Preferencias de usuario (las que se editan en Ajustes). */
 fun Context.userPrefs() = PreferenceManager.getDefaultSharedPreferences(this)
 

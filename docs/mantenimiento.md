@@ -35,6 +35,15 @@ Después de tocar algo visual: `record`, mirar las imágenes que cambiaron (`git
 
 El plan de diseño original de las funciones está en [`plan.md`](plan.md).
 
+### Herramientas de prueba (solo en los APK de prueba)
+
+Los APK sin versión (`dev` local, o *Build APK* con la versión vacía: `dev-<commit>`) traen además `app/src/devtools`:
+
+- `assets/devtools.js`, que va antes de `block.user.js`: mide tareas largas, cambios de página y videos, y al salir de la app copia un resumen; si deslizar para responder no encuentra el botón, copia la estructura del mensaje (sin el texto).
+- Ajustes → *Pruebas* → *Medir IG Lite y YT Lite*: recorre las dos 3 veces sola (abrir, ir a otra página y volver, recargar con el gesto, abrir un video de YouTube) y copia los tiempos para pegarlos en el chat. No abre chats. Lo que tarde suma al uso del día.
+
+La versión publicada (con número) se arma con `app/src/nodevtools`, un `DevTools` vacío: ni el script, ni la medición, ni sus textos entran en el APK (`app/build.gradle.kts`).
+
 ## Arreglar el bloqueo cuando Instagram o YouTube cambian algo
 
 Editá `app/src/main/assets/block.user.js` y **subí el número de `@version`**. La app descarga el script de `main` y lo usa si su versión no es menor que la que trae adentro, así que en unas horas les llega a todos sin reinstalar. Para probarlo antes: Ajustes → *Buscar actualización ahora*.

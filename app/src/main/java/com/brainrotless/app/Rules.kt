@@ -49,7 +49,10 @@ object Rules {
         return base
     }
 
-    /** Script final que se inyecta: configuración de Ajustes + reglas. Se rearma solo si algo cambió. */
+    /**
+     * Script final que se inyecta: configuración de Ajustes + reglas (en los APK de prueba, con sus
+     * herramientas antes). Se rearma solo si algo cambió.
+     */
     fun build(c: Context): String {
         Setup.migratePrefs(c)
         val p = c.userPrefs()
@@ -62,13 +65,12 @@ object Rules {
             .put("ytShorts", reels)
             .put("smooth", p.getBoolean("smooth_transitions", false))
             .put("swipeReply", p.getBoolean("swipe_reply", true))
-            .put("debug", testBuild) // APK de prueba: el script puede mandar diagnósticos y mediciones
         // Hora de dormir, foco o límite diario: Instagram solo para mensajes. El porqué y hasta cuándo
         // lo dice la barra de la app (el cartel del script, restrictedMsg, queda para Safari)
         if (Lock.ig(c) != null) cfg.put("restricted", true)
         val config = cfg.toString()
         val rules = current(c)
-        if (config != built.first || rules != built.second) built = Triple(config, rules, "window.__noscrollCfg=$config;\n$rules")
+        if (config != built.first || rules != built.second) built = Triple(config, rules, "window.__noscrollCfg=$config;\n${DevTools.script(c)}$rules")
         return built.third
     }
 
