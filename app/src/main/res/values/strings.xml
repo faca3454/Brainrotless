@@ -18,6 +18,8 @@
     <string name="loosen_forbidden">Durante el compromiso solo podés hacerlo más estricto</string>
     <string name="offline_title">Sin conexión</string>
     <string name="offline_text">Revisá el Wi-Fi o los datos</string>
+    <string name="site_down_title">%1$s no responde</string>
+    <string name="site_down_text">Tu internet anda: el problema parece ser de %1$s. Probá de nuevo en un rato.</string>
     <string name="retry">Reintentar</string>
     <string name="go_to_messages">Ir a los mensajes de Instagram</string>
     <string name="guard_off_title">Lúcido está apagado</string>

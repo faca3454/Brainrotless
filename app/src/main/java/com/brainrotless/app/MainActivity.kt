@@ -385,7 +385,7 @@ class MainActivity : ComponentActivity() {
             if (!req.isForMainFrame || v !== web) return
             mainFrameError = true
             refresh.isRefreshing = false
-            offline.visibility = View.VISIBLE
+            showOffline(isYouTube(req.url.toString()))
             hideStill()
             setRetrying(false)
         }
@@ -915,6 +915,22 @@ class MainActivity : ComponentActivity() {
         if (loading && progress.alpha == 0f) progress.scaleX = 0f
         progress.animate().scaleX(p / 100f).alpha(if (loading) 1f else 0f)
             .setDuration(200).setInterpolator(Brand.EASE_OUT).start()
+    }
+
+    /**
+     * Error al cargar: "sin conexión" si el teléfono no tiene internet; si lo tiene, que el que no responde
+     * es el sitio (no hace falta revisar el Wi-Fi).
+     */
+    private fun showOffline(youtube: Boolean) {
+        val online = getSystemService(ConnectivityManager::class.java)?.let { cm ->
+            cm.activeNetwork?.let(cm::getNetworkCapabilities)?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        } == true
+        val site = if (youtube) "YouTube" else "Instagram"
+        offline.findViewWithTag<TextView>("title").text =
+            if (online) getString(R.string.site_down_title, site) else getString(R.string.offline_title)
+        offline.findViewWithTag<TextView>("subtitle").text =
+            if (online) getString(R.string.site_down_text, site) else getString(R.string.offline_text)
+        offline.visibility = View.VISIBLE
     }
 
     /** "Reintentar": mientras vuelve a cargar, el botón queda apagado, así se ve que algo pasa. */

@@ -32,6 +32,11 @@ class NoticeShots : Shots(theme = "AppTheme") {
             night = 23.5f to 7f; now = 20.5f; usage = 1f; over = true
         }
 
+    /** Con internet andando, el que no responde es el sitio. */
+    @Test fun sitioCaido() = shot("sitio_caido", listOf(BASE, DARK, EN, WORST)) { c ->
+        screen(c, c.getString(R.string.site_down_title, "Instagram"), c.getString(R.string.site_down_text, "Instagram"), c.getString(R.string.retry))
+    }
+
     @Test fun youtubeLimite() = shot("youtube_limite", ALL) { c -> limit(c) }
 
     /**
