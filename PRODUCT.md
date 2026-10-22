@@ -35,7 +35,7 @@ No bloquea las apps ni pide fuerza de voluntad: las reemplaza por una versión s
 
 ## Brand Commitments
 
-- Nombre: Lúcido (el repo se llama Brainrotless). Lema: "Instagram y YouTube, sin piloto automático" / "Instagram and YouTube, off autopilot".
+- Nombre: Lúcido (el paquete de Android sigue siendo com.brainrotless.app). Lema: "Instagram y YouTube, sin piloto automático" / "Instagram and YouTube, off autopilot".
 - Logo existente (`ic_logo`): una L crema con un sol ámbar sobre verde azulado profundo.
 - Voz: rioplatense (vos, tocá, elegí), clara y directa. Firme pero amable: el límite es el límite y se dice sin vueltas, sin culpa ni reto, y sin festejar de más.
 

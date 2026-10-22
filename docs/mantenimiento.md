@@ -50,7 +50,7 @@ Editá `app/src/main/assets/block.user.js` y **subí el número de `@version`**.
 
 ## Sacar una versión nueva
 
-1. Escribí las notas en `.github/release-notes/vX.Y.Z.md` (si no hay, GitHub genera una lista de cambios).
+1. Escribí las notas en `.github/release-notes/vX.Y.Z.md` (si no hay, GitHub genera una lista de cambios). El primer párrafo, sin formato, es lo que muestra el aviso de actualización de la app (hasta la 1.1.0, las primeras 600 letras).
 2. GitHub → *Actions* → *Build APK* → *Run workflow* → escribí la versión (ej. `1.1.1`, siempre mayor que la anterior) → *Run workflow*.
 
 En unos minutos aparece en *Releases* con `Lucido-X.Y.Z.apk` adjunto, y las apps instaladas avisan solas. También funciona crear el release a mano (*Releases* → *Draft a new release* → tag `vX.Y.Z` → *Publish*) o subir un tag `vX.Y.Z`: el APK se adjunta solo.

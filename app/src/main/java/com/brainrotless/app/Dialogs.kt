@@ -70,7 +70,9 @@ object Dialogs {
     fun update(c: Context, version: String, notes: String, onDownload: () -> Unit): AlertDialog.Builder =
         AlertDialog.Builder(c)
             .setTitle(c.getString(R.string.update_title, version))
-            .setMessage(notes.take(600).ifBlank { c.getString(R.string.update_new) } + c.getString(R.string.update_install))
+            // Solo el primer párrafo de las notas (el resumen): lo demás tiene formato de GitHub
+            .setMessage(notes.replace("\r\n", "\n").substringBefore("\n\n").take(600).ifBlank { c.getString(R.string.update_new) } +
+                c.getString(R.string.update_install))
             .setPositiveButton(R.string.update_download) { _, _ -> onDownload() }
             .setNegativeButton(R.string.update_later, null)
 }

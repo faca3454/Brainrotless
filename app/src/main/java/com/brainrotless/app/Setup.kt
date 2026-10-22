@@ -19,7 +19,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.preference.PreferenceManager
 
 const val PKG = "com.brainrotless.app"
-const val REPO = "faca3454/Brainrotless"
+const val REPO = "faca3454/Lucido"
 
 /** Preferencias de usuario (las que se editan en Ajustes). */
 fun Context.userPrefs() = PreferenceManager.getDefaultSharedPreferences(this)
